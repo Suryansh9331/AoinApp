@@ -1,11 +1,11 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Platform, Text } from 'react-native';
 import Swiper from 'react-native-swiper';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Colors } from '../utils/Colors';
 import useAppTheme from '../theme/useAppTheme';
 import { getThemeColors } from '../theme/themeColors';
@@ -64,8 +64,21 @@ const BottomTab = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const swiperRef = useRef(null);
   const navigation = useNavigation();
+  const route = useRoute();
   const theme = useAppTheme();
   const { backgroundColor, textColor, borderColor } = getThemeColors(theme);
+
+  // Handle navigation to specific tab with params
+  useEffect(() => {
+    const params = route.params;
+    if (params?.navigateToTab) {
+      const tabIndex = TAB_ITEMS.findIndex(tab => tab.key === params.navigateToTab);
+      if (tabIndex !== -1 && swiperRef.current) {
+        setActiveIndex(tabIndex);
+        swiperRef.current.scrollTo(tabIndex, true);
+      }
+    }
+  }, [route.params]);
 
   const handleTabPress = index => {
     if (swiperRef.current) {
@@ -84,11 +97,22 @@ const BottomTab = () => {
         onIndexChanged={setActiveIndex}
         loadMinimal
         loadMinimalSize={1}>
-        {TAB_ITEMS.map(({ key, component: ScreenComponent }, idx) => (
-          <View style={[styles.slide, { backgroundColor }]} key={key}>
-            <ScreenComponent navigation={navigation} routeKey={key} />
-          </View>
-        ))}
+        {TAB_ITEMS.map(({ key, component: ScreenComponent }, idx) => {
+          // Pass route params to Profile component
+          const profileParams = key === 'Profile' && route.params?.userId 
+            ? { userId: route.params.userId }
+            : undefined;
+          
+          return (
+            <View style={[styles.slide, { backgroundColor }]} key={key}>
+              <ScreenComponent 
+                navigation={navigation} 
+                routeKey={key}
+                routeParams={profileParams}
+              />
+            </View>
+          );
+        })}
       </Swiper>
 
       <View style={[
@@ -104,7 +128,7 @@ const BottomTab = () => {
           const { Component: IconComp, active, inactive } = tab.icon;
           const iconName = isActive ? active : inactive;
           const isCenterTab = tab.isCenter;
-          const iconSize = isCenterTab ? moderateScale(28) : moderateScale(22);
+          const iconSize = isCenterTab ? moderateScale(24) : moderateScale(20);
           const iconColor = isActive 
             ? (isCenterTab ? '#FFFFFF' : Colors.PRIMARY) 
             : (isCenterTab ? '#FFFFFF' : (theme === 'dark' ? '#6B7280' : '#9CA3AF'));
@@ -187,8 +211,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingBottom: verticalScale(Platform.OS === 'ios' ? 24 : 12),
-    paddingTop: verticalScale(10),  
+    paddingBottom: verticalScale(Platform.OS === 'ios' ? 8 : 6),
+    paddingTop: verticalScale(6),  
     borderTopWidth: StyleSheet.hairlineWidth,
     shadowColor: '#111827',
     shadowOffset: { width: 0, height: -4 },
@@ -213,9 +237,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   centerIconContainer: {
-    width: moderateScale(52),
-    height: moderateScale(52),
-    borderRadius: moderateScale(28),
+    width: moderateScale(44),
+    height: moderateScale(44),
+    borderRadius: moderateScale(22),
     backgroundColor: Colors.PRIMARY,
     alignItems: 'center',
     justifyContent: 'center',
@@ -227,8 +251,8 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   tabLabel: {
-    marginTop: verticalScale(4),
-    fontSize: moderateScale(11),
+    marginTop: verticalScale(2),
+    fontSize: moderateScale(10),
     fontWeight: '600',
   },
 });

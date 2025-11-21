@@ -53,7 +53,7 @@ const AppNavigator = () => {
   };
 
   if (isLoading) {
-    return null; // Or a loading screen
+    return null; 
   }
 
   const isAuthenticated = Boolean(token);
