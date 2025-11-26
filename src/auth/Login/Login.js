@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { View, Text, Alert, Image, TouchableOpacity, StyleSheet } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-import { login_Request } from '../../redux/slices/authSlice';
 import Input from '../../components/reuseable/Input';
 import ActionButton from '../../components/reuseable/ActionButton';
 import { ImageData } from '../../utils/resources';
@@ -11,26 +9,88 @@ import { Colors } from '../../utils/Colors';
 import { useNavigation } from '@react-navigation/native';
 import useAppTheme from '../../theme/useAppTheme';
 import { getThemeColors } from '../../theme/themeColors';
+import { ROUTES } from '../../utils/Routes';
+import { postData } from '../../utils/APiCall';
 
 
 const Login = ({ route }) => {
-  const dispatch = useDispatch();
   const theme = useAppTheme();
-  const { backgroundColor, textColor, borderColor, iconColor, headerColor } = getThemeColors(theme);
-
-  const { loading, error } = useSelector(state => state.auth);
+  const { backgroundColor, textColor } = getThemeColors(theme);
   const navigation = useNavigation();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const selectedRole = route?.params?.role || null;
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+  const handleSendOTP = async () => {
+    if (!phoneNumber) {
+      Alert.alert('Error', 'Please enter your phone number');
       return;
     }
 
-    dispatch(login_Request({ email, password }));
+    // Clean phone number (remove spaces, dashes, etc.)
+    const cleanPhone = phoneNumber.replace(/[\s\-\(\)]/g, '');
+    
+    if (cleanPhone.length < 10) {
+      Alert.alert('Error', 'Please enter a valid phone number');
+      return;
+    }
+
+    // Format phone number with country code if not present
+    const formattedPhone = cleanPhone.startsWith('+') 
+      ? cleanPhone 
+      : `+91${cleanPhone}`;
+
+    setLoading(true);
+    try {
+      console.log('Sending OTP for login:', {
+        phone: formattedPhone,
+        route: ROUTES.SEND_OTP,
+      });
+
+      const response = await postData(ROUTES.SEND_OTP, {
+        phone: formattedPhone,
+      });
+      
+      console.log('OTP send response:', response);
+      setLoading(false);
+      
+      if (response) {
+        // Navigate to OTP verification screen for login with expiry time
+        const expiresIn = response?.expires_in || 600; // Default to 600 seconds if not provided
+        navigation.navigate('VerifyOTPLogin', { phone: formattedPhone, expiresIn });
+      } else {
+        Alert.alert('Error', 'Failed to send OTP. Please try again.');
+      }
+    } catch (error) {
+      setLoading(false);
+      console.log('OTP send error:', error);
+      console.log('Error details:', JSON.stringify(error, null, 2));
+      
+      let errorMessage = 'Failed to send OTP. Please try again.';
+      let errorTitle = 'Error';
+      
+      if (error?.status === 500) {
+        const errorData = error?.data || {};
+        const backendError = errorData?.error || errorData?.message || '';
+        
+        if (backendError.includes('user_id') || backendError.includes('database') || backendError.includes('SQL')) {
+          errorTitle = 'Service Temporarily Unavailable';
+          errorMessage = 'We are experiencing a technical issue. Please try again in a few moments.\n\nIf the problem continues, please contact support.';
+        } else {
+          errorTitle = 'Server Error';
+          errorMessage = 'Server error occurred. Please try again.\n\nIf the issue persists, please contact support.';
+        }
+      } else if (error?.status === 400) {
+        errorMessage = error?.message || 'Invalid phone number. Please check and try again.';
+      } else if (error?.status === 404) {
+        errorMessage = 'Service not found. Please contact support.';
+      } else if (error?.type === 'network') {
+        errorMessage = 'Network error. Please check your internet connection.';
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert(errorTitle, errorMessage);
+    }
   };
 
   return (
@@ -48,36 +108,21 @@ const Login = ({ route }) => {
       </Text>
       
       <Text style={[styles.description, { color: textColor }]}>
-        Enter your details below
+        Enter your phone number to receive OTP
       </Text>
       
       <Input
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
+        placeholder="Phone Number"
+        value={phoneNumber}
+        onChangeText={setPhoneNumber}
+        keyboardType="phone-pad"
+        maxLength={10}
       />
-      
-      <Input
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        type="password"
-        showPasswordToggle={true}
-      />
-
-      {error && (
-        <Text style={styles.errorText}>
-          {error}
-        </Text>
-      )}
 
       <View style={styles.buttonContainer}>
         <ActionButton
-          title="Login"
-          onPress={handleLogin}
+          title="Send OTP"
+          onPress={handleSendOTP}
           loading={loading}
           fontSize={moderateScale(14)}
           fontWeight="700"
@@ -93,7 +138,7 @@ const Login = ({ route }) => {
           Don't have an account?{' '}
         </Text>
         <TouchableOpacity onPress={() => {
-          navigation.navigate('Register');
+          navigation.navigate('SelectSignUpMethod');
         }}>
           <Text style={styles.signupLink}>
             Sign up

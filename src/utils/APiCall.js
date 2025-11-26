@@ -23,10 +23,20 @@ apiClient.interceptors.request.use(config => {
 export const handleApiError = error => {
   if (error.response) {
     const {status, data} = error.response;
+    const errorMessage = data?.message || data?.error || data?.errorMessage || `Request failed with status ${status}`;
+    
+    // Log full error for debugging
+    console.log('API Error Response:', {
+      status,
+      data,
+      message: errorMessage,
+    });
+    
     throw {
       type: 'response',
       status,
-      message: data?.message || `Request failed with status ${status}`,
+      message: errorMessage,
+      data: data, // Include full data for more context
     };
   }
 

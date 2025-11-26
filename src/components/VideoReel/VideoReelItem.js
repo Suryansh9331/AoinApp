@@ -17,10 +17,13 @@ import { Colors } from '../../utils/Colors';
 import useAppTheme from '../../theme/useAppTheme';
 import { getThemeColors } from '../../theme/themeColors';
 import { useNavigation } from '@react-navigation/native';
+import { useSelector } from 'react-redux';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
   const navigation = useNavigation();
+  const userData = useSelector(state => state.auth.data);
+  const userRole = userData?.data?.role || userData?.role || 'user';
   const theme = useAppTheme();
   const { backgroundColor, textColor } = getThemeColors(theme);
   const [isLiked, setIsLiked] = useState(item.isLiked);
@@ -196,18 +199,6 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
           </TouchableOpacity>
         )}
 
-        {/* Pause Button - Center bottom when playing */}
-        {!isPaused && (
-          <TouchableOpacity
-            style={styles.pauseButton}
-            onPress={() => setIsPaused(true)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.pauseButtonContainer}>
-              <Ionicons name="pause" size={moderateScale(20)} color="#FFFFFF" />
-            </View>
-          </TouchableOpacity>
-        )}
       </TouchableOpacity>
 
       {/* Right side action buttons */}
@@ -216,8 +207,8 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
         <TouchableOpacity 
           style={styles.avatarContainer} 
           onPress={() => {
-         
-            navigation.navigate('BottomTab', { 
+            const bottomTabName = userRole === 'merchant' ? 'MerchantBottomTab' : 'UserBottomTab';
+            navigation.navigate(bottomTabName, { 
               navigateToTab: 'Profile',
               userId: item.userId || item.id 
             });
@@ -265,16 +256,6 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
           <Text style={styles.actionCount}>{formatNumber(likes)}</Text>
         </TouchableOpacity>
 
-        {/* Comment Button */}
-        <TouchableOpacity style={styles.actionButton} activeOpacity={0.7}>
-          <Ionicons
-            name="chatbubble-outline"
-            size={moderateScale(32)}
-            color="#FFFFFF"
-          />
-          <Text style={styles.actionCount}>{formatNumber(item.comments)}</Text>
-        </TouchableOpacity>
-
         {/* Share Button */}
         <TouchableOpacity
           style={styles.actionButton}
@@ -287,15 +268,6 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
             color="#FFFFFF"
           />
           <Text style={styles.actionCount}>{formatNumber(item.shares)}</Text>
-        </TouchableOpacity>
-
-        {/* More Options */}
-        <TouchableOpacity style={styles.actionButton} activeOpacity={0.7}>
-          <Ionicons
-            name="ellipsis-vertical"
-            size={moderateScale(28)}
-            color="#FFFFFF"
-          />
         </TouchableOpacity>
       </View>
 
@@ -344,20 +316,6 @@ const styles = StyleSheet.create({
     width: moderateScale(60),
     height: moderateScale(60),
     borderRadius: moderateScale(30),
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pauseButton: {
-    position: 'absolute',
-    bottom: verticalScale(120),
-    alignSelf: 'center',
-    zIndex: 5,
-  },
-  pauseButtonContainer: {
-    width: moderateScale(36),
-    height: moderateScale(36),
-    borderRadius: moderateScale(18),
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',

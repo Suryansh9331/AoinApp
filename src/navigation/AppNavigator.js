@@ -6,7 +6,8 @@ import {useSelector} from 'react-redux';
 import { getItem, setItem } from '../utils/MMKVStorage';
 import useAppTheme from '../theme/useAppTheme';
 import { getThemeColors } from '../theme/themeColors';
-import BottomTab from './BottomTab';
+import UserBottomTab from './UserBottomTab';
+import MerchantBottomTab from './MerchantBottomTab';
 import Login from '../auth/Login/Login';
 import SplashScreen from '../components/IntroScreens/SplashScreen';
 import OnboardingScreen1 from '../components/IntroScreens/OnboardingScreen1';
@@ -14,16 +15,22 @@ import OnboardingScreen2 from '../components/IntroScreens/OnboardingScreen2';
 import OnboardingScreen3 from '../components/IntroScreens/OnboardingScreen3';
 import SelectRoleScreen from '../components/IntroScreens/SelectRoleScreen';
 import Register from '../auth/Register/Register';
+import SelectSignUpMethod from '../auth/Register/SelectSignUpMethod';
+import VerifyOTP from '../auth/Register/VerifyOTP';
+import VerifyOTPLogin from '../auth/Login/VerifyOTPLogin';
 const Stack = createNativeStackNavigator();
 
 const INTRO_COMPLETED_KEY = 'intro_completed';
 
 const AppNavigator = () => {
   const token = useSelector(state => state.auth.token);
+  const userData = useSelector(state => state.auth.data);
   const theme = useAppTheme();
   const { backgroundColor } = getThemeColors(theme);
   const [hasSeenIntro, setHasSeenIntro] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const userRole = userData?.data?.role || userData?.role || 'user';
 
   useEffect(() => {
     // Check if user has seen intro screens
@@ -86,18 +93,28 @@ const AppNavigator = () => {
               }}
             />
             <Stack.Screen name="Login" component={Login} />
+            <Stack.Screen name="SelectSignUpMethod" component={SelectSignUpMethod} />
             <Stack.Screen name="Register" component={Register} />
+            <Stack.Screen name="VerifyOTP" component={VerifyOTP} />
+            <Stack.Screen name="VerifyOTPLogin" component={VerifyOTPLogin} />
           </>
         ) : !isAuthenticated ? (
           // User has seen intro but not authenticated
           <>
             <Stack.Screen name="SelectRole" component={SelectRoleScreen} />
             <Stack.Screen name="Login" component={Login} />
+            <Stack.Screen name="SelectSignUpMethod" component={SelectSignUpMethod} />
             <Stack.Screen name="Register" component={Register} />
+            <Stack.Screen name="VerifyOTP" component={VerifyOTP} />
+            <Stack.Screen name="VerifyOTPLogin" component={VerifyOTPLogin} />
           </>
         ) : (
-          // User is authenticated
-          <Stack.Screen name="BottomTab" component={BottomTab} />
+          // User is authenticated - show role-based bottom tab
+          userRole === 'merchant' ? (
+            <Stack.Screen name="MerchantBottomTab" component={MerchantBottomTab} />
+          ) : (
+            <Stack.Screen name="UserBottomTab" component={UserBottomTab} />
+          )
         )}
       </Stack.Navigator>
     </NavigationContainer>
