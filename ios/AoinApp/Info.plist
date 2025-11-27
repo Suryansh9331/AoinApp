@@ -69,5 +69,16 @@
 		<string>SimpleLineIcons.ttf</string>
 		<string>Zocial.ttf</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.968020800951-t89qvbb6ne0nh8oh4cne6a3blqr6gs3l</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

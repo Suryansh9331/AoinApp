@@ -41,10 +41,7 @@ const Login = ({ route }) => {
 
     setLoading(true);
     try {
-      console.log('Sending OTP for login:', {
-        phone: formattedPhone,
-        route: ROUTES.SEND_OTP,
-      });
+      
 
       const response = await postData(ROUTES.SEND_OTP, {
         phone: formattedPhone,
@@ -63,7 +60,7 @@ const Login = ({ route }) => {
     } catch (error) {
       setLoading(false);
       console.log('OTP send error:', error);
-      console.log('Error details:', JSON.stringify(error, null, 2));
+      
       
       let errorMessage = 'Failed to send OTP. Please try again.';
       let errorTitle = 'Error';

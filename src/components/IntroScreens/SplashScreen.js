@@ -4,14 +4,13 @@ import {
   Text,
   StyleSheet,
   Animated,
-  Image,
   Dimensions,
   StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { moderateScale, verticalScale } from 'react-native-size-matters';
 import { Colors } from '../../utils/Colors';
-import { ImageData } from '../../utils/resources';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 const { width, height } = Dimensions.get('window');
 
@@ -36,13 +35,19 @@ const SplashScreen = () => {
       }),
     ]).start();
 
-    // Navigate to onboarding after 3 seconds
+    // Navigate to Onboarding1 after 3 seconds
     const timer = setTimeout(() => {
-      navigation.replace('Onboarding1');
+      try {
+        navigation.replace('Onboarding1');
+      } catch (error) {
+        console.log('Navigation error:', error);
+        // Fallback to navigate if replace fails
+        navigation.navigate('Onboarding1');
+      }
     }, 3000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [navigation]);
 
   return (
     <View style={styles.container}>
@@ -60,11 +65,7 @@ const SplashScreen = () => {
           },
         ]}>
         <View style={styles.logoCircle}>
-          <Image 
-            source={ImageData.AOIN_LOGO} 
-            style={styles.logoImage}
-            resizeMode="contain"
-          />
+          <Ionicons name="rocket" size={moderateScale(60)} color={Colors.PRIMARY} />
         </View>
         <Text style={styles.appName}>AoinApp</Text>
       </Animated.View>

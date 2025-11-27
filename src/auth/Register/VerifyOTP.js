@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Alert, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Alert, TouchableOpacity, StyleSheet } from 'react-native';
 import { useDispatch } from 'react-redux';
 import Input from '../../components/reuseable/Input';
 import ActionButton from '../../components/reuseable/ActionButton';
-import { ImageData } from '../../utils/resources';
 import { moderateScale, verticalScale } from 'react-native-size-matters';
 import FONTS from '../../utils/Font';
 import { Colors } from '../../utils/Colors';
@@ -22,9 +21,9 @@ const VerifyOTP = ({ route }) => {
 
   const phoneNumber = route?.params?.phone || '';
   const expiresIn = route?.params?.expiresIn || 600; // Default 600 seconds
+  const firstName = route?.params?.firstName || ''; // Get from route params
+  const lastName = route?.params?.lastName || ''; // Get from route params
   const [otp, setOtp] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(expiresIn);
   const intervalRef = useRef(null);
@@ -58,8 +57,13 @@ const VerifyOTP = ({ route }) => {
   };
 
   const handleVerifyOTP = async () => {
-    if (!otp || !firstName || !lastName) {
-      Alert.alert('Error', 'Please fill in all fields');
+    if (!otp) {
+      Alert.alert('Error', 'Please enter OTP');
+      return;
+    }
+
+    if (!firstName || !lastName) {
+      Alert.alert('Error', 'Missing user information. Please go back and fill all fields.');
       return;
     }
 
@@ -126,14 +130,6 @@ const VerifyOTP = ({ route }) => {
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
-      <View style={styles.logoContainer}>
-        <Image 
-          source={ImageData.AOIN_LOGO} 
-          style={styles.logoImage}
-          resizeMode="contain"
-        />
-      </View>
-      
       <Text style={[styles.title, { color: textColor }]}>
         Verify OTP
       </Text>
@@ -164,20 +160,6 @@ const VerifyOTP = ({ route }) => {
         onChangeText={setOtp}
         keyboardType="number-pad"
         maxLength={6}
-      />
-
-      <Input
-        placeholder="First Name"
-        value={firstName}
-        onChangeText={setFirstName}
-        autoCapitalize="words"
-      />
-
-      <Input
-        placeholder="Last Name"
-        value={lastName}
-        onChangeText={setLastName}
-        autoCapitalize="words"
       />
 
       <View style={styles.buttonContainer}>
@@ -219,14 +201,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: verticalScale(20),
-  },
-  logoImage: {
-    width: moderateScale(100),
-    height: moderateScale(100),
-  },
   title: {
     fontSize: moderateScale(24),
     fontFamily: FONTS.WINDSONG.REGULAR,
@@ -240,9 +214,6 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     marginBottom: verticalScale(20),
     textAlign: 'center',
-  },
-  disabledInput: {
-    opacity: 0.6,
   },
   buttonContainer: {
     marginTop: verticalScale(20),

@@ -1,17 +1,19 @@
 import React from 'react';
-import {TouchableOpacity, Text, StyleSheet, Image} from 'react-native';
+import {TouchableOpacity, Text, StyleSheet} from 'react-native';
 import {moderateScale, verticalScale, scale} from 'react-native-size-matters';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import { IconData } from '../../utils/resources';
 
-const GoogleButton = ({onPress, style, textStyle}) => {
+const GoogleButton = ({onPress, style, textStyle, disabled = false}) => {
   return (
     <TouchableOpacity
       activeOpacity={0.7}
       onPress={onPress}
-      style={[styles.button, style]}>
-      <Image source={IconData.GOOGLELOGO} style={{width: moderateScale(18), height: moderateScale(18)}} color="#4285F4" />
-      <Text style={[styles.label, textStyle]}>Continue with Google</Text>
+      disabled={disabled}
+      style={[styles.button, disabled && styles.buttonDisabled, style]}>
+      <FontAwesome name="google" size={moderateScale(18)} color="#4285F4" />
+      <Text style={[styles.label, disabled && styles.labelDisabled, textStyle]}>
+        Continue with Google
+      </Text>
     </TouchableOpacity>
   );
 };
@@ -38,6 +40,12 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(13),
     fontWeight: '600',
     color: '#374151',
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  labelDisabled: {
+    opacity: 0.6,
   },
 });
 

@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, Alert, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Alert, TouchableOpacity, StyleSheet } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import Input from '../../components/reuseable/Input';
 import ActionButton from '../../components/reuseable/ActionButton';
-import { ImageData } from '../../utils/resources';
 import { moderateScale, verticalScale, scale } from 'react-native-size-matters';
 import FONTS from '../../utils/Font';
 import { Colors } from '../../utils/Colors';
@@ -20,26 +19,22 @@ const Register = ({ route }) => {
 
   const navigation = useNavigation();
   const signUpMethod = route?.params?.method || 'email'; // 'email' or 'phone'
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
+    // Validate common fields
+    if (!firstName || !lastName) {
+      Alert.alert('Error', 'Please fill in your first name and last name');
+      return;
+    }
+
     if (signUpMethod === 'email') {
-      if (!email || !password || !confirmPassword) {
-        Alert.alert('Error', 'Please fill in all fields');
-        return;
-      }
-      
-      if (password !== confirmPassword) {
-        Alert.alert('Error', 'Passwords do not match');
-        return;
-      }
-      
-      if (password.length < 6) {
-        Alert.alert('Error', 'Password must be at least 6 characters');
+      if (!email) {
+        Alert.alert('Error', 'Please enter your email');
         return;
       }
 
@@ -51,7 +46,7 @@ const Register = ({ route }) => {
         navigation.navigate('Login');
       }, 2000);
     } else {
-      // Phone signup - only phone number required
+      // Phone signup
       if (!mobileNumber) {
         Alert.alert('Error', 'Please enter your phone number');
         return;
@@ -62,8 +57,6 @@ const Register = ({ route }) => {
         return;
       }
 
-      
-    
       const formattedPhone = mobileNumber.startsWith('+') 
         ? mobileNumber 
         : `+91${mobileNumber}`; 
@@ -83,9 +76,14 @@ const Register = ({ route }) => {
         setLoading(false);
         
         if (response) {
-          // Navigate to OTP verification screen with formatted phone number and expiry time
+          // Navigate to OTP verification screen with all user data
           const expiresIn = response?.expires_in || 600; // Default to 600 seconds if not provided
-          navigation.navigate('VerifyOTP', { phone: formattedPhone, expiresIn });
+          navigation.navigate('VerifyOTP', { 
+            phone: formattedPhone, 
+            expiresIn,
+            firstName: firstName,
+            lastName: lastName,
+          });
         } else {
           Alert.alert('Error', 'Failed to send OTP. Please try again.');
         }
@@ -127,52 +125,38 @@ const Register = ({ route }) => {
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
-      <View style={styles.logoContainer}>
-        <Image 
-          source={ImageData.AOIN_LOGO} 
-          style={styles.logoImage}
-          resizeMode="contain"
-        />
-      </View>
-      
       <Text style={[styles.title, { color: textColor }]}>
         Create Account
       </Text>
       
       <Text style={[styles.description, { color: textColor }]}>
         {signUpMethod === 'email' 
-          ? 'Enter your email to register' 
-          : 'Enter your phone number to receive OTP'}
+          ? 'Enter your details to register' 
+          : 'Enter your details to receive OTP'}
       </Text>
       
+      <Input
+        placeholder="First Name"
+        value={firstName}
+        onChangeText={setFirstName}
+        autoCapitalize="words"
+      />
+
+      <Input
+        placeholder="Last Name"
+        value={lastName}
+        onChangeText={setLastName}
+        autoCapitalize="words"
+      />
+
       {signUpMethod === 'email' ? (
-        <>
-          <Input
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-
-          <Input
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            type="password"
-            showPasswordToggle={true}
-          />
-
-          <Input
-            placeholder="Confirm Password"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-            type="password"
-            showPasswordToggle={true}
-          />
-        </>
+        <Input
+          placeholder="Email"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
       ) : (
         <Input
           placeholder="Mobile Number"
@@ -220,14 +204,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     width: '100%',
     height: '100%',
-  },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: verticalScale(20),
-  },
-  logoImage: {
-    width: moderateScale(100),
-    height: moderateScale(100),
   },
   title: {
     fontSize: moderateScale(24),
