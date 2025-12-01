@@ -2,6 +2,7 @@ import {configureStore} from '@reduxjs/toolkit';
 import createSagaMiddleware from 'redux-saga';
 import authReducer from './slices/authSlice';
 import themeReducer from './slices/themeSlice';
+import reelReducer from './slices/reelSlice';
 import rootSaga from './sagas/rootSaga';
 
 // Create saga middleware
@@ -11,6 +12,7 @@ export const store = configureStore({
   reducer: {
     auth: authReducer,
     theme: themeReducer,
+    reels: reelReducer,
   },
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({

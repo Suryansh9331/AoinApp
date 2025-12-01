@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -20,57 +20,12 @@ import useAppTheme from '../../theme/useAppTheme';
 import {getThemeColors} from '../../theme/themeColors';
 import {Colors} from '../../utils/Colors';
 import {ROUTES} from '../../utils/Routes';
-import {uploadFormData} from '../../utils/APiCall';
+import {uploadFormData, getData} from '../../utils/APiCall';
 
 // Import image picker
 import {launchImageLibrary} from 'react-native-image-picker';
 import Video from 'react-native-video';
 
-// Sample products data (same as Products.js)
-const PRODUCTS_DATA = [
-  {
-    id: '1',
-    name: 'Classic Cotton T-Shirt',
-    category: "Men's Fashion / T-Shirts",
-    price: '₹1,299',
-    image: 'https://picsum.photos/200/200?random=1',
-  },
-  {
-    id: '2',
-    name: 'Summer Floral Dress',
-    category: "Women's Fashion / Dresses",
-    price: '₹2,499',
-    image: 'https://picsum.photos/200/200?random=2',
-  },
-  {
-    id: '3',
-    name: 'Wide Brim Sun Hat',
-    category: 'Accessories / Hats',
-    price: '₹799',
-    image: 'https://picsum.photos/200/200?random=3',
-  },
-  {
-    id: '4',
-    name: 'Scented Soy Candle',
-    category: 'Home Decor / Candles',
-    price: '₹499',
-    image: 'https://picsum.photos/200/200?random=4',
-  },
-  {
-    id: '5',
-    name: 'Hydrating Face Serum',
-    category: 'Beauty / Skincare',
-    price: '₹1,599',
-    image: 'https://picsum.photos/200/200?random=5',
-  },
-  {
-    id: '6',
-    name: 'Hydrating Face Serum',
-    category: 'Beauty / Skincare',
-    price: '₹1,599',
-    image: 'https://picsum.photos/200/200?random=6',
-  },
-];
 
 const Post = () => {
   const navigation = useNavigation();
@@ -81,7 +36,54 @@ const Post = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [description, setDescription] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [products] = useState(PRODUCTS_DATA);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [products, setProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+
+  // Format price to Indian currency format
+  const formatPrice = price => {
+    return `₹${parseFloat(price).toLocaleString('en-IN', {
+      maximumFractionDigits: 2,
+    })}`;
+  };
+
+  // Fetch products from API
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      setLoadingProducts(true);
+      const response = await getData(ROUTES.PRODUCTS_AVAILABLE);
+      
+      if (response && response.status === 'success' && response.data) {
+        // Map API response to UI format
+        const mappedProducts = response.data.map(item => ({
+          id: item.product_id.toString(),
+          product_id: item.product_id,
+          name: item.product_name,
+          category: item.category_name,
+          price: formatPrice(item.selling_price),
+          selling_price: item.selling_price,
+          stock_qty: item.stock_qty,
+          category_id: item.category_id,
+          // Use placeholder image if no image URL in API response
+          image: `https://picsum.photos/200/200?random=${item.product_id}`,
+        }));
+        
+        setProducts(mappedProducts);
+      } else {
+        setProducts([]);
+      }
+    } catch (error) {
+      console.log('Error fetching products:', error);
+      Alert.alert('Error', 'Failed to load products. Please try again.');
+      setProducts([]);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
 
   // Permission handling - react-native-image-picker handles it automatically
   // But we can check beforehand for better UX
@@ -239,6 +241,7 @@ const Post = () => {
     }
 
     setUploading(true);
+    setUploadProgress(0);
     try {
       // React Native FormData
       const formData = new FormData();
@@ -248,20 +251,32 @@ const Post = () => {
         name: selectedVideo.name || 'video.mp4',
       });
       formData.append('url', selectedVideo.uri);
-      formData.append('product_id', selectedProduct.id.toString());
+      // Use product_id from API response
+      formData.append('product_id', selectedProduct.product_id.toString());
       formData.append('description', description.trim());
 
-      const response = await uploadFormData(ROUTES.UPLOAD_REEL, formData);
+      // Upload with progress tracking
+      const response = await uploadFormData(
+        ROUTES.UPLOAD_REEL, 
+        formData,
+        (progress) => {
+          setUploadProgress(progress);
+        }
+      );
       
       Alert.alert('Success', 'Video uploaded successfully!', [
         {
           text: 'OK',
           onPress: () => {
-        // Reset form
-        setSelectedVideo(null);
-        setSelectedProduct(null);
-        setDescription('');
-        navigation.goBack();
+            // Reset form
+            setSelectedVideo(null);
+            setSelectedProduct(null);
+            setDescription('');
+            // Only go back if there's a screen to go back to
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            }
+            // Otherwise, stay on the same screen (form is already reset)
           },
         },
       ]);
@@ -273,35 +288,9 @@ const Post = () => {
       );
     } finally {
       setUploading(false);
+      setUploadProgress(0);
     }
   };
-
-  const renderProductItem = ({item}) => (
-    <TouchableOpacity
-      style={[
-        styles.productItem,
-        {borderBottomColor: borderColor},
-        selectedProduct?.id === item.id && styles.selectedProductItem,
-      ]}
-      onPress={() => handleProductSelect(item)}
-      activeOpacity={0.7}>
-      <Image source={{uri: item.image}} style={styles.productImage} />
-      <View style={styles.productDetails}>
-        <Text style={[styles.productName, {color: textColor}]}>
-          {item.name}
-        </Text>
-        <Text style={[styles.productCategory, {color: textColor}]}>
-          {item.category}
-        </Text>
-        <Text style={[styles.productPrice, {color: Colors.PRIMARY}]}>
-          {item.price}
-        </Text>
-      </View>
-      {selectedProduct?.id === item.id && (
-        <Ionicons name="checkmark-circle" size={24} color={Colors.PRIMARY} />
-      )}
-    </TouchableOpacity>
-  );
 
   return (
     <View style={[styles.container, {backgroundColor}]}>
@@ -322,7 +311,14 @@ const Post = () => {
               styles.uploadButtonDisabled,
           ]}>
           {uploading ? (
-            <ActivityIndicator size="small" color={Colors.PRIMARY} />
+            <View style={styles.uploadProgressContainer}>
+              <ActivityIndicator size="large" color={Colors.PRIMARY} />
+              {uploadProgress > 0 && (
+                <View style={styles.uploadProgressOverlay}>
+                  <Text style={styles.uploadProgressText}>{uploadProgress}%</Text>
+                </View>
+              )}
+            </View>
           ) : (
             <Text style={styles.uploadButtonText}>Upload</Text>
           )}
@@ -434,42 +430,64 @@ const Post = () => {
             Products List
           </Text>
           
-          <View style={styles.productsList}>
-            {products.map((product, index) => (
-              <TouchableOpacity
-                key={product.id + index}
-                style={[
-                  styles.productItem,
-                  {borderBottomColor: borderColor},
-                  selectedProduct?.id === product.id && styles.selectedProductItem,
-                ]}
-                onPress={() => handleProductSelect(product)}
-                activeOpacity={0.7}>
-                <Image
-                  source={{uri: product.image}}
-                  style={styles.productImage}
-                />
-                <View style={styles.productDetails}>
-                  <Text style={[styles.productName, {color: textColor}]}>
-                    {product.name}
-                  </Text>
-                  <Text style={[styles.productCategory, {color: textColor}]}>
-                    {product.category}
-                  </Text>
-                  <Text style={[styles.productPrice, {color: Colors.PRIMARY}]}>
-                    {product.price}
+          {loadingProducts ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color={Colors.PRIMARY} />
+              <Text style={[styles.loadingText, {color: textColor}]}>
+                Loading products...
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.productsList}>
+              {products.length > 0 ? (
+                products.map((product, index) => (
+                  <TouchableOpacity
+                    key={product.id + index}
+                    style={[
+                      styles.productItem,
+                      {borderBottomColor: borderColor},
+                      selectedProduct?.id === product.id && styles.selectedProductItem,
+                    ]}
+                    onPress={() => handleProductSelect(product)}
+                    activeOpacity={0.7}>
+                    <Image
+                      source={{uri: product.image}}
+                      style={styles.productImage}
+                    />
+                    <View style={styles.productDetails}>
+                      <Text style={[styles.productName, {color: textColor}]}>
+                        {product.name}
+                      </Text>
+                      <Text style={[styles.productCategory, {color: textColor}]}>
+                        {product.category}
+                      </Text>
+                      <Text style={[styles.productPrice, {color: Colors.PRIMARY}]}>
+                        {product.price}
+                      </Text>
+                    </View>
+                    {selectedProduct?.id === product.id && (
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={24}
+                        color={Colors.PRIMARY}
+                      />
+                    )}
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <View style={styles.emptyContainer}>
+                  <Ionicons
+                    name="cube-outline"
+                    size={moderateScale(48)}
+                    color={Colors.GRAY}
+                  />
+                  <Text style={[styles.emptyText, {color: Colors.GRAY}]}>
+                    No products available
                   </Text>
                 </View>
-                {selectedProduct?.id === product.id && (
-                  <Ionicons
-                    name="checkmark-circle"
-                    size={24}
-                    color={Colors.PRIMARY}
-                  />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
+              )}
+            </View>
+          )}
         </View>
       </ScrollView>
     </View>
@@ -508,6 +526,28 @@ const styles = StyleSheet.create({
   uploadButtonText: {
     color: Colors.PRIMARY,
     fontSize: moderateScale(14),
+    fontWeight: '600',
+  },
+  uploadProgressContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: scale(80),
+    minHeight: verticalScale(40),
+  },
+  uploadProgressOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  uploadProgressText: {
+    color: Colors.PRIMARY,
+    fontSize: moderateScale(9),
     fontWeight: '600',
   },
   scrollView: {
@@ -667,6 +707,24 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: moderateScale(14),
     fontWeight: '700',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: verticalScale(20),
+  },
+  loadingText: {
+    fontSize: moderateScale(12),
+    marginTop: verticalScale(8),
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: verticalScale(40),
+  },
+  emptyText: {
+    fontSize: moderateScale(14),
+    marginTop: verticalScale(12),
   },
 });
 

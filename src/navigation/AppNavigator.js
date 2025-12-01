@@ -22,6 +22,7 @@ import VerifyOTPLogin from '../auth/Login/VerifyOTPLogin';
 import Settings from '../screens/user/Settings';
 import HelpCenter from '../screens/user/HelpCenter';
 import MyProfile from '../screens/user/MyProfile';
+import EditProfile from '../screens/merchant/EditProfile';
 const Stack = createNativeStackNavigator();
 
 const INTRO_COMPLETED_KEY = 'intro_completed';
@@ -135,6 +136,7 @@ const AppNavigator = () => {
         <Stack.Screen name="Settings" component={Settings} />
         <Stack.Screen name="HelpCenter" component={HelpCenter} />
         <Stack.Screen name="MyProfile" component={MyProfile} />
+        <Stack.Screen name="EditProfile" component={EditProfile} />
         <Stack.Screen name="MerchantBottomTab" component={MerchantBottomTab} />
         <Stack.Screen name="UserBottomTab" component={UserBottomTab} />
       </Stack.Navigator>

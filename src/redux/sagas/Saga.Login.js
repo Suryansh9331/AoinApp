@@ -7,7 +7,7 @@ import {
   login_Failed,
 } from "../slices/authSlice";
 import { ROUTES } from "../../utils/Routes";
-import { postData } from "../../utils/APiCall";
+import { postData, setAuthToken } from "../../utils/APiCall";
 
 function* loginWorker(action) {
   console.log(action,'action');
@@ -53,6 +53,9 @@ function* loginWorker(action) {
 
     // Extract user data
     const userData = response?.data?.user ?? response?.data ?? response;
+
+    // Set auth token for API calls
+    setAuthToken(token);
 
     // Success case - pass the full response
     yield put(

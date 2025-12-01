@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,16 @@ import {
   TouchableOpacity,
   Dimensions,
   FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import {useRoute, useNavigation} from '@react-navigation/native';
+import {useDispatch, useSelector} from 'react-redux';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
 import useAppTheme from '../../theme/useAppTheme';
 import {getThemeColors} from '../../theme/themeColors';
 import {Colors} from '../../utils/Colors';
+import {fetchMerchantReels_Request} from '../../redux/slices/reelSlice';
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
 const POST_ITEM_SIZE = (SCREEN_WIDTH - 4) / 3;
@@ -24,125 +27,93 @@ const Profile = ({routeParams}) => {
   const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
   const route = useRoute();
   const navigation = useNavigation();
+  const dispatch = useDispatch();
   const userId = routeParams?.userId || route.params?.userId;
 
+  // Get reels from Redux store
+  const {reels, loading, error} = useSelector(state => state.reels);
+
+  // Fetch reels on component mount
+  useEffect(() => {
+    dispatch(fetchMerchantReels_Request({page: 1, per_page: 20}));
+  }, [dispatch]);
+
+  // Get current user data for profile
+  const userData = useSelector(state => state.auth.data);
+  const userInfo = userData?.data || userData || {};
 
   // Sample profile data
   const profileData = {
-    username: userId ? `merchant_${userId}` : '@Shivm_w',
-    fullName: 'Merchant Store',
-    bio: '', // Empty bio - will show "Tap to add bio"
-    avatar: 'https://i.pravatar.cc/150?img=1',
-    posts: 125,
+    username: userId ? `merchant_${userId}` : userInfo.username || userInfo.user_name || '@merchant',
+    fullName: userId ? 'Merchant Store' : userInfo.first_name && userInfo.last_name 
+      ? `${userInfo.first_name} ${userInfo.last_name}` 
+      : userInfo.name || 'Merchant Store',
+    bio: userInfo.bio || userInfo.description || '', // Empty bio - will show "Tap to add bio"
+    avatar: userInfo.avatar || userInfo.avatar_url || userInfo.profile_picture || 
+      userInfo.profile_image || 'https://i.pravatar.cc/150?img=1',
+    posts: reels?.length || 0,
     followers: 38,
     following: 14,
-    likes: 91,
+    likes: reels?.reduce((sum, reel) => sum + (reel.likes || 0), 0) || 0,
     isFollowing: false,
     isOwnProfile: !userId,
   };
 
-  // Sample posts data with view counts
-  const postsData = [
-    {
-      id: '1',
-      image: 'https://picsum.photos/400/400?random=1',
-      views: '13M',
-      likes: 1250,
-      comments: 45,
-    },
-    {
-      id: '2',
-      image: 'https://picsum.photos/400/400?random=2',
-      views: '18M',
-      likes: 890,
-      comments: 23,
-    },
-    {
-      id: '3',
-      image: 'https://picsum.photos/400/400?random=3',
-      views: '12M',
-      likes: 2100,
-      comments: 67,
-    },
-    {
-      id: '4',
-      image: 'https://picsum.photos/400/400?random=4',
-      views: '1M',
-      likes: 567,
-      comments: 12,
-    },
-    {
-      id: '5',
-      image: 'https://picsum.photos/400/400?random=5',
-      views: '5M',
-      likes: 1890,
-      comments: 89,
-    },
-    {
-      id: '6',
-      image: 'https://picsum.photos/400/400?random=6',
-      views: '8M',
-      likes: 2340,
-      comments: 156,
-    },
-    {
-      id: '7',
-      image: 'https://picsum.photos/400/400?random=7',
-      views: '3M',
-      likes: 980,
-      comments: 34,
-    },
-    {
-      id: '8',
-      image: 'https://picsum.photos/400/400?random=8',
-      views: '6M',
-      likes: 1450,
-      comments: 56,
-    },
-    {
-      id: '9',
-      image: 'https://picsum.photos/400/400?random=9',
-      views: '2M',
-      likes: 1120,
-      comments: 78,
-    },
-  ];
+  // Format views count
+  const formatViews = (views) => {
+    if (!views) return '0';
+    if (views >= 1000000) {
+      return (views / 1000000).toFixed(1) + 'M';
+    } else if (views >= 1000) {
+      return (views / 1000).toFixed(1) + 'K';
+    }
+    return views.toString();
+  };
 
-  const [pressedPosts, setPressedPosts] = useState({});
+  const [pressedReels, setPressedReels] = useState({});
 
-  const renderPostItem = ({item}) => {
-    const isPressed = pressedPosts[item.id] || false;
+  const renderReelItem = ({item}) => {
+    const isPressed = pressedReels[item.id] || false;
+    const thumbnail = item.thumbnail || item.videoUrl;
+    const views = formatViews(item.views || item.views_count || 0);
 
     return (
       <TouchableOpacity
         style={[styles.postItem, {borderColor: borderColor}]}
         activeOpacity={1}
-        onPressIn={() => setPressedPosts(prev => ({...prev, [item.id]: true}))}
+        onPressIn={() => setPressedReels(prev => ({...prev, [item.id]: true}))}
         onPressOut={() =>
-          setPressedPosts(prev => ({...prev, [item.id]: false}))
-        }>
+          setPressedReels(prev => ({...prev, [item.id]: false}))
+        }
+        onPress={() => {
+          // Navigate to reels view or play video
+          navigation.navigate('MerchantBottomTab', {
+            navigateToTab: 'Home',
+            reelId: item.id,
+          });
+        }}>
         <Image
-          source={{uri: item.image}}
+          source={{uri: thumbnail}}
           style={styles.postImage}
           resizeMode="cover"
         />
-        {/* Camera icon in top right */}
+        {/* Video icon in top right */}
         <View style={styles.cameraIconContainer}>
           <Ionicons name="videocam" size={14} color="#FFFFFF" />
         </View>
         {/* View count in bottom left */}
         <View style={styles.viewCountContainer}>
-          <Text style={styles.viewCountText}>{item.views}</Text>
+          <Text style={styles.viewCountText}>{views}</Text>
         </View>
         <View
           style={[styles.postOverlay, isPressed && styles.postOverlayVisible]}>
           <View style={styles.postStats}>
             <Ionicons name="heart" size={16} color="#FFFFFF" />
-            <Text style={styles.postStatText}>{item.likes}</Text>
+            <Text style={styles.postStatText}>{formatViews(item.likes || 0)}</Text>
           </View>
           <View style={styles.postStats}>
-            <Ionicons name="chatbubble" size={16} color="#FFFFFF" />
-            <Text style={styles.postStatText}>{item.comments}</Text>
+            <Ionicons name="share-outline" size={16} color="#FFFFFF" />
+            <Text style={styles.postStatText}>{formatViews(item.shares || 0)}</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -178,8 +149,12 @@ const Profile = ({routeParams}) => {
             <Image source={{uri: profileData.avatar}} style={styles.avatar} />
           </View>
 
-          {/* Username */}
+          {/* Merchant Name */}
           <Text style={[styles.username, {color: textColor}]}>
+            {profileData.fullName}
+          </Text>
+          {/* Username below name */}
+          <Text style={[styles.userHandle, {color: textColor}]}>
             {profileData.username}
           </Text>
 
@@ -187,10 +162,10 @@ const Profile = ({routeParams}) => {
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
               <Text style={[styles.statNumber, {color: textColor}]}>
-                {profileData.following}
+                {profileData.posts}
               </Text>
               <Text style={[styles.statLabel, {color: textColor}]}>
-                Following
+                Reels
               </Text>
             </View>
             <View style={styles.statItem}>
@@ -215,7 +190,8 @@ const Profile = ({routeParams}) => {
           <View style={styles.actionButtons}>
             <TouchableOpacity
               style={[styles.editButton, {borderColor: borderColor}]}
-              activeOpacity={0.7}>
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('EditProfile')}>
               <Text style={[styles.editButtonText, {color: Colors.PRIMARY}]}>
                 Edit profile
               </Text>
@@ -244,28 +220,45 @@ const Profile = ({routeParams}) => {
         {/* Content Display Option */}
         <View style={styles.contentOptionContainer}>
           <TouchableOpacity style={styles.contentOptionButton}>
-            <Ionicons name="ellipsis-horizontal" size={20} color={textColor} />
+            <Ionicons name="videocam-outline" size={20} color={textColor} />
           </TouchableOpacity>
         </View>
 
-        {/* Posts Grid */}
+        {/* Reels Grid */}
         <View style={styles.postsGridContainer}>
-          <FlatList
-            data={postsData}
-            renderItem={renderPostItem}
-            keyExtractor={item => item.id}
-            numColumns={3}
-            scrollEnabled={false}
-            contentContainerStyle={styles.postsGrid}
-          />
-          
-          {/* Upload Video Overlay */}
-          <View style={styles.uploadOverlay}>
-            <Text style={styles.uploadOverlayText}>
-              Tap to upload a new video
-            </Text>
-            <Ionicons name="arrow-down" size={20} color="#FFFFFF" style={styles.uploadArrow} />
-          </View>
+          {loading && reels.length === 0 ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={Colors.PRIMARY} />
+              <Text style={[styles.loadingText, {color: textColor}]}>
+                Loading reels...
+              </Text>
+            </View>
+          ) : error ? (
+            <View style={styles.errorContainer}>
+              <Text style={[styles.errorText, {color: Colors.PRIMARY}]}>
+                {error}
+              </Text>
+            </View>
+          ) : reels.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="videocam-outline" size={48} color={textColor} />
+              <Text style={[styles.emptyText, {color: textColor}]}>
+                No reels yet
+              </Text>
+              <Text style={[styles.emptySubText, {color: textColor}]}>
+                Upload your first reel to get started
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={reels}
+              renderItem={renderReelItem}
+              keyExtractor={item => item.id || item.reel_id?.toString()}
+              numColumns={3}
+              scrollEnabled={false}
+              contentContainerStyle={styles.postsGrid}
+            />
+          )}
         </View>
       </ScrollView>
     </View>
@@ -309,11 +302,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   username: {
-    fontSize: moderateScale(16),
-    fontWeight: '600',
+    fontSize: moderateScale(18),
+    fontWeight: '700',
     textAlign: 'center',
     marginTop: verticalScale(12),
+    marginBottom: verticalScale(4),
+  },
+  userHandle: {
+    fontSize: moderateScale(14),
+    fontWeight: '400',
+    textAlign: 'center',
     marginBottom: verticalScale(16),
+    opacity: 0.7,
   },
   scrollView: {
     flex: 1,
@@ -471,27 +471,6 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(11),
     fontWeight: '600',
   },
-  uploadOverlay: {
-    position: 'absolute',
-    bottom: verticalScale(20),
-    right: scale(16),
-    backgroundColor: 'rgba(255, 165, 0, 0.9)',
-    borderRadius: moderateScale(12),
-    paddingHorizontal: scale(16),
-    paddingVertical: verticalScale(12),
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: scale(8),
-    maxWidth: SCREEN_WIDTH * 0.6,
-  },
-  uploadOverlayText: {
-    color: '#FFFFFF',
-    fontSize: moderateScale(13),
-    fontWeight: '600',
-  },
-  uploadArrow: {
-    marginLeft: scale(4),
-  },
   postOverlay: {
     position: 'absolute',
     top: 0,
@@ -517,6 +496,40 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: moderateScale(14),
     fontWeight: '600',
+  },
+  loadingContainer: {
+    paddingVertical: verticalScale(40),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: verticalScale(12),
+    fontSize: moderateScale(14),
+  },
+  errorContainer: {
+    paddingVertical: verticalScale(40),
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: scale(20),
+  },
+  errorText: {
+    fontSize: moderateScale(14),
+    textAlign: 'center',
+  },
+  emptyContainer: {
+    paddingVertical: verticalScale(60),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    marginTop: verticalScale(16),
+    fontSize: moderateScale(16),
+    fontWeight: '600',
+  },
+  emptySubText: {
+    marginTop: verticalScale(8),
+    fontSize: moderateScale(13),
+    opacity: 0.6,
   },
 });
 

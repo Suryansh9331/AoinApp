@@ -41,9 +41,20 @@ export const handleApiError = error => {
   }
 
   if (error.request) {
+    // Log more details for network errors
+    console.log('Network error details:', {
+      message: error.message,
+      code: error.code,
+      config: {
+        url: error.config?.url,
+        method: error.config?.method,
+        baseURL: error.config?.baseURL,
+      },
+    });
     throw {
       type: 'network',
-      message: 'Network error, no response received',
+      message: 'Network error, no response received. Please check your internet connection and server URL.',
+      code: error.code,
     };
   }
 
@@ -101,7 +112,7 @@ export const deleteData = async (endpoint, body = {}) => {
   }
 };
 
-export const uploadFormData = async (endpoint, formData) => {
+export const uploadFormData = async (endpoint, formData, onProgress = null) => {
   try {
     const response = await axios.post(`${BASE_URL}${endpoint}`, formData, {
       headers: {
@@ -109,6 +120,14 @@ export const uploadFormData = async (endpoint, formData) => {
         ...(authToken && { Authorization: `Bearer ${authToken}` }),
       },
       timeout: 60000, // 60 seconds timeout for uploads
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+          onProgress(percentCompleted);
+        }
+      },
     });
     return response.data;
   } catch (error) {

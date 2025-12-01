@@ -13,17 +13,41 @@ import { getThemeColors } from '../../theme/themeColors';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const HEADER_HEIGHT = 56; 
 
-const VideoReel = ({ data = [] }) => {
+const VideoReel = ({ data = [], initialReelId = null }) => {
   const theme = useAppTheme();
   const { backgroundColor } = getThemeColors(theme);
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef(null);
   const [reelsData, setReelsData] = useState(data);
   const [containerHeight, setContainerHeight] = useState(SCREEN_HEIGHT - HEADER_HEIGHT);
+  const hasScrolledToInitialReel = useRef(false);
 
   useEffect(() => {
     setReelsData(data);
   }, [data]);
+
+  // Scroll to specific reel when initialReelId is provided
+  useEffect(() => {
+    if (initialReelId && reelsData.length > 0 && containerHeight > 0 && !hasScrolledToInitialReel.current) {
+      const reelIndex = reelsData.findIndex(reel => 
+        reel.id === initialReelId || 
+        reel.id?.toString() === initialReelId?.toString() ||
+        reel.reel_id?.toString() === initialReelId?.toString()
+      );
+      
+      if (reelIndex !== -1 && flatListRef.current) {
+        setTimeout(() => {
+          flatListRef.current?.scrollToIndex({
+            index: reelIndex,
+            animated: true,
+            viewPosition: 0.5,
+          });
+          setCurrentIndex(reelIndex);
+          hasScrolledToInitialReel.current = true;
+        }, 300); // Small delay to ensure layout is ready
+      }
+    }
+  }, [initialReelId, reelsData, containerHeight]);
 
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
     if (viewableItems.length > 0) {
@@ -42,22 +66,18 @@ const VideoReel = ({ data = [] }) => {
     minimumViewTime: 100,
   }).current;
 
+  // These handlers are kept for backward compatibility
+  // But VideoReelItem now uses Redux actions directly
   const handleLike = (id, isLiked) => {
-    setReelsData(prevData =>
-      prevData.map(item =>
-        item.id === id
-          ? { ...item, isLiked, likes: isLiked ? item.likes + 1 : item.likes - 1 }
-          : item
-      )
-    );
+    // Redux actions are handled in VideoReelItem
+    // This is just for any parent component callbacks
+    // Local state will be updated via data prop from Redux
   };
 
   const handleShare = (id) => {
-    setReelsData(prevData =>
-      prevData.map(item =>
-        item.id === id ? { ...item, shares: item.shares + 1 } : item
-      )
-    );
+    // Redux actions are handled in VideoReelItem
+    // This is just for any parent component callbacks
+    // Local state will be updated via data prop from Redux
   };
 
   const renderItem = ({ item, index }) => {
@@ -129,6 +149,17 @@ const VideoReel = ({ data = [] }) => {
         scrollEventThrottle={16}
         bounces={false}
         onMomentumScrollEnd={onMomentumScrollEnd}
+        onScrollToIndexFailed={(info) => {
+          // Handle scroll to index failure
+          const wait = new Promise(resolve => setTimeout(resolve, 500));
+          wait.then(() => {
+            flatListRef.current?.scrollToIndex({ 
+              index: info.index, 
+              animated: true,
+              viewPosition: 0.5 
+            });
+          });
+        }}
       />
     </View>
   );

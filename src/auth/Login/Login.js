@@ -63,6 +63,7 @@ const Login = () => {
     }
 
     setLoading(true);
+   
     try {
       const response = await postData(ROUTES.MERCHANT_LOGIN, {
         business_email: businessEmail.trim(),
@@ -91,15 +92,7 @@ const Login = () => {
             })
           );
 
-          // The AppNavigator will automatically redirect to BottomTab based on token
-          Alert.alert('Success', response?.message || 'Login successful!', [
-            {
-              text: 'OK',
-              onPress: () => {
-                // AppNavigator will automatically show MerchantBottomTab when token is set
-              },
-            },
-          ]);
+         
         } else {
           Alert.alert('Error', 'Failed to login. Please try again.');
         }

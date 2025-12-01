@@ -17,11 +17,17 @@ import { Colors } from '../../utils/Colors';
 import useAppTheme from '../../theme/useAppTheme';
 import { getThemeColors } from '../../theme/themeColors';
 import { useNavigation } from '@react-navigation/native';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import {
+  likeReel_Request,
+  unlikeReel_Request,
+  shareReel_Request,
+} from '../../redux/slices/reelSlice';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
   const navigation = useNavigation();
+  const dispatch = useDispatch();
   const userData = useSelector(state => state.auth.data);
   const userRole = userData?.data?.role || userData?.role || 'user';
   const theme = useAppTheme();
@@ -44,8 +50,17 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
     }
   }, [isActive, isPaused]);
 
+  // Sync local state with item props (from Redux)
+  useEffect(() => {
+    setIsLiked(item.isLiked || false);
+    setLikes(item.likes || 0);
+  }, [item.isLiked, item.likes]);
+
   const handleLike = () => {
     const newLikedState = !isLiked;
+    const reelId = item.reel_id || item.id;
+    
+    // Optimistically update UI
     setIsLiked(newLikedState);
     setLikes(prev => newLikedState ? prev + 1 : prev - 1);
     
@@ -75,6 +90,14 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
       ]),
     ]).start();
 
+    // Dispatch Redux action
+    if (newLikedState) {
+      dispatch(likeReel_Request({ reelId }));
+    } else {
+      dispatch(unlikeReel_Request({ reelId }));
+    }
+
+    // Callback for parent component
     if (onLike) {
       onLike(item.id, newLikedState);
     }
@@ -103,13 +126,20 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
   };
 
   const handleShare = async () => {
+    const reelId = item.reel_id || item.id;
+    
     try {
+      // Dispatch share action to API
+      dispatch(shareReel_Request({ reelId }));
+
+      // Native share functionality
       const result = await Share.share({
         message: `Check out this amazing reel by ${item.username}: ${item.caption}`,
         url: item.videoUrl,
         title: 'Share Reel',
       });
 
+      // Callback for parent component
       if (onShare) {
         onShare(item.id);
       }

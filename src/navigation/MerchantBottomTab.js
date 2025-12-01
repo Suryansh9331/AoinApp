@@ -97,12 +97,17 @@ const MerchantBottomTab = () => {
             ? { userId: route.params.userId }
             : undefined;
           
+          // Pass reelId to Home component
+          const homeParams = key === 'Home' && route.params?.reelId
+            ? { reelId: route.params.reelId }
+            : undefined;
+          
           return (
             <View style={[styles.slide, { backgroundColor }]} key={key}>
               <ScreenComponent 
                 navigation={navigation} 
                 routeKey={key}
-                routeParams={profileParams}
+                routeParams={profileParams || homeParams}
               />
             </View>
           );

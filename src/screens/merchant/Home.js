@@ -1,20 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, StatusBar, Text } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, StyleSheet, StatusBar, Text, ActivityIndicator } from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
+import { useRoute } from '@react-navigation/native';
 import VideoReel from '../../components/VideoReel/VideoReel';
 import useAppTheme from '../../theme/useAppTheme';
 import { getThemeColors } from '../../theme/themeColors';
-import reelsData from '../../data/reels';
 import { moderateScale } from 'react-native-size-matters';
+import { fetchMerchantReels_Request } from '../../redux/slices/reelSlice';
 
-const Home = () => {
+const Home = ({ routeParams }) => {
   const theme = useAppTheme();
   const { backgroundColor } = getThemeColors(theme);
-  const [reels, setReels] = useState([]);
+  const dispatch = useDispatch();
+  const route = useRoute();
+  
+  // Get reels from Redux store
+  const { reels, loading, error } = useSelector(state => state.reels);
+  
+  // Get reelId from route params (passed from Profile screen)
+  const reelId = routeParams?.reelId || route.params?.reelId;
 
   useEffect(() => {
-    // Load reels data from JSON
-    setReels(reelsData);
-  }, []);
+    // Fetch merchant reels on component mount
+    dispatch(fetchMerchantReels_Request({ page: 1, per_page: 20 }));
+  }, [dispatch]);
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
@@ -30,7 +39,18 @@ const Home = () => {
           <View style={styles.headerRight} />
         </View>
       </View>
-      <VideoReel data={reels} />
+      {loading && reels.length === 0 ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#F2631F" />
+          <Text style={styles.loadingText}>Loading reels...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : (
+        <VideoReel data={reels} initialReelId={reelId} />
+      )}
     </View>
   );
 };
@@ -72,9 +92,33 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000000',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: moderateScale(14),
+    color: '#FFFFFF',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000000',
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    fontSize: moderateScale(14),
+    color: '#FF3040',
+    textAlign: 'center',
+  },
 });
 
 export default Home;
+
 
 
 

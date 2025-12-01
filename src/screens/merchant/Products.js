@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   Image,
   FlatList,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -16,94 +18,72 @@ import useAppTheme from '../../theme/useAppTheme';
 import {getThemeColors} from '../../theme/themeColors';
 import {Colors} from '../../utils/Colors';
 import Header from '../../components/Header/Header';
-
-// Sample products data
-const PRODUCTS_DATA = [
-  {
-    id: '1',
-    name: 'Classic Cotton T-Shirt',
-    category: "Men's Fashion / T-Shirts",
-    price: '₹1,299',
-    image: 'https://picsum.photos/200/200?random=1',
-  },
-  {
-    id: '2',
-    name: 'Summer Floral Dress',
-    category: "Women's Fashion / Dresses",
-    price: '₹2,499',
-    image: 'https://picsum.photos/200/200?random=2',
-  },
-  {
-    id: '3',
-    name: 'Wide Brim Sun Hat',
-    category: 'Accessories / Hats',
-    price: '₹799',
-    image: 'https://picsum.photos/200/200?random=3',
-  },
-  {
-    id: '4',
-    name: 'Scented Soy Candle',
-    category: 'Home Decor / Candles',
-    price: '₹499',
-    image: 'https://picsum.photos/200/200?random=4',
-  },
-  {
-    id: '5',
-    name: 'Hydrating Face Serum',
-    category: 'Beauty / Skincare',
-    price: '₹1,599',
-    image: 'https://picsum.photos/200/200?random=5',
-  },
-  {
-    id: '6',
-    name: 'Hydrating Face Serum',
-    category: 'Beauty / Skincare',
-    price: '₹1,599',
-    image: 'https://picsum.photos/200/200?random=6',
-  },
-  {
-    id: '7',
-    name: 'Hydrating Face Serum',
-    category: 'Beauty / Skincare',
-    price: '₹1,599',
-    image: 'https://picsum.photos/200/200?random=7',
-  },
-  {
-    id: '8',
-    name: 'Leather Wallet',
-    category: 'Accessories / Wallets',
-    price: '₹1,899',
-    image: 'https://picsum.photos/200/200?random=8',
-  },
-  {
-    id: '9',
-    name: 'Wireless Headphones',
-    category: 'Electronics / Audio',
-    price: '₹3,999',
-    image: 'https://picsum.photos/200/200?random=9',
-  },
-  {
-    id: '10',
-    name: 'Running Shoes',
-    category: "Men's Fashion / Footwear",
-    price: '₹4,499',
-    image: 'https://picsum.photos/200/200?random=10',
-  },
-];
+import {getData} from '../../utils/APiCall';
+import {ROUTES} from '../../utils/Routes';
 
 const Products = () => {
   const navigation = useNavigation();
   const theme = useAppTheme();
   const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
   const [searchQuery, setSearchQuery] = useState('');
-  const [products, setProducts] = useState(PRODUCTS_DATA);
+  const [products, setProducts] = useState([]);
+  const [allProducts, setAllProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Format price to Indian currency format
+  const formatPrice = price => {
+    return `₹${parseFloat(price).toLocaleString('en-IN', {
+      maximumFractionDigits: 2,
+    })}`;
+  };
+
+  // Fetch products from API
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const response = await getData(ROUTES.PRODUCTS_AVAILABLE);
+      
+      if (response && response.status === 'success' && response.data) {
+        // Map API response to UI format
+        const mappedProducts = response.data.map(item => ({
+          id: item.product_id.toString(),
+          product_id: item.product_id,
+          name: item.product_name,
+          category: item.category_name,
+          price: formatPrice(item.selling_price),
+          selling_price: item.selling_price,
+          stock_qty: item.stock_qty,
+          category_id: item.category_id,
+          // Use placeholder image if no image URL in API response
+          image: `https://picsum.photos/200/200?random=${item.product_id}`,
+        }));
+        
+        setAllProducts(mappedProducts);
+        setProducts(mappedProducts);
+      } else {
+        setAllProducts([]);
+        setProducts([]);
+      }
+    } catch (error) {
+      console.log('Error fetching products:', error);
+      Alert.alert('Error', 'Failed to load products. Please try again.');
+      setAllProducts([]);
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSearch = text => {
     setSearchQuery(text);
     if (text.trim() === '') {
-      setProducts(PRODUCTS_DATA);
+      setProducts(allProducts);
     } else {
-      const filtered = PRODUCTS_DATA.filter(
+      const filtered = allProducts.filter(
         product =>
           product.name.toLowerCase().includes(text.toLowerCase()) ||
           product.category.toLowerCase().includes(text.toLowerCase()),
@@ -211,25 +191,34 @@ const Products = () => {
       </View>
 
       {/* Products List */}
-      <FlatList
-        data={products}
-        renderItem={renderProductItem}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons
-              name="search-outline"
-              size={moderateScale(48)}
-              color={Colors.GRAY}
-            />
-            <Text style={[styles.emptyText, {color: Colors.GRAY}]}>
-              No products found
-            </Text>
-          </View>
-        }
-      />
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.PRIMARY} />
+          <Text style={[styles.loadingText, {color: textColor}]}>
+            Loading products...
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={products}
+          renderItem={renderProductItem}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons
+                name="search-outline"
+                size={moderateScale(48)}
+                color={Colors.GRAY}
+              />
+              <Text style={[styles.emptyText, {color: Colors.GRAY}]}>
+                {searchQuery.trim() ? 'No products found' : 'No products available'}
+              </Text>
+            </View>
+          }
+        />
+      )}
     </View>
   );
 };
@@ -337,9 +326,20 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14),
     marginTop: verticalScale(12),
   },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: verticalScale(60),
+  },
+  loadingText: {
+    fontSize: moderateScale(14),
+    marginTop: verticalScale(12),
+  },
 });
 
 export default Products;
+
 
 
 
