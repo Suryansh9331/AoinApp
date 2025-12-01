@@ -39,13 +39,13 @@ const SelectRoleScreen = () => {
       <View style={styles.roleContainer}>
         <TouchableOpacity
           style={styles.roleButton}
-          onPress={() => handleRoleSelect('user')}
+          onPress={() => handleRoleSelect('merchant')}
           activeOpacity={0.8}>
           <View style={styles.buttonContent}>
           
             <View style={styles.buttonTextContainer}>
               <Text style={styles.roleTitle}>
-                Signin as a Merchants 
+                Signin as a Merchant
               </Text>
             </View>
           </View>
@@ -53,7 +53,7 @@ const SelectRoleScreen = () => {
 
         <TouchableOpacity
           style={styles.roleButton}
-          onPress={() => handleRoleSelect('merchant')}
+          onPress={() => handleRoleSelect('user')}
           activeOpacity={0.8}>
           <View style={styles.buttonContent}>
             

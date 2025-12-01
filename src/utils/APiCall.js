@@ -100,3 +100,18 @@ export const deleteData = async (endpoint, body = {}) => {
     return null;
   }
 };
+
+export const uploadFormData = async (endpoint, formData) => {
+  try {
+    const response = await axios.post(`${BASE_URL}${endpoint}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        ...(authToken && { Authorization: `Bearer ${authToken}` }),
+      },
+      timeout: 60000, // 60 seconds timeout for uploads
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
