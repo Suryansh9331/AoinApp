@@ -10,7 +10,7 @@ const Explore = () => {
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
-      <Text style={[styles.title, { color: textColor }]}>Explore</Text>
+      <Text style={[styles.title, { color: textColor }]}>Notifications</Text>
     </View>
   );
 };
@@ -28,6 +28,8 @@ const styles = StyleSheet.create({
 });
 
 export default Explore;
+
+
 
 
 

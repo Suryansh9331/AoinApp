@@ -5,8 +5,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
+  Platform,
+  StatusBar,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useNavigation, CommonActions} from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
 import {useDispatch} from 'react-redux';
@@ -15,12 +18,14 @@ import {getThemeColors} from '../../theme/themeColors';
 import {Colors} from '../../utils/Colors';
 import {clearCredentials} from '../../redux/slices/authSlice';
 import {clearAuthToken} from '../../utils/APiCall';
+import {removeItem, AUTH_STORAGE_KEY} from '../../utils/MMKVStorage';
 
 const Profile = () => {
   const theme = useAppTheme();
   const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
   const navigation = useNavigation();
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
 
   const handleLogout = () => {
     Alert.alert(
@@ -37,7 +42,15 @@ const Profile = () => {
           onPress: () => {
             dispatch(clearCredentials());
             clearAuthToken();
-            // Navigation will be handled by AppNavigator based on auth state
+            // Clear auth data from MMKV storage
+            removeItem(AUTH_STORAGE_KEY);
+            // Immediately navigate to Splash screen to start from beginning
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [{ name: 'Splash' }],
+              })
+            );
           },
         },
       ]
@@ -94,8 +107,17 @@ const Profile = () => {
 
   return (
     <View style={[styles.container, {backgroundColor}]}>
+      <StatusBar
+        barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={backgroundColor}
+        translucent={false}
+      />
       {/* Header */}
-      <View style={[styles.header, {borderBottomColor: borderColor}]}>
+      <View style={[
+        styles.header, 
+        {borderBottomColor: borderColor},
+        Platform.OS === 'ios' && {paddingTop: insets.top + verticalScale(12)}
+      ]}>
         <View style={styles.headerLeft}>
           {navigation.canGoBack() && (
             <TouchableOpacity

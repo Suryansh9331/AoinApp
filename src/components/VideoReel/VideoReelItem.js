@@ -237,11 +237,19 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
         <TouchableOpacity 
           style={styles.avatarContainer} 
           onPress={() => {
-            const bottomTabName = userRole === 'merchant' ? 'MerchantBottomTab' : 'UserBottomTab';
-            navigation.navigate(bottomTabName, { 
-              navigateToTab: 'Profile',
-              userId: item.userId || item.id 
-            });
+            if (userRole === 'merchant') {
+              // For merchant, navigate to Profile tab
+              navigation.navigate('MerchantBottomTab', { 
+                navigateToTab: 'Profile',
+                userId: item.merchant_id || item.userId || item.id 
+              });
+            } else {
+              // For user, navigate to PerticularReelProfile screen
+              navigation.navigate('PerticularReelProfile', {
+                userId: item.merchant_id || item.userId || item.id,
+                merchantId: item.merchant_id || item.userId || item.id 
+              });
+            }
           }}
           activeOpacity={0.7}
         >

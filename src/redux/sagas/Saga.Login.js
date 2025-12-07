@@ -8,6 +8,7 @@ import {
 } from "../slices/authSlice";
 import { ROUTES } from "../../utils/Routes";
 import { postData, setAuthToken } from "../../utils/APiCall";
+import { setObject, AUTH_STORAGE_KEY, calculateTokenExpiry, DEFAULT_TOKEN_EXPIRY_DAYS } from "../../utils/MMKVStorage";
 
 function* loginWorker(action) {
   console.log(action,'action');
@@ -28,7 +29,6 @@ function* loginWorker(action) {
       password: password,
     };
     
-    console.log('Login payload being sent:', { ...loginPayload, password: '***' });
     const response = yield call(postData, ROUTES.LOGIN, loginPayload);
     console.log('Login response:', response);
     
@@ -56,6 +56,19 @@ function* loginWorker(action) {
 
     // Set auth token for API calls
     setAuthToken(token);
+
+    // Store auth data in MMKV for persistence with expiration
+    const expiresIn = response?.expires_in || response?.data?.expires_in; // in seconds
+    const expiresAt = calculateTokenExpiry(expiresIn);
+    const authData = {
+      token: token,
+      userData: userData,
+      timestamp: Date.now(),
+      expiresAt: expiresAt,
+      expiresIn: expiresIn || (DEFAULT_TOKEN_EXPIRY_DAYS * 24 * 60 * 60), // Store in seconds
+    };
+    setObject(AUTH_STORAGE_KEY, authData);
+    console.log('Auth data stored in MMKV (from saga) with expiration:', new Date(expiresAt).toLocaleString());
 
     // Success case - pass the full response
     yield put(

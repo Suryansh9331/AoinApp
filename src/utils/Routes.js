@@ -1,4 +1,4 @@
-export const BASE_URL = "http://10.247.126.132:5110";
+export const BASE_URL = "http://10.123.43.132:5110";
 
 
 export const ROUTES = Object.freeze({
@@ -10,9 +10,11 @@ export const ROUTES = Object.freeze({
   PRODUCTS_AVAILABLE: '/api/reels/products/available',
   MERCHANT_MY_REELS: '/api/reels/merchant/my',
   PUBLIC_REELS: '/api/reels/public',
-  LIKE_REEL: '/api/reels', // Will append /{reel_id}/like
-  UNLIKE_REEL: '/api/reels', // Will append /{reel_id}/unlike
-  SHARE_REEL: '/api/reels', // Will append /{reel_id}/share
+  LIKE_REEL: '/api/reels', 
+  UNLIKE_REEL: '/api/reels', 
+  SHARE_REEL: '/api/reels', 
+  FOLLOW_MERCHANT: '/api/merchants',
+  UNFOLLOW_MERCHANT: '/api/merchants',
 
   GOOGLE_LOGIN: 'https://api.aoinstore.com/api/auth/google',
 });

@@ -21,8 +21,11 @@ const Home = ({ routeParams }) => {
   const reelId = routeParams?.reelId || route.params?.reelId;
 
   useEffect(() => {
-    // Fetch merchant reels on component mount
-    dispatch(fetchMerchantReels_Request({ page: 1, per_page: 20 }));
+    // Only fetch reels if they're not already loaded
+    // Don't fetch if we have a reelId (coming from navigation) and reels exist
+    if (reels.length === 0 && !loading) {
+      dispatch(fetchMerchantReels_Request({ page: 1, per_page: 20 }));
+    }
   }, [dispatch]);
 
   return (
@@ -39,7 +42,9 @@ const Home = ({ routeParams }) => {
           <View style={styles.headerRight} />
         </View>
       </View>
-      {loading && reels.length === 0 ? (
+      {reels.length > 0 ? (
+        <VideoReel data={reels} initialReelId={reelId} />
+      ) : loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#F2631F" />
           <Text style={styles.loadingText}>Loading reels...</Text>
@@ -49,7 +54,9 @@ const Home = ({ routeParams }) => {
           <Text style={styles.errorText}>{error}</Text>
         </View>
       ) : (
-        <VideoReel data={reels} initialReelId={reelId} />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>No reels available</Text>
+        </View>
       )}
     </View>
   );

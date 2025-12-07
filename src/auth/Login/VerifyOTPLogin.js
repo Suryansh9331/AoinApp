@@ -13,6 +13,7 @@ import { getThemeColors } from '../../theme/themeColors';
 import { ROUTES } from '../../utils/Routes';
 import { postData, setAuthToken } from '../../utils/APiCall';
 import { login_Success } from '../../redux/slices/authSlice';
+import { setObject, AUTH_STORAGE_KEY, calculateTokenExpiry, DEFAULT_TOKEN_EXPIRY_DAYS } from '../../utils/MMKVStorage';
 
 const VerifyOTPLogin = ({ route }) => {
   const dispatch = useDispatch();
@@ -97,6 +98,20 @@ const VerifyOTPLogin = ({ route }) => {
         if (accessToken) {
           // Set auth token for API calls
           setAuthToken(accessToken);
+
+          // Store auth data in MMKV for persistence with expiration
+          const expiresIn = response?.expires_in || response?.data?.expires_in; // in seconds
+          const expiresAt = calculateTokenExpiry(expiresIn);
+          const authData = {
+            token: accessToken,
+            refreshToken: refreshToken,
+            userData: userData,
+            timestamp: Date.now(),
+            expiresAt: expiresAt,
+            expiresIn: expiresIn || (DEFAULT_TOKEN_EXPIRY_DAYS * 24 * 60 * 60), // Store in seconds
+          };
+          setObject(AUTH_STORAGE_KEY, authData);
+          console.log('Auth data stored in MMKV with expiration:', new Date(expiresAt).toLocaleString());
 
           // Store in Redux
           dispatch(

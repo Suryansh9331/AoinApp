@@ -21,10 +21,19 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
   const [reelsData, setReelsData] = useState(data);
   const [containerHeight, setContainerHeight] = useState(SCREEN_HEIGHT - HEADER_HEIGHT);
   const hasScrolledToInitialReel = useRef(false);
+  const lastInitialReelId = useRef(null);
 
   useEffect(() => {
     setReelsData(data);
   }, [data]);
+
+  // Reset scroll flag when initialReelId changes
+  useEffect(() => {
+    if (initialReelId !== lastInitialReelId.current) {
+      hasScrolledToInitialReel.current = false;
+      lastInitialReelId.current = initialReelId;
+    }
+  }, [initialReelId]);
 
   // Scroll to specific reel when initialReelId is provided
   useEffect(() => {
@@ -32,19 +41,34 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
       const reelIndex = reelsData.findIndex(reel => 
         reel.id === initialReelId || 
         reel.id?.toString() === initialReelId?.toString() ||
-        reel.reel_id?.toString() === initialReelId?.toString()
+        reel.reel_id?.toString() === initialReelId?.toString() ||
+        reel.reel_id === initialReelId
       );
       
       if (reelIndex !== -1 && flatListRef.current) {
-        setTimeout(() => {
-          flatListRef.current?.scrollToIndex({
-            index: reelIndex,
-            animated: true,
-            viewPosition: 0.5,
-          });
-          setCurrentIndex(reelIndex);
-          hasScrolledToInitialReel.current = true;
-        }, 300); // Small delay to ensure layout is ready
+        // Use requestAnimationFrame for smoother scroll
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            try {
+              flatListRef.current?.scrollToIndex({
+                index: reelIndex,
+                animated: false,
+                viewPosition: 0.5,
+              });
+              setCurrentIndex(reelIndex);
+              hasScrolledToInitialReel.current = true;
+            } catch (error) {
+              // Fallback to scrollToOffset if scrollToIndex fails
+              const offset = reelIndex * containerHeight;
+              flatListRef.current?.scrollToOffset({
+                offset,
+                animated: false,
+              });
+              setCurrentIndex(reelIndex);
+              hasScrolledToInitialReel.current = true;
+            }
+          }, 50);
+        });
       }
     }
   }, [initialReelId, reelsData, containerHeight]);

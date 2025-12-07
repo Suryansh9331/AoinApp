@@ -2,6 +2,55 @@ import {MMKV} from 'react-native-mmkv';
 
 export const AUTH_STORAGE_KEY = 'auth_data';
 
+// Token expiration constants (in milliseconds)
+export const DEFAULT_TOKEN_EXPIRY_DAYS = 30; // Default 30 days if not provided by API
+const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000; // 5 minutes buffer before actual expiry
+
+/**
+ * Calculate token expiration timestamp
+ * @param {number} expiresIn - Expiration time in seconds (optional)
+ * @returns {number} Expiration timestamp in milliseconds
+ */
+export const calculateTokenExpiry = (expiresIn = null) => {
+  if (expiresIn) {
+    // If expiresIn is provided in seconds, convert to milliseconds
+    return Date.now() + (expiresIn * 1000);
+  }
+  // Default to 30 days if not provided
+  return Date.now() + (DEFAULT_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+};
+
+/**
+ * Check if token is expired
+ * @param {number} expiresAt - Expiration timestamp in milliseconds
+ * @returns {boolean} True if token is expired or will expire soon
+ */
+export const isTokenExpired = (expiresAt) => {
+  if (!expiresAt) return true;
+  // Check if token expires within buffer time (5 minutes)
+  return Date.now() >= (expiresAt - TOKEN_EXPIRY_BUFFER_MS);
+};
+
+/**
+ * Get valid auth data from storage (only if not expired)
+ * @returns {object|null} Auth data if valid, null if expired or missing
+ */
+export const getValidAuthData = () => {
+  const authData = getObject(AUTH_STORAGE_KEY);
+  if (!authData || !authData.token) {
+    return null;
+  }
+  
+  // Check expiration
+  if (authData.expiresAt && isTokenExpired(authData.expiresAt)) {
+    console.log('Token expired, clearing auth data');
+    removeItem(AUTH_STORAGE_KEY);
+    return null;
+  }
+  
+  return authData;
+};
+
 let storage = null;
 let isRemoteDebugging = false;
 
@@ -27,8 +76,7 @@ try {
 
 const ensureStorage = () => {
   if (!storage) {
-    // Don't warn in remote debugging mode - this is expected behavior
-    // MMKV requires JSI which doesn't work with remote debugger
+    
     return false;
   }
   return true;

@@ -9,64 +9,98 @@ import {
   Dimensions,
   FlatList,
   ActivityIndicator,
-  Platform,
-  StatusBar,
   Alert,
 } from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {useRoute, useNavigation, CommonActions} from '@react-navigation/native';
+import {useRoute, useNavigation} from '@react-navigation/native';
 import {useDispatch, useSelector} from 'react-redux';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
 import useAppTheme from '../../theme/useAppTheme';
 import {getThemeColors} from '../../theme/themeColors';
 import {Colors} from '../../utils/Colors';
-import {fetchMerchantReels_Request} from '../../redux/slices/reelSlice';
-import {clearCredentials} from '../../redux/slices/authSlice';
-import {clearAuthToken} from '../../utils/APiCall';
-import {removeItem, AUTH_STORAGE_KEY} from '../../utils/MMKVStorage';
+import {fetchPublicReels_Request} from '../../redux/slices/reelSlice';
+import {postData, setAuthToken, getAuthToken} from '../../utils/APiCall';
+import {ROUTES} from '../../utils/Routes';
+import {getValidAuthData, AUTH_STORAGE_KEY} from '../../utils/MMKVStorage';
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
 const POST_ITEM_SIZE = (SCREEN_WIDTH - 4) / 3;
 
-const Profile = ({routeParams}) => {
+const PerticularReelProfile = ({routeParams}) => {
   const theme = useAppTheme();
   const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
   const route = useRoute();
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const userId = routeParams?.userId || route.params?.userId;
-  const insets = useSafeAreaInsets();
+  const merchantId = routeParams?.merchantId || route.params?.merchantId || userId;
+  
+
+  const {publicReels, publicReelsLoading, publicReelsError} = useSelector(state => state.reels);
+  
+  // Get auth token from Redux store - check multiple possible locations
+  // Also check APiCall module and MMKV storage in case Redux state is not synced
+  // Only use valid (non-expired) tokens from MMKV
+  const authState = useSelector(state => state.auth);
+  const reduxToken = authState?.token || authState?.data?.token || null;
+  const apiCallToken = getAuthToken();
+  // Check MMKV storage as fallback (only valid/not expired tokens)
+  const storedAuthData = getValidAuthData();
+  const mmkvToken = storedAuthData?.token || null;
+  const authToken = reduxToken || apiCallToken || mmkvToken;
+
+  // Reels are already filtered by merchant_id from API, no need for client-side filtering
+  const filteredReels = publicReels;
+
+
+  // Set auth token in APiCall module when component mounts or token changes
+  // This ensures API calls have the token even if Redux state is not synced
+  useEffect(() => {
+    if (authToken && !apiCallToken) {
+      // If we have token from Redux or MMKV but not in APiCall, set it
+      setAuthToken(authToken);
+      console.log('PerticularReelProfile - Auth token synced to APiCall module');
+    } else if (apiCallToken && !reduxToken) {
+      // If token exists in APiCall but not Redux, log for debugging
+      console.log('PerticularReelProfile - Token exists in APiCall but not in Redux');
+    }
+    
+    // If token found in MMKV but not in Redux or APiCall, restore it
+    if (mmkvToken && !reduxToken && !apiCallToken) {
+      setAuthToken(mmkvToken);
+      console.log('PerticularReelProfile - Token restored from MMKV storage');
+    }
+  }, [authToken, reduxToken, apiCallToken, mmkvToken]);
+
+  // Fetch public reels with merchant_id when component mounts or merchantId changes
+  useEffect(() => {
+    if (!publicReelsLoading && merchantId) {
+      dispatch(fetchPublicReels_Request({
+        page: 1,
+        per_page: 20,
+        merchant_id: merchantId,
+      }));
+    }
+  }, [dispatch, merchantId]);
+
+
+  const [pressedReels, setPressedReels] = useState({});
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
 
  
-  const {reels, loading, error} = useSelector(state => state.reels);
-
-
-  useEffect(() => {
-    if (reels.length === 0 && !loading) {
-      dispatch(fetchMerchantReels_Request({page: 1, per_page: 20}));
-    }
-  }, [dispatch]);
-
-  // Get current user data for profile
-  const userData = useSelector(state => state.auth.data);
-  const userInfo = userData?.data || userData || {};
-
-  // Sample profile data
   const profileData = {
-    username: userId ? `merchant_${userId}` : userInfo.username || userInfo.user_name || '@merchant',
-    fullName: userId ? 'Merchant Store' : userInfo.first_name && userInfo.last_name 
-      ? `${userInfo.first_name} ${userInfo.last_name}` 
-      : userInfo.name || 'Merchant Store',
-    bio: userInfo.bio || userInfo.description || '', // Empty bio - will show "Tap to add bio"
-    avatar: userInfo.avatar || userInfo.avatar_url || userInfo.profile_picture || 
-      userInfo.profile_image || 'https://i.pravatar.cc/150?img=1',
-    posts: reels?.length || 0,
+    username: merchantId ? `merchant_${merchantId}` : '@merchant',
+    fullName: 'Merchant Store',
+    bio: '',
+    avatar: 'https://i.pravatar.cc/150?img=1',
+    posts: filteredReels?.length || 0,
     followers: 38,
     following: 14,
-    likes: reels?.reduce((sum, reel) => sum + (reel.likes || 0), 0) || 0,
-    isFollowing: false,
-    isOwnProfile: !userId,
+    likes: filteredReels?.reduce((sum, reel) => sum + (reel.likes || 0), 0) || 0,
+    isFollowing: isFollowing,
+    isOwnProfile: false,
+    merchantId: merchantId,
   };
 
   // Format views count
@@ -80,36 +114,88 @@ const Profile = ({routeParams}) => {
     return views.toString();
   };
 
-  const [pressedReels, setPressedReels] = useState({});
+  // Handle follow/unfollow merchant
+  const handleFollow = async () => {
+    if (!merchantId || isFollowLoading) return;
 
-  const handleLogout = () => {
-    Alert.alert(
-      'Log Out',
-      'Are you sure you want to log out?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Log Out',
-          style: 'destructive',
-          onPress: () => {
-            dispatch(clearCredentials());
-            clearAuthToken();
-           
-            removeItem(AUTH_STORAGE_KEY);
-           
-            navigation.dispatch(
-              CommonActions.reset({
-                index: 0,
-                routes: [{ name: 'Splash' }],
-              })
-            );
+    // Check for token in Redux, APiCall module, and MMKV storage (get fresh values)
+    // Only use valid (non-expired) tokens from MMKV
+    const apiCallTokenValue = getAuthToken();
+    const storedAuthData = getValidAuthData();
+    const mmkvTokenValue = storedAuthData?.token || null;
+    const currentToken = apiCallTokenValue || reduxToken || mmkvTokenValue;
+    
+    // If no token found, show alert and navigate to login
+    if (!currentToken) {
+      console.error('No auth token available. Auth state:', {
+        hasReduxToken: !!reduxToken,
+        hasApiCallToken: !!apiCallTokenValue,
+        hasMmkvToken: !!mmkvTokenValue,
+        hasToken: !!authState?.token,
+        hasDataToken: !!authState?.data?.token,
+        authState: authState,
+      });
+      
+      // Show user-friendly error with option to login
+      Alert.alert(
+        'Authentication Required',
+        'Please log in to follow merchants.',
+        [
+          {text: 'Cancel', style: 'cancel'},
+          {
+            text: 'Login',
+            onPress: () => {
+              navigation.navigate('Login');
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+      return;
+    }
+    
+    // Ensure token is set in APiCall module for API calls
+    // Use token from any source (Redux, APiCall, or MMKV)
+    if (!apiCallTokenValue && currentToken) {
+      setAuthToken(currentToken);
+      console.log('PerticularReelProfile - Token set in APiCall module for follow action');
+    }
+
+    const currentFollowState = isFollowing;
+    const action = currentFollowState ? 'Unfollow' : 'Follow';
+
+    try {
+      setIsFollowLoading(true);
+      const endpoint = currentFollowState 
+        ? `${ROUTES.UNFOLLOW_MERCHANT}/${merchantId}/unfollow`
+        : `${ROUTES.FOLLOW_MERCHANT}/${merchantId}/follow`;
+      const response = await postData(endpoint, {});
+      
+      // Toggle follow state based on response or current state
+      setIsFollowing(prev => !prev);
+      console.log(`${action} action successful:`, response);
+    } catch (error) {
+      console.error(`${action} action failed:`, error);
+      
+      // Handle 401 Unauthorized - token might be invalid
+      if (error?.status === 401) {
+        Alert.alert(
+          'Authentication Failed',
+          'Your session has expired. Please log in again.',
+          [
+            {text: 'OK', onPress: () => navigation.navigate('Login')},
+          ]
+        );
+      } else {
+        // Show error message for other failures
+        Alert.alert(
+          'Error',
+          error?.message || `Failed to ${action.toLowerCase()} merchant. Please try again.`,
+          [{text: 'OK'}]
+        );
+      }
+    } finally {
+      setIsFollowLoading(false);
+    }
   };
 
   const renderReelItem = ({item}) => {
@@ -127,7 +213,7 @@ const Profile = ({routeParams}) => {
         }
         onPress={() => {
           // Navigate to reels view or play video
-          navigation.navigate('MerchantBottomTab', {
+          navigation.navigate('UserBottomTab', {
             navigateToTab: 'Home',
             reelId: item.id || item.reel_id,
           });
@@ -159,28 +245,23 @@ const Profile = ({routeParams}) => {
 
   return (
     <View style={[styles.container, {backgroundColor}]}>
-      <StatusBar
-        barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundColor}
-        translucent={false}
-      />
       {/* Header */}
-      <View style={[
-        styles.header, 
-        {borderBottomColor: borderColor},
-        Platform.OS === 'ios' && {paddingTop: insets.top + verticalScale(10)}
-      ]}>
+      <View style={[styles.header, {borderBottomColor: borderColor}]}>
         <View style={styles.headerLeft}>
+          {navigation.canGoBack() && (
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.headerButton}>
+              <Ionicons name="arrow-back" size={24} color={textColor} />
+            </TouchableOpacity>
+          )}
           <Text style={[styles.headerTitle, {color: textColor}]}>
             Profile
           </Text>
-          <TouchableOpacity style={styles.headerButton}>
-            <Ionicons name="chevron-down" size={20} color={textColor} />
-          </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.headerButton}>
-            <Ionicons name="settings-outline" size={24} color={textColor} />
+            <Ionicons name="ellipsis-horizontal" size={24} color={textColor} />
           </TouchableOpacity>
         </View>
       </View>
@@ -235,17 +316,22 @@ const Profile = ({routeParams}) => {
           {/* Action Buttons */}
           <View style={styles.actionButtons}>
             <TouchableOpacity
-              style={[styles.editButton, {borderColor: borderColor}]}
+              style={[styles.followButton, {borderColor: borderColor}]}
               activeOpacity={0.7}
-              onPress={() => navigation.navigate('EditProfile')}>
-              <Text style={[styles.editButtonText, {color: Colors.PRIMARY}]}>
-                Edit profile
-              </Text>
+              onPress={handleFollow}
+              disabled={isFollowLoading}>
+              {isFollowLoading ? (
+                <ActivityIndicator size="small" color={Colors.PRIMARY} />
+              ) : (
+                <Text style={[styles.followButtonText, {color: Colors.PRIMARY}]}>
+                  {profileData.isFollowing ? 'Following' : 'Follow'}
+                </Text>
+              )}
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.bookmarkButton, {borderColor: borderColor}]}
+              style={[styles.messageButton, {borderColor: borderColor}]}
               activeOpacity={0.7}>
-              <Ionicons name="bookmark-outline" size={18} color={Colors.PRIMARY} />
+              <Ionicons name="chatbubble-outline" size={18} color={Colors.PRIMARY} />
             </TouchableOpacity>
           </View>
 
@@ -255,24 +341,9 @@ const Profile = ({routeParams}) => {
               {profileData.bio}
             </Text>
           ) : (
-            <TouchableOpacity activeOpacity={0.7}>
-              <Text style={[styles.addBioText, {color: textColor}]}>
-                Tap to add bio
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Logout Button - Only show for own profile, below bio text */}
-          {profileData.isOwnProfile && (
-            <TouchableOpacity
-              style={[styles.logoutButton, {borderColor: borderColor}]}
-              activeOpacity={0.7}
-              onPress={handleLogout}>
-              <Ionicons name="log-out-outline" size={18} color={Colors.PRIMARY} />
-              <Text style={[styles.logoutButtonText, {color: Colors.PRIMARY}]}>
-                Log Out
-              </Text>
-            </TouchableOpacity>
+            <Text style={[styles.addBioText, {color: textColor}]}>
+              No bio available
+            </Text>
           )}
         </View>
 
@@ -285,26 +356,26 @@ const Profile = ({routeParams}) => {
 
         {/* Reels Grid */}
         <View style={styles.postsGridContainer}>
-          {reels.length > 0 ? (
+          {filteredReels.length > 0 ? (
             <FlatList
-              data={reels}
+              data={filteredReels}
               renderItem={renderReelItem}
               keyExtractor={item => item.id || item.reel_id?.toString()}
               numColumns={3}
               scrollEnabled={false}
               contentContainerStyle={styles.postsGrid}
             />
-          ) : loading ? (
+          ) : publicReelsLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={Colors.PRIMARY} />
               <Text style={[styles.loadingText, {color: textColor}]}>
                 Loading reels...
               </Text>
             </View>
-          ) : error ? (
+          ) : publicReelsError ? (
             <View style={styles.errorContainer}>
               <Text style={[styles.errorText, {color: Colors.PRIMARY}]}>
-                {error}
+                {publicReelsError}
               </Text>
             </View>
           ) : (
@@ -314,7 +385,7 @@ const Profile = ({routeParams}) => {
                 No reels yet
               </Text>
               <Text style={[styles.emptySubText, {color: textColor}]}>
-                Upload your first reel to get started
+                This merchant hasn't uploaded any reels
               </Text>
             </View>
           )}
@@ -349,16 +420,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: scale(4),
   },
-  themeToggleButton: {
-    width: moderateScale(36),
-    height: moderateScale(36),
-    borderRadius: moderateScale(18),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   headerTitle: {
     fontSize: moderateScale(18),
     fontWeight: '700',
+    marginLeft: scale(8),
   },
   username: {
     fontSize: moderateScale(18),
@@ -430,7 +495,7 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: scale(20),
   },
-  editButton: {
+  followButton: {
     flex: 1,
     paddingVertical: verticalScale(10),
     borderRadius: moderateScale(8),
@@ -439,7 +504,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
   },
-  bookmarkButton: {
+  followButtonText: {
+    fontSize: moderateScale(14),
+    fontWeight: '600',
+  },
+  messageButton: {
     width: moderateScale(44),
     height: moderateScale(44),
     borderRadius: moderateScale(8),
@@ -447,42 +516,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
-  },
-  editButtonText: {
-    fontSize: moderateScale(14),
-    fontWeight: '600',
-  },
-  followButton: {
-    flex: 1,
-    paddingVertical: verticalScale(8),
-    borderRadius: moderateScale(8),
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  followButtonText: {
-    fontSize: moderateScale(14),
-    fontWeight: '600',
-  },
-  messageButton: {
-    flex: 1,
-    paddingVertical: verticalScale(8),
-    borderRadius: moderateScale(8),
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  messageButtonText: {
-    fontSize: moderateScale(14),
-    fontWeight: '600',
-  },
-  shareButton: {
-    width: moderateScale(40),
-    height: moderateScale(40),
-    borderRadius: moderateScale(8),
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   contentOptionContainer: {
     paddingHorizontal: scale(16),
@@ -590,28 +623,7 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(13),
     opacity: 0.6,
   },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: scale(8),
-    marginTop: verticalScale(16),
-    marginBottom: verticalScale(12),
-    paddingVertical: verticalScale(12),
-    paddingHorizontal: scale(20),
-    borderRadius: moderateScale(8),
-    borderWidth: 1,
-    backgroundColor: '#FFFFFF',
-    alignSelf: 'center',
-    minWidth: scale(120),
-  },
-  logoutButtonText: {
-    fontSize: moderateScale(14),
-    fontWeight: '600',
-  },
 });
 
-export default Profile;
-
-
+export default PerticularReelProfile;
 

@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import {StatusBar, View, ActivityIndicator} from 'react-native';
 import {NavigationContainer, CommonActions} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {useSelector} from 'react-redux';
-import { getItem, setItem } from '../utils/MMKVStorage';
+import {useSelector, useDispatch} from 'react-redux';
+import { getItem, setItem, getValidAuthData, AUTH_STORAGE_KEY } from '../utils/MMKVStorage';
+import { login_Success } from '../redux/slices/authSlice';
+import { setAuthToken } from '../utils/APiCall';
 import useAppTheme from '../theme/useAppTheme';
 import { getThemeColors } from '../theme/themeColors';
 import { Colors } from '../utils/Colors';
@@ -23,11 +25,13 @@ import Settings from '../screens/user/Settings';
 import HelpCenter from '../screens/user/HelpCenter';
 import MyProfile from '../screens/user/MyProfile';
 import EditProfile from '../screens/merchant/EditProfile';
+import PerticularReelProfile from '../screens/user/PerticularReelProfile';
 const Stack = createNativeStackNavigator();
 
 const INTRO_COMPLETED_KEY = 'intro_completed';
 
 const AppNavigator = () => {
+  const dispatch = useDispatch();
   const token = useSelector(state => state.auth.token);
   const userData = useSelector(state => state.auth.data);
   const theme = useAppTheme();
@@ -41,31 +45,67 @@ const AppNavigator = () => {
   const prevAuthRef = useRef(isAuthenticated);
 
   useEffect(() => {
-    // Check if user has seen intro screens
-    const checkIntroStatus = async () => {
+    // Check if user has seen intro screens and restore auth token
+    const initializeApp = async () => {
       try {
+        // Check intro status
         const introCompleted = getItem(INTRO_COMPLETED_KEY);
-        // Safety check: ensure we have a valid string value
         if (introCompleted && typeof introCompleted === 'string') {
           setHasSeenIntro(introCompleted === 'true');
         } else {
           setHasSeenIntro(false);
         }
+
+        // Restore auth token from MMKV storage if not in Redux
+        // Only restore if token is not expired
+        if (!token) {
+          const storedAuthData = getValidAuthData(); // This checks expiration automatically
+          if (storedAuthData && storedAuthData.token) {
+            console.log('Restoring auth token from MMKV storage');
+            const { token: storedToken, userData: storedUserData, refreshToken, expiresAt } = storedAuthData;
+            
+            // Log expiration info
+            if (expiresAt) {
+              const expiresDate = new Date(expiresAt);
+              const timeRemaining = expiresAt - Date.now();
+              const daysRemaining = Math.floor(timeRemaining / (24 * 60 * 60 * 1000));
+              console.log(`Token expires on: ${expiresDate.toLocaleString()}, ${daysRemaining} days remaining`);
+            }
+            
+            // Set token in APiCall module
+            setAuthToken(storedToken);
+            
+            // Restore Redux state
+            dispatch(
+              login_Success({
+                data: storedUserData,
+                token: storedToken,
+                refreshToken: refreshToken,
+              })
+            );
+            console.log('Auth token restored successfully - user will remain logged in');
+          } else {
+            console.log('No valid auth token found in storage (expired or missing)');
+          }
+        } else {
+          // If token exists in Redux, ensure it's also in APiCall module
+          setAuthToken(token);
+        }
       } catch (error) {
-        console.log('Error checking intro status:', error);
+        console.log('Error initializing app:', error);
         setHasSeenIntro(false);
       } finally {
         setIsLoading(false);
       }
     };
 
-    checkIntroStatus();
-  }, []);
+    initializeApp();
+  }, [dispatch, token]);
 
   // Handle navigation when authentication status changes (only on change, not initial load)
   useEffect(() => {
     if (!isLoading && navigationRef.current?.isReady()) {
-      // Only navigate if auth status changed from false to true (after login)
+      // Navigate if auth status changed from false to true (after login)
       if (isAuthenticated && !prevAuthRef.current) {
         // Navigate to role-based tab after login
         const targetRoute = userRole === 'merchant' ? 'MerchantBottomTab' : 'UserBottomTab';
@@ -75,6 +115,20 @@ const AppNavigator = () => {
             routes: [{ name: targetRoute }],
           })
         );
+      }
+     
+      else if (!isAuthenticated && prevAuthRef.current) {
+       
+        setTimeout(() => {
+          if (navigationRef.current?.isReady()) {
+            navigationRef.current.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [{ name: 'Splash' }],
+              })
+            );
+          }
+        }, 100);
       }
       prevAuthRef.current = isAuthenticated;
     }
@@ -137,6 +191,7 @@ const AppNavigator = () => {
         <Stack.Screen name="HelpCenter" component={HelpCenter} />
         <Stack.Screen name="MyProfile" component={MyProfile} />
         <Stack.Screen name="EditProfile" component={EditProfile} />
+        <Stack.Screen name="PerticularReelProfile" component={PerticularReelProfile} />
         <Stack.Screen name="MerchantBottomTab" component={MerchantBottomTab} />
         <Stack.Screen name="UserBottomTab" component={UserBottomTab} />
       </Stack.Navigator>

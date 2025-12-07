@@ -69,9 +69,14 @@ const MerchantBottomTab = () => {
     const params = route.params;
     if (params?.navigateToTab) {
       const tabIndex = TAB_ITEMS.findIndex(tab => tab.key === params.navigateToTab);
-      if (tabIndex !== -1 && swiperRef.current) {
-        setActiveIndex(tabIndex);
-        swiperRef.current.scrollTo(tabIndex, true);
+      if (tabIndex !== -1) {
+        // Use setTimeout to ensure swiper is ready
+        setTimeout(() => {
+          if (swiperRef.current) {
+            setActiveIndex(tabIndex);
+            swiperRef.current.scrollTo(tabIndex, false); // false for instant scroll
+          }
+        }, 50);
       }
     }
   }, [route.params]);
