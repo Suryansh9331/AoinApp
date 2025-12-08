@@ -7,7 +7,7 @@ import { ImageData } from '../../utils/resources';
 import { moderateScale, verticalScale } from 'react-native-size-matters';
 import FONTS from '../../utils/Font';
 import { Colors } from '../../utils/Colors';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import useAppTheme from '../../theme/useAppTheme';
 import { getThemeColors } from '../../theme/themeColors';
 import { ROUTES } from '../../utils/Routes';
@@ -122,16 +122,15 @@ const VerifyOTPLogin = ({ route }) => {
             })
           );
 
-          // The AppNavigator will automatically redirect to BottomTab based on token
-          // No need to manually navigate - just show success message
-          Alert.alert('Success', response?.message || 'Login successful!', [
-            {
-              text: 'OK',
-              onPress: () => {
-                // AppNavigator will automatically show BottomTab when token is set
-              },
-            },
-          ]);
+          // Immediately reset navigation to the correct home tab
+          const role = userData?.role || userData?.data?.role || 'user';
+          const targetRoute = role === 'merchant' ? 'MerchantBottomTab' : 'UserBottomTab';
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [{ name: targetRoute }],
+            })
+          );
         } else {
           Alert.alert('Error', 'Failed to login. Please try again.');
         }

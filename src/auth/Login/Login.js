@@ -7,7 +7,7 @@ import { ImageData } from '../../utils/resources';
 import { moderateScale, verticalScale } from 'react-native-size-matters';
 import FONTS from '../../utils/Font';
 import { Colors } from '../../utils/Colors';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, CommonActions } from '@react-navigation/native';
 import useAppTheme from '../../theme/useAppTheme';
 import { getThemeColors } from '../../theme/themeColors';
 import { ROUTES } from '../../utils/Routes';
@@ -19,7 +19,7 @@ import { setObject, AUTH_STORAGE_KEY, calculateTokenExpiry, DEFAULT_TOKEN_EXPIRY
 const Login = () => {
   const dispatch = useDispatch();
   const theme = useAppTheme();
-  const { backgroundColor, textColor } = getThemeColors(theme);
+  const { backgroundColor, textColor, borderColor, iconColor } = getThemeColors(theme);
   const navigation = useNavigation();
   const route = useRoute();
   
@@ -107,7 +107,14 @@ const Login = () => {
             })
           );
 
-         
+          // Immediately reset navigation to the correct home tab
+          const targetRoute = 'MerchantBottomTab';
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [{ name: targetRoute }],
+            })
+          );
         } else {
           Alert.alert('Error', 'Failed to login. Please try again.');
         }
@@ -297,7 +304,7 @@ const Login = () => {
         <TouchableOpacity onPress={() => {
           navigation.navigate('SelectSignUpMethod');
         }}>
-          <Text style={styles.signupLink}>
+          <Text style={[styles.signupLink, { color: Colors.PRIMARY }]}>
             Sign up
           </Text>
         </TouchableOpacity>
@@ -337,7 +344,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   errorText: {
-    color: '#DC2626',
+    color: Colors.ERROR,
     marginTop: 10,
     textAlign: 'center',
     fontSize: moderateScale(14),

@@ -1,24 +1,12 @@
-import React, { useEffect } from 'react';
-import { View, StyleSheet, StatusBar, Text, ActivityIndicator } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-import VideoReel from '../../components/VideoReel/VideoReel';
+import React from 'react';
+import { View, StyleSheet, StatusBar, Text } from 'react-native';
 import useAppTheme from '../../theme/useAppTheme';
 import { getThemeColors } from '../../theme/themeColors';
-import { moderateScale } from 'react-native-size-matters';
-import { fetchPublicReels_Request } from '../../redux/slices/reelSlice';
+import { moderateScale, verticalScale } from 'react-native-size-matters';
 
 const Home = () => {
   const theme = useAppTheme();
-  const { backgroundColor } = getThemeColors(theme);
-  const dispatch = useDispatch();
-  
-  // Get public reels from Redux store
-  const { publicReels, publicReelsLoading, publicReelsError } = useSelector(state => state.reels);
-
-  useEffect(() => {
-    // Fetch public reels on component mount
-    dispatch(fetchPublicReels_Request({ page: 1, per_page: 20 }));
-  }, [dispatch]);
+  const { backgroundColor, textColor } = getThemeColors(theme);
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
@@ -34,18 +22,14 @@ const Home = () => {
           <View style={styles.headerRight} />
         </View>
       </View>
-      {publicReelsLoading && publicReels.length === 0 ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#F2631F" />
-          <Text style={styles.loadingText}>Loading reels...</Text>
-        </View>
-      ) : publicReelsError ? (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{publicReelsError}</Text>
-        </View>
-      ) : (
-        <VideoReel data={publicReels} />
-      )}
+      <View style={styles.emptyContainer}>
+        <Text style={[styles.emptyText, {color: textColor}]}>
+          Reels feature coming soon
+        </Text>
+        <Text style={[styles.emptySubText, {color: textColor}]}>
+          Check back later for exciting content
+        </Text>
+      </View>
     </View>
   );
 };
@@ -109,6 +93,24 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14),
     color: '#FF3040',
     textAlign: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000000',
+    paddingHorizontal: 20,
+  },
+  emptyText: {
+    fontSize: moderateScale(18),
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: verticalScale(8),
+  },
+  emptySubText: {
+    fontSize: moderateScale(14),
+    textAlign: 'center',
+    opacity: 0.7,
   },
 });
 

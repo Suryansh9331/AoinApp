@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,10 @@ import {
   FlatList,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useFocusEffect} from '@react-navigation/native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
 import useAppTheme from '../../theme/useAppTheme';
@@ -23,12 +25,14 @@ import {ROUTES} from '../../utils/Routes';
 
 const Products = () => {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const theme = useAppTheme();
   const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [hasFetched, setHasFetched] = useState(false);
 
   // Format price to Indian currency format
   const formatPrice = price => {
@@ -36,11 +40,6 @@ const Products = () => {
       maximumFractionDigits: 2,
     })}`;
   };
-
-  // Fetch products from API
-  useEffect(() => {
-    fetchProducts();
-  }, []);
 
   const fetchProducts = async () => {
     try {
@@ -64,19 +63,40 @@ const Products = () => {
         
         setAllProducts(mappedProducts);
         setProducts(mappedProducts);
+        setHasFetched(true);
       } else {
         setAllProducts([]);
         setProducts([]);
+        setHasFetched(true);
       }
     } catch (error) {
       console.log('Error fetching products:', error);
       Alert.alert('Error', 'Failed to load products. Please try again.');
       setAllProducts([]);
       setProducts([]);
+      setHasFetched(true);
     } finally {
       setLoading(false);
     }
   };
+
+  // Fetch products from API on mount (only once)
+  useEffect(() => {
+    if (!hasFetched) {
+      fetchProducts();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Reset loading state when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      // If we have data, ensure loading is false
+      if (hasFetched) {
+        setLoading(false);
+      }
+    }, [hasFetched])
+  );
 
   const handleSearch = text => {
     setSearchQuery(text);
@@ -133,6 +153,9 @@ const Products = () => {
         title="My Products"
         leftType="back"
         onLeftPress={() => navigation.goBack()}
+        containerStyle={{
+          paddingTop: Platform.OS === 'ios' ? insets.top : 0,
+        }}
       />
 
       {/* Search Bar */}

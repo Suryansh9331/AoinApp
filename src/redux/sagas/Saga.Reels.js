@@ -75,35 +75,25 @@ function* fetchMerchantReelsWorker(action) {
     const page = payload.page || 1;
     const perPage = payload.per_page || 20;
 
-    // Get current logged-in user data from Redux
+ 
     const currentUser = yield select(state => state.auth.data);
 
-    console.log('Fetching merchant reels:', {page, perPage});
-    console.log('Merchant reels API endpoint:', ROUTES.MERCHANT_MY_REELS);
-    console.log('Merchant reels API params:', {page, per_page: perPage});
-
-    // Call API with pagination params
     const response = yield call(getData, ROUTES.MERCHANT_MY_REELS, {
       page,
       per_page: perPage,
     });
 
-    console.log('Merchant reels response:', response);
-    console.log('Merchant reels raw data:', response?.data);
-    console.log('Merchant reels data count:', response?.data?.length);
+    
 
     if (response && response.status === 'success' && response.data) {
-      // Map API response to component format with current user data
+      
       const mappedReels = response.data.map((apiReel, index) => {
         const mapped = mapReelData(apiReel, currentUser);
-        console.log(`Merchant reel [${index}] raw:`, apiReel);
-        console.log(`Merchant reel [${index}] mapped:`, mapped);
+
         return mapped;
       });
 
-      console.log('Merchant reels mapped data:', mappedReels);
-      console.log('Merchant reels mapped count:', mappedReels.length);
-      console.log('Merchant reels pagination:', response.pagination);
+     
 
       yield put(
         fetchMerchantReels_Success({
@@ -235,30 +225,17 @@ function* fetchPublicReelsWorker(action) {
       queryParams.merchant_id = merchantId;
     }
 
-    console.log('Fetching public reels:', {page, perPage, merchantId});
-    console.log('Public reels API endpoint:', ROUTES.PUBLIC_REELS);
-    console.log('Public reels API params:', queryParams);
-
-    // Call API with pagination params and optional merchant_id
     const response = yield call(getData, ROUTES.PUBLIC_REELS, queryParams);
-
-    console.log('Public reels response:', response);
-    console.log('Public reels raw data:', response?.data);
-    console.log('Public reels data count:', response?.data?.length);
 
     if (response && response.status === 'success' && response.data) {
       // Map API response to component format with current user data
       const mappedReels = response.data.map((apiReel, index) => {
         const mapped = mapPublicReelData(apiReel, currentUser);
-        console.log(`Public reel [${index}] raw:`, apiReel);
-        console.log(`Public reel [${index}] mapped:`, mapped);
+      
         return mapped;
       });
 
-      console.log('Public reels mapped data:', mappedReels);
-      console.log('Public reels mapped count:', mappedReels.length);
-      console.log('Public reels pagination:', response.pagination);
-
+     
       yield put(
         fetchPublicReels_Success({
           reels: mappedReels,
@@ -324,15 +301,13 @@ function* likeReelWorker(action) {
       return;
     }
 
-    console.log('Liking reel:', reelId);
-    console.log('Like reel API endpoint:', `${ROUTES.LIKE_REEL}/${reelId}/like`);
+  
 
     // Call API
     const endpoint = `${ROUTES.LIKE_REEL}/${reelId}/like`;
     const response = yield call(postData, endpoint, {});
 
-    console.log('Like reel response:', response);
-    console.log('Like reel response data:', response?.data);
+  
 
     if (response && response.status === 'success') {
       yield put(likeReel_Success({reelId, response}));
@@ -381,15 +356,13 @@ function* unlikeReelWorker(action) {
       return;
     }
 
-    console.log('Unliking reel:', reelId);
-    console.log('Unlike reel API endpoint:', `${ROUTES.UNLIKE_REEL}/${reelId}/unlike`);
+  
 
     // Call API
     const endpoint = `${ROUTES.UNLIKE_REEL}/${reelId}/unlike`;
     const response = yield call(postData, endpoint, {});
 
-    console.log('Unlike reel response:', response);
-    console.log('Unlike reel response data:', response?.data);
+   
 
     if (response && response.status === 'success') {
       yield put(unlikeReel_Success({reelId, response}));
@@ -438,16 +411,13 @@ function* shareReelWorker(action) {
       return;
     }
 
-    console.log('Sharing reel:', reelId);
-    console.log('Share reel API endpoint:', `${ROUTES.SHARE_REEL}/${reelId}/share`);
+  
 
     // Call API
     const endpoint = `${ROUTES.SHARE_REEL}/${reelId}/share`;
     const response = yield call(postData, endpoint, {});
 
-    console.log('Share reel response:', response);
-    console.log('Share reel response data:', response?.data);
-
+   
     if (response && response.status === 'success') {
       yield put(shareReel_Success({reelId, response}));
     } else {

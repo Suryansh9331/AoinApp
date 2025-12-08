@@ -3,9 +3,9 @@ import {StatusBar, View, ActivityIndicator} from 'react-native';
 import {NavigationContainer, CommonActions} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {useSelector, useDispatch} from 'react-redux';
-import { getItem, setItem, getValidAuthData, AUTH_STORAGE_KEY } from '../utils/MMKVStorage';
+import { getItem, setItem, getValidAuthData, AUTH_STORAGE_KEY, removeItem } from '../utils/MMKVStorage';
 import { login_Success } from '../redux/slices/authSlice';
-import { setAuthToken } from '../utils/APiCall';
+import { setAuthToken, clearAuthToken } from '../utils/APiCall';
 import useAppTheme from '../theme/useAppTheme';
 import { getThemeColors } from '../theme/themeColors';
 import { Colors } from '../utils/Colors';
@@ -22,6 +22,7 @@ import SelectSignUpMethod from '../auth/Register/SelectSignUpMethod';
 import VerifyOTP from '../auth/Register/VerifyOTP';
 import VerifyOTPLogin from '../auth/Login/VerifyOTPLogin';
 import Settings from '../screens/user/Settings';
+import MerchantSettings from '../screens/merchant/Settings';
 import HelpCenter from '../screens/user/HelpCenter';
 import MyProfile from '../screens/user/MyProfile';
 import EditProfile from '../screens/merchant/EditProfile';
@@ -37,6 +38,7 @@ const AppNavigator = () => {
   const theme = useAppTheme();
   const { backgroundColor } = getThemeColors(theme);
   const [hasSeenIntro, setHasSeenIntro] = useState(null);
+  const [isNavReady, setIsNavReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const userRole = userData?.data?.role || userData?.role || 'user';
@@ -104,10 +106,20 @@ const AppNavigator = () => {
 
   // Handle navigation when authentication status changes (only on change, not initial load)
   useEffect(() => {
-    if (!isLoading && navigationRef.current?.isReady()) {
+    if (isLoading || !isNavReady || !navigationRef.current) {
+      return;
+    }
+
+    // Keep axios interceptor token in sync with Redux token
+    if (isAuthenticated && token) {
+      setAuthToken(token);
+    } else if (!isAuthenticated) {
+      clearAuthToken();
+      removeItem(AUTH_STORAGE_KEY);
+    }
+
       // Navigate if auth status changed from false to true (after login)
       if (isAuthenticated && !prevAuthRef.current) {
-        // Navigate to role-based tab after login
         const targetRoute = userRole === 'merchant' ? 'MerchantBottomTab' : 'UserBottomTab';
         navigationRef.current.dispatch(
           CommonActions.reset({
@@ -115,12 +127,9 @@ const AppNavigator = () => {
             routes: [{ name: targetRoute }],
           })
         );
-      }
-     
-      else if (!isAuthenticated && prevAuthRef.current) {
-       
+    } else if (!isAuthenticated && prevAuthRef.current) {
         setTimeout(() => {
-          if (navigationRef.current?.isReady()) {
+        if (navigationRef.current) {
             navigationRef.current.dispatch(
               CommonActions.reset({
                 index: 0,
@@ -130,9 +139,9 @@ const AppNavigator = () => {
           }
         }, 100);
       }
+
       prevAuthRef.current = isAuthenticated;
-    }
-  }, [isAuthenticated, userRole, isLoading]);
+  }, [isAuthenticated, userRole, isLoading, isNavReady, token]);
 
   const markIntroCompleted = () => {
     setItem(INTRO_COMPLETED_KEY, 'true');
@@ -153,7 +162,7 @@ const AppNavigator = () => {
   };
 
   return (
-    <NavigationContainer ref={navigationRef}>
+    <NavigationContainer ref={navigationRef} onReady={() => setIsNavReady(true)}>
       <StatusBar 
         barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} 
         backgroundColor={backgroundColor}
@@ -191,6 +200,7 @@ const AppNavigator = () => {
         <Stack.Screen name="HelpCenter" component={HelpCenter} />
         <Stack.Screen name="MyProfile" component={MyProfile} />
         <Stack.Screen name="EditProfile" component={EditProfile} />
+        <Stack.Screen name="MerchantSettings" component={MerchantSettings} />
         <Stack.Screen name="PerticularReelProfile" component={PerticularReelProfile} />
         <Stack.Screen name="MerchantBottomTab" component={MerchantBottomTab} />
         <Stack.Screen name="UserBottomTab" component={UserBottomTab} />

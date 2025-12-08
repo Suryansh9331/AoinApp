@@ -12,13 +12,12 @@ import {
   Alert,
 } from 'react-native';
 import {useRoute, useNavigation} from '@react-navigation/native';
-import {useDispatch, useSelector} from 'react-redux';
+import {useSelector} from 'react-redux';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
 import useAppTheme from '../../theme/useAppTheme';
 import {getThemeColors} from '../../theme/themeColors';
 import {Colors} from '../../utils/Colors';
-import {fetchPublicReels_Request} from '../../redux/slices/reelSlice';
 import {postData, setAuthToken, getAuthToken} from '../../utils/APiCall';
 import {ROUTES} from '../../utils/Routes';
 import {getValidAuthData, AUTH_STORAGE_KEY} from '../../utils/MMKVStorage';
@@ -31,12 +30,12 @@ const PerticularReelProfile = ({routeParams}) => {
   const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
   const route = useRoute();
   const navigation = useNavigation();
-  const dispatch = useDispatch();
   const userId = routeParams?.userId || route.params?.userId;
   const merchantId = routeParams?.merchantId || route.params?.merchantId || userId;
   
 
-  const {publicReels, publicReelsLoading, publicReelsError} = useSelector(state => state.reels);
+  // PUBLIC_REELS is only available for MERCHANT role, so empty for user
+  const filteredReels = [];
   
   // Get auth token from Redux store - check multiple possible locations
   // Also check APiCall module and MMKV storage in case Redux state is not synced
@@ -48,9 +47,6 @@ const PerticularReelProfile = ({routeParams}) => {
   const storedAuthData = getValidAuthData();
   const mmkvToken = storedAuthData?.token || null;
   const authToken = reduxToken || apiCallToken || mmkvToken;
-
-  // Reels are already filtered by merchant_id from API, no need for client-side filtering
-  const filteredReels = publicReels;
 
 
   // Set auth token in APiCall module when component mounts or token changes
@@ -72,16 +68,6 @@ const PerticularReelProfile = ({routeParams}) => {
     }
   }, [authToken, reduxToken, apiCallToken, mmkvToken]);
 
-  // Fetch public reels with merchant_id when component mounts or merchantId changes
-  useEffect(() => {
-    if (!publicReelsLoading && merchantId) {
-      dispatch(fetchPublicReels_Request({
-        page: 1,
-        per_page: 20,
-        merchant_id: merchantId,
-      }));
-    }
-  }, [dispatch, merchantId]);
 
 
   const [pressedReels, setPressedReels] = useState({});
@@ -356,39 +342,15 @@ const PerticularReelProfile = ({routeParams}) => {
 
         {/* Reels Grid */}
         <View style={styles.postsGridContainer}>
-          {filteredReels.length > 0 ? (
-            <FlatList
-              data={filteredReels}
-              renderItem={renderReelItem}
-              keyExtractor={item => item.id || item.reel_id?.toString()}
-              numColumns={3}
-              scrollEnabled={false}
-              contentContainerStyle={styles.postsGrid}
-            />
-          ) : publicReelsLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={Colors.PRIMARY} />
-              <Text style={[styles.loadingText, {color: textColor}]}>
-                Loading reels...
-              </Text>
-            </View>
-          ) : publicReelsError ? (
-            <View style={styles.errorContainer}>
-              <Text style={[styles.errorText, {color: Colors.PRIMARY}]}>
-                {publicReelsError}
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="videocam-outline" size={48} color={textColor} />
-              <Text style={[styles.emptyText, {color: textColor}]}>
-                No reels yet
-              </Text>
-              <Text style={[styles.emptySubText, {color: textColor}]}>
-                This merchant hasn't uploaded any reels
-              </Text>
-            </View>
-          )}
+          <View style={styles.emptyContainer}>
+            <Ionicons name="videocam-outline" size={48} color={textColor} />
+            <Text style={[styles.emptyText, {color: textColor}]}>
+              Reels feature not available
+            </Text>
+            <Text style={[styles.emptySubText, {color: textColor}]}>
+              This feature is only available for merchants
+            </Text>
+          </View>
         </View>
       </ScrollView>
     </View>

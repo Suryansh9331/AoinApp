@@ -179,7 +179,9 @@ const Profile = ({routeParams}) => {
           </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.headerButton}>
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => navigation.navigate('MerchantSettings')}>
             <Ionicons name="settings-outline" size={24} color={textColor} />
           </TouchableOpacity>
         </View>
@@ -235,7 +237,13 @@ const Profile = ({routeParams}) => {
           {/* Action Buttons */}
           <View style={styles.actionButtons}>
             <TouchableOpacity
-              style={[styles.editButton, {borderColor: borderColor}]}
+              style={[
+                styles.editButton, 
+                {
+                  borderColor: borderColor,
+                  backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
+                }
+              ]}
               activeOpacity={0.7}
               onPress={() => navigation.navigate('EditProfile')}>
               <Text style={[styles.editButtonText, {color: Colors.PRIMARY}]}>
@@ -243,7 +251,13 @@ const Profile = ({routeParams}) => {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.bookmarkButton, {borderColor: borderColor}]}
+              style={[
+                styles.bookmarkButton, 
+                {
+                  borderColor: borderColor,
+                  backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
+                }
+              ]}
               activeOpacity={0.7}>
               <Ionicons name="bookmark-outline" size={18} color={Colors.PRIMARY} />
             </TouchableOpacity>
@@ -262,18 +276,6 @@ const Profile = ({routeParams}) => {
             </TouchableOpacity>
           )}
 
-          {/* Logout Button - Only show for own profile, below bio text */}
-          {profileData.isOwnProfile && (
-            <TouchableOpacity
-              style={[styles.logoutButton, {borderColor: borderColor}]}
-              activeOpacity={0.7}
-              onPress={handleLogout}>
-              <Ionicons name="log-out-outline" size={18} color={Colors.PRIMARY} />
-              <Text style={[styles.logoutButtonText, {color: Colors.PRIMARY}]}>
-                Log Out
-              </Text>
-            </TouchableOpacity>
-          )}
         </View>
 
         {/* Content Display Option */}
@@ -437,7 +439,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
   },
   bookmarkButton: {
     width: moderateScale(44),
@@ -446,7 +447,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
   },
   editButtonText: {
     fontSize: moderateScale(14),

@@ -8,6 +8,9 @@ import {
   ScrollView
 } from "react-native";
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import useAppTheme from '../../theme/useAppTheme';
+import { getThemeColors } from '../../theme/themeColors';
+import { Colors } from '../../utils/Colors';
 
 // Country codes data
 const countryCodes = [
@@ -49,9 +52,18 @@ const Input = ({
   autoCapitalize = "sentences", // For text inputs
   maxLength, // Maximum length for text inputs
 }) => {
+  const theme = useAppTheme();
+  const { backgroundColor, textColor, borderColor, iconColor } = getThemeColors(theme);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedCountryCode, setSelectedCountryCode] = useState(countryCodes[0]);
   const [showPassword, setShowPassword] = useState(false);
+  
+  // Theme-based colors
+  const inputBgColor = theme === 'dark' ? '#1E1E1E' : '#FFFFFF';
+  const inputTextColor = textColor;
+  const inputBorderColor = borderColor;
+  const placeholderColor = theme === 'dark' ? '#9CA3AF' : '#999';
+  const eyeIconColor = theme === 'dark' ? '#9CA3AF' : '#6B7280';
 
   const renderPhoneInput = () => {
     return (
@@ -147,15 +159,27 @@ const Input = ({
 
   const renderPasswordInput = () => {
     return (
-      <View style={styles.passwordContainer}>
+      <View style={[
+        styles.passwordContainer,
+        {
+          backgroundColor: inputBgColor,
+          borderColor: error ? Colors.ERROR : inputBorderColor,
+        }
+      ]}>
         <TextInput
-          style={[styles.passwordInput, error && styles.errorInput]}
+          style={[
+            styles.passwordInput,
+            {
+              color: inputTextColor,
+            },
+            error && styles.errorInput
+          ]}
           placeholder={placeholder}
           value={value}
           onChangeText={onChangeText}
           secureTextEntry={!showPassword}
           keyboardType={keyboardType}
-          placeholderTextColor="#999"
+          placeholderTextColor={placeholderColor}
           editable={!disabled}
           fontSize={13}
           maxLength={maxLength}
@@ -169,7 +193,7 @@ const Input = ({
             <MaterialIcons
               name={showPassword ? 'visibility-off' : 'visibility'}
               size={20}
-              color="#6B7280"
+              color={eyeIconColor}
             />
           </TouchableOpacity>
         )}
@@ -180,13 +204,22 @@ const Input = ({
   const renderTextInput = () => {
     return (
       <TextInput
-        style={[styles.input, error && styles.errorInput, style]}
+        style={[
+          styles.input,
+          {
+            backgroundColor: inputBgColor,
+            color: inputTextColor,
+            borderColor: error ? Colors.ERROR : inputBorderColor,
+          },
+          error && styles.errorInput,
+          style
+        ]}
         placeholder={placeholder}
         value={value}
         onChangeText={onChangeText}
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
-        placeholderTextColor="#999"
+        placeholderTextColor={placeholderColor}
         editable={!disabled}
         fontSize={13}
         autoCapitalize={autoCapitalize}
@@ -198,14 +231,14 @@ const Input = ({
 
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <Text style={[styles.label, { color: textColor }]}>{label}</Text>}
 
       {type === "phone" && renderPhoneInput()}
       {type === "dropdown" && renderDropdownInput()}
       {type === "password" && renderPasswordInput()}
       {type === "text" && renderTextInput()}
 
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error && <Text style={[styles.errorText, { color: Colors.ERROR }]}>{error}</Text>}
     </View>
   );
 };
@@ -217,27 +250,22 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     marginBottom: 4,
-    color: "#333",
     fontWeight: "600",
     marginLeft: 3,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#E5E7EB",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 14,
     fontSize: 16,
-    color: "#000",
-    backgroundColor: "#ffffff",
   },
   errorInput: {
-    borderColor: "red",
+    borderColor: Colors.ERROR,
   },
   errorText: {
     marginTop: 4,
     fontSize: 12,
-    color: "red",
   },
   // Phone Input Styles
   phoneContainer: {
@@ -362,16 +390,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
     borderRadius: 8,
-    backgroundColor: "#ffffff",
   },
   passwordInput: {
     flex: 1,
     paddingHorizontal: 12,
     paddingVertical: 13,
     fontSize: 16,
-    color: "#000",
   },
   eyeIcon: {
     paddingHorizontal: 12,

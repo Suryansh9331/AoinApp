@@ -358,7 +358,13 @@ const Post = () => {
                 </View>
               </View>
             ) : (
-              <View style={[styles.videoPlaceholder, {borderColor: borderColor}]}>
+              <View style={[
+                styles.videoPlaceholder, 
+                {
+                  borderColor: borderColor,
+                  backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
+                }
+              ]}>
                 <Ionicons name="videocam-outline" size={48} color={textColor} />
                 <Text style={[styles.placeholderText, {color: textColor}]}>
                   Tap to select video
@@ -402,7 +408,13 @@ const Post = () => {
 
         {/* Add Details Button */}
         <TouchableOpacity
-          style={[styles.addDetailsButton, {borderColor: borderColor}]}
+          style={[
+            styles.addDetailsButton, 
+            {
+              borderColor: borderColor,
+              backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
+            }
+          ]}
           onPress={handleAddDetails}
           activeOpacity={0.7}>
           <Text style={[styles.addDetailsText, {color: textColor}]}>
@@ -413,7 +425,14 @@ const Post = () => {
         {/* Description Input */}
         <View style={styles.descriptionContainer}>
           <TextInput
-            style={[styles.descriptionInput, {color: textColor, borderColor: borderColor}]}
+            style={[
+              styles.descriptionInput, 
+              {
+                color: textColor, 
+                borderColor: borderColor,
+                backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
+              }
+            ]}
             placeholder="Add description..."
             placeholderTextColor={textColor + '80'}
             value={description}
@@ -446,7 +465,11 @@ const Post = () => {
                     style={[
                       styles.productItem,
                       {borderBottomColor: borderColor},
-                      selectedProduct?.id === product.id && styles.selectedProductItem,
+                      selectedProduct?.id === product.id && {
+                        backgroundColor: theme === 'dark' 
+                          ? 'rgba(242, 99, 31, 0.15)' 
+                          : 'rgba(242, 99, 31, 0.05)'
+                      },
                     ]}
                     onPress={() => handleProductSelect(product)}
                     activeOpacity={0.7}>
@@ -458,9 +481,9 @@ const Post = () => {
                       <Text style={[styles.productName, {color: textColor}]}>
                         {product.name}
                       </Text>
-                      <Text style={[styles.productCategory, {color: textColor}]}>
-                        {product.category}
-                      </Text>
+                    <Text style={[styles.productCategory, {color: textColor, opacity: 0.7}]}>
+                      {product.category}
+                    </Text>
                       <Text style={[styles.productPrice, {color: Colors.PRIMARY}]}>
                         {product.price}
                       </Text>
@@ -608,7 +631,6 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(12),
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
   },
   placeholderText: {
     marginTop: verticalScale(8),
@@ -646,7 +668,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale(16),
     borderRadius: moderateScale(8),
     borderWidth: 1,
-    backgroundColor: '#FFFFFF',
   },
   addDetailsText: {
     fontSize: moderateScale(14),
@@ -662,7 +683,6 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(8),
     borderWidth: 1,
     fontSize: moderateScale(14),
-    backgroundColor: '#FFFFFF',
   },
   productsListSection: {
     marginTop: verticalScale(24),
@@ -682,9 +702,6 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(12),
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  selectedProductItem: {
-    backgroundColor: 'rgba(0, 122, 255, 0.05)',
-  },
   productImage: {
     width: moderateScale(80),
     height: moderateScale(80),
@@ -702,7 +719,6 @@ const styles = StyleSheet.create({
   productCategory: {
     fontSize: moderateScale(12),
     marginBottom: verticalScale(4),
-    opacity: 0.7,
   },
   productPrice: {
     fontSize: moderateScale(14),

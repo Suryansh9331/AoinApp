@@ -215,7 +215,13 @@ const EditProfile = () => {
       {/* Action Buttons */}
       <View style={[styles.actionButtonsContainer, {borderTopColor: borderColor}]}>
         <TouchableOpacity
-          style={[styles.cancelButton, {borderColor: borderColor}]}
+          style={[
+            styles.cancelButton, 
+            {
+              borderColor: borderColor,
+              backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
+            }
+          ]}
           onPress={handleCancel}
           activeOpacity={0.7}>
           <Text style={[styles.cancelButtonText, {color: textColor}]}>Cancel</Text>
@@ -339,7 +345,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
   },
   cancelButtonText: {
     fontSize: moderateScale(14),

@@ -6,7 +6,7 @@ import VideoReel from '../../components/VideoReel/VideoReel';
 import useAppTheme from '../../theme/useAppTheme';
 import { getThemeColors } from '../../theme/themeColors';
 import { moderateScale } from 'react-native-size-matters';
-import { fetchMerchantReels_Request } from '../../redux/slices/reelSlice';
+import { fetchPublicReels_Request } from '../../redux/slices/reelSlice';
 
 const Home = ({ routeParams }) => {
   const theme = useAppTheme();
@@ -14,17 +14,16 @@ const Home = ({ routeParams }) => {
   const dispatch = useDispatch();
   const route = useRoute();
   
-  // Get reels from Redux store
-  const { reels, loading, error } = useSelector(state => state.reels);
+  // Get public reels from Redux store
+  const { publicReels, publicReelsLoading, publicReelsError } = useSelector(state => state.reels);
   
   // Get reelId from route params (passed from Profile screen)
   const reelId = routeParams?.reelId || route.params?.reelId;
 
   useEffect(() => {
-    // Only fetch reels if they're not already loaded
-    // Don't fetch if we have a reelId (coming from navigation) and reels exist
-    if (reels.length === 0 && !loading) {
-      dispatch(fetchMerchantReels_Request({ page: 1, per_page: 20 }));
+    // Fetch public reels on component mount
+    if (publicReels.length === 0 && !publicReelsLoading) {
+      dispatch(fetchPublicReels_Request({ page: 1, per_page: 20 }));
     }
   }, [dispatch]);
 
@@ -42,17 +41,17 @@ const Home = ({ routeParams }) => {
           <View style={styles.headerRight} />
         </View>
       </View>
-      {reels.length > 0 ? (
-        <VideoReel data={reels} initialReelId={reelId} />
-      ) : loading ? (
+      {publicReelsLoading && publicReels.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#F2631F" />
           <Text style={styles.loadingText}>Loading reels...</Text>
         </View>
-      ) : error ? (
+      ) : publicReelsError ? (
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText}>{publicReelsError}</Text>
         </View>
+      ) : publicReels.length > 0 ? (
+        <VideoReel data={publicReels} initialReelId={reelId} />
       ) : (
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>No reels available</Text>
