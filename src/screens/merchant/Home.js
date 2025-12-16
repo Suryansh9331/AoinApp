@@ -18,26 +18,55 @@ const Home = ({ routeParams, initialReels }) => {
 
   // Get public reels from Redux store
   const { publicReels, publicReelsLoading, publicReelsError } = useSelector(state => state.reels);
-
   
-  const reelId = routeParams?.reelId || route.params?.reelId;
-
+  // Get the reel ID and preloaded reels from navigation params
+  const [currentReelId, setCurrentReelId] = React.useState(routeParams?.reelId || route.params?.reelId);
+  const [preloadedReels, setPreloadedReels] = React.useState(initialReels || routeParams?.preloadedReels || route.params?.preloadedReels || []);
   
-  const preloadedReels = initialReels || routeParams?.preloadedReels || route.params?.preloadedReels;
-  const initialData = (preloadedReels && preloadedReels.length > 0) ? preloadedReels : publicReels;
-
+  // Update state when route params change
+  React.useEffect(() => {
+    const newReelId = routeParams?.reelId || route.params?.reelId;
+    const newPreloadedReels = initialReels || routeParams?.preloadedReels || route.params?.preloadedReels || [];
+    
+    if (newReelId !== currentReelId) {
+      setCurrentReelId(newReelId);
+    }
+    
+    if (JSON.stringify(newPreloadedReels) !== JSON.stringify(preloadedReels)) {
+      setPreloadedReels(newPreloadedReels);
+    }
+  }, [routeParams, route.params, initialReels]);
   
+  // Determine which data to use - prioritize preloaded reels if available
+  const [displayData, setDisplayData] = React.useState(preloadedReels.length > 0 ? preloadedReels : publicReels);
+  
+  // Update display data when either preloadedReels or publicReels change
   useEffect(() => {
-    // Only fetch public reels when no preloaded data is provided, no existing error, and we haven't fetched yet
-    if ((!preloadedReels || preloadedReels.length === 0) && 
-        publicReels.length === 0 && 
-        !publicReelsLoading && 
-        !publicReelsError &&
-        !hasFetched) {
+    if (preloadedReels && preloadedReels.length > 0) {
+      setDisplayData(preloadedReels);
+    } else if (publicReels.length > 0) {
+      setDisplayData(publicReels);
+    } else {
+      setDisplayData([]);
+    }
+  }, [preloadedReels, publicReels]);
+  
+  // Fetch public reels if we don't have any data
+  useEffect(() => {
+    // If we have preloaded reels, use them and don't fetch
+    if (preloadedReels && preloadedReels.length > 0) {
+      return;
+    }
+    
+    // Only fetch if we don't have any data and we're not already loading
+    if (displayData.length === 0 && !publicReelsLoading && !hasFetched) {
       setHasFetched(true);
       dispatch(fetchPublicReels_Request({ page: 1, per_page: 20 }));
     }
-  }, [dispatch, preloadedReels, publicReels.length, publicReelsLoading, publicReelsError, hasFetched]);
+  }, [dispatch, displayData.length, publicReelsLoading, hasFetched, preloadedReels]);
+  
+  // Show loading state only if we don't have any data and we're loading
+  const showLoading = displayData.length === 0 && (publicReelsLoading || !hasFetched);
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
@@ -58,9 +87,7 @@ const Home = ({ routeParams, initialReels }) => {
           titleStyle={{ color: '#FFFFFF' }}
         />
       </SafeAreaView>
-      {initialData.length > 0 ? (
-        <VideoReel data={initialData} initialReelId={reelId} />
-      ) : publicReelsLoading ? (
+      {showLoading && displayData.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#F2631F" />
           <Text style={styles.loadingText}>Loading reels...</Text>
@@ -69,6 +96,12 @@ const Home = ({ routeParams, initialReels }) => {
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{publicReelsError}</Text>
         </View>
+      ) : displayData.length > 0 ? (
+        <VideoReel 
+          data={displayData} 
+          initialReelId={currentReelId}
+          key={`video-reel-${currentReelId || 'default'}-${Date.now()}`} // Force re-render with new key
+        />
       ) : (
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>No reels available</Text>

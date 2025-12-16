@@ -27,6 +27,7 @@ import HelpCenter from '../screens/user/HelpCenter';
 import MyProfile from '../screens/user/MyProfile';
 import EditProfile from '../screens/merchant/EditProfile';
 import PerticularReelProfile from '../screens/user/PerticularReelProfile';
+import Post from '../screens/merchant/Post';
 const Stack = createNativeStackNavigator();
 
 const INTRO_COMPLETED_KEY = 'intro_completed';
@@ -202,6 +203,17 @@ const AppNavigator = () => {
         <Stack.Screen name="EditProfile" component={EditProfile} />
         <Stack.Screen name="MerchantSettings" component={MerchantSettings} />
         <Stack.Screen name="PerticularReelProfile" component={PerticularReelProfile} />
+        <Stack.Screen 
+          name="Post" 
+          component={Post}
+          options={{
+            headerShown: true,
+            title: 'Create Post',
+            headerTitleStyle: {
+              fontWeight: '600',
+            },
+          }}
+        />
         <Stack.Screen name="MerchantBottomTab" component={MerchantBottomTab} />
         <Stack.Screen name="UserBottomTab" component={UserBottomTab} />
       </Stack.Navigator>

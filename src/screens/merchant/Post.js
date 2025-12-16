@@ -56,7 +56,7 @@ const Post = ({ routeParams }) => {
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
   const [validationError, setValidationError] = useState('');
-
+ 
   // Validation function
   const validateUpload = async (video, product, desc) => {
     try {

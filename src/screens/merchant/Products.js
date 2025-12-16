@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   Image,
   FlatList,
-  ActivityIndicator,
+  Dimensions,
   Alert,
   Platform,
 } from 'react-native';
@@ -20,6 +20,7 @@ import useAppTheme from '../../theme/useAppTheme';
 import {getThemeColors} from '../../theme/themeColors';
 import {Colors} from '../../utils/Colors';
 import Header from '../../components/Header/Header';
+import { ProductSkeleton } from '../../components/Skeleton/Skeleton';
 import {getData} from '../../utils/APiCall';
 import {ROUTES} from '../../utils/Routes';
 
@@ -208,15 +209,15 @@ const Products = () => {
 
       {/* Products List */}
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.PRIMARY} />
-          <Text style={[styles.loadingText, {color: textColor}]}>
-            Loading products...
-          </Text>
+        <View>
+          {[1, 2, 3, 4, 5, 6].map((_, index) => (
+            <ProductSkeleton key={`skeleton-${index}`} />
+          ))}
         </View>
       ) : (
         <FlatList
           data={products}
+          key="products-list" // Add a static key for the products list
           renderItem={renderProductItem}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.listContent}
@@ -238,6 +239,8 @@ const Products = () => {
     </View>
   );
 };
+
+const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   container: {
@@ -341,15 +344,8 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14),
     marginTop: verticalScale(12),
   },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: verticalScale(60),
-  },
-  loadingText: {
-    fontSize: moderateScale(14),
-    marginTop: verticalScale(12),
+  skeletonContainer: {
+    padding: 0,
   },
 });
 

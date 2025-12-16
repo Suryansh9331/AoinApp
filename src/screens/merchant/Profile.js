@@ -163,11 +163,13 @@ const Profile = ({ routeParams }) => {
 
   const handleEditReel = (item) => {
     setVisibleMenuReelId(null);
-    // Navigate to MerchantBottomTab's Post screen with reel data for editing
-    navigation.navigate('MerchantBottomTab', {
-      navigateToTab: 'Post',
-      editingReel: item,
-      editingReelId: item.id || item.reel_id,
+    // Navigate directly to the Post screen with reel data for editing
+    navigation.navigate('Post', {
+      screen: 'Post',
+      params: {
+        editingReel: item,
+        editingReelId: item.id || item.reel_id,
+      },
     });
   };
 
@@ -187,13 +189,25 @@ const Profile = ({ routeParams }) => {
           setPressedReels(prev => ({ ...prev, [item.id]: false }))
         }
         onPress={() => {
-          // Navigate to reels view or play video and pass the selected reel
-          // as preloaded data so Home / VideoReel can display it immediately
-          navigation.navigate('MerchantBottomTab', {
-            navigateToTab: 'Home',
-            reelId: item.id || item.reel_id,
-            preloadedReels: [item],
-          });
+          // Navigate to reels view with the selected reel
+          // First reset the navigation stack to avoid multiple navigations
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [
+                { 
+                  name: 'MerchantBottomTab',
+                  params: { 
+                    navigateToTab: 'Home',
+                    reelId: item.id || item.reel_id,
+                    preloadedReels: [item],
+                    // Force a new navigation by adding a timestamp
+                    timestamp: Date.now()
+                  }
+                }
+              ],
+            })
+          );
         }}>
         <Image
           source={{ uri: thumbnail }}

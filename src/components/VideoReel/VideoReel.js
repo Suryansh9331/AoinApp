@@ -38,37 +38,53 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
   // Scroll to specific reel when initialReelId is provided
   useEffect(() => {
     if (initialReelId && reelsData.length > 0 && containerHeight > 0 && !hasScrolledToInitialReel.current) {
-      const reelIndex = reelsData.findIndex(reel =>
-        reel.id === initialReelId ||
-        reel.id?.toString() === initialReelId?.toString() ||
-        reel.reel_id?.toString() === initialReelId?.toString() ||
-        reel.reel_id === initialReelId
-      );
+      const reelIndex = reelsData.findIndex(reel => {
+        // Check all possible ID fields and handle both string and number comparisons
+        const reelId = reel.id || reel.reel_id;
+        return (
+          reelId === initialReelId ||
+          reelId?.toString() === initialReelId?.toString()
+        );
+      });
 
-      if (reelIndex !== -1 && flatListRef.current) {
-        // Use requestAnimationFrame for smoother scroll
-        requestAnimationFrame(() => {
-          setTimeout(() => {
+      if (reelIndex !== -1) {
+        // Reset the scroll flag to ensure we can scroll again if needed
+        hasScrolledToInitialReel.current = false;
+        
+        // Small delay to ensure the list is ready
+        const scrollToReel = () => {
+          if (!flatListRef.current) return;
+          
+          try {
+            // First try scrollToIndex
+            flatListRef.current.scrollToIndex({
+              index: reelIndex,
+              animated: false,
+              viewPosition: 0.5,
+            });
+            setCurrentIndex(reelIndex);
+            hasScrolledToInitialReel.current = true;
+          } catch (error) {
+            // If that fails, try scrollToOffset
             try {
-              flatListRef.current?.scrollToIndex({
-                index: reelIndex,
-                animated: false,
-                viewPosition: 0.5,
-              });
-              setCurrentIndex(reelIndex);
-              hasScrolledToInitialReel.current = true;
-            } catch (error) {
-              // Fallback to scrollToOffset if scrollToIndex fails
               const offset = reelIndex * containerHeight;
-              flatListRef.current?.scrollToOffset({
+              flatListRef.current.scrollToOffset({
                 offset,
                 animated: false,
               });
               setCurrentIndex(reelIndex);
               hasScrolledToInitialReel.current = true;
+            } catch (e) {
+              // If both methods fail, try again after a short delay
+              if (!hasScrolledToInitialReel.current) {
+                setTimeout(scrollToReel, 100);
+              }
             }
-          }, 50);
-        });
+          }
+        };
+
+        // Initial attempt
+        scrollToReel();
       }
     }
   }, [initialReelId, reelsData, containerHeight]);
@@ -141,8 +157,9 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
 
   if (reelsData.length === 0) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor }]}>
+      <View style={[styles.loadingContainer, { backgroundColor: '#000000' }]}>
         <ActivityIndicator size="large" color="#F2631F" />
+        <Text style={styles.loadingText}>Loading reels...</Text>
       </View>
     );
   }
@@ -197,6 +214,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#000000',
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    marginTop: 10,
+    fontSize: 16,
   },
 });
 

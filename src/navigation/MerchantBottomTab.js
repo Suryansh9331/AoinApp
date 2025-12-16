@@ -77,26 +77,46 @@ const MerchantBottomTab = () => {
 
   // Handle navigation to specific tab with params
   useEffect(() => {
-    const params = route.params;
+    const params = route.params || {};
     
-
     // If caller passed preloadedReels, hydrate publicReels in Redux immediately
-    if (params?.preloadedReels && Array.isArray(params.preloadedReels) && params.preloadedReels.length > 0) {
-      dispatch(fetchPublicReels_Success({ reels: params.preloadedReels, pagination: { page: 1, pages: 1, per_page: params.preloadedReels.length, total: params.preloadedReels.length } }));
+    if (params.preloadedReels && Array.isArray(params.preloadedReels) && params.preloadedReels.length > 0) {
+      dispatch(fetchPublicReels_Success({ 
+        reels: params.preloadedReels, 
+        pagination: { 
+          page: 1, 
+          pages: 1, 
+          per_page: params.preloadedReels.length, 
+          total: params.preloadedReels.length 
+        } 
+      }));
     }
-
     
-    if (params?.navigateToTab) {
+    // Handle tab navigation
+    if (params.navigateToTab) {
       const tabIndex = TAB_ITEMS.findIndex(tab => tab.key === params.navigateToTab);
-      if (tabIndex !== -1) {
+      if (tabIndex !== -1 && tabIndex !== activeIndex) {
         setActiveIndex(tabIndex);
+        if (swiperRef.current) {
+          swiperRef.current.scrollTo(tabIndex, true);
+        }
       }
     }
   }, [route.params]);
 
   const handleTabPress = index => {
-    if (swiperRef.current) {
+    if (swiperRef.current && index !== activeIndex) {
+      setActiveIndex(index);
       swiperRef.current.scrollTo(index, true);
+      // Clear any navigation params that might be causing issues
+      navigation.setParams({ 
+        navigateToTab: null,
+        reelId: null,
+        preloadedReels: null,
+        userId: null,
+        editingReel: null,
+        editingReelId: null
+      });
     }
   };
 
@@ -107,7 +127,20 @@ const MerchantBottomTab = () => {
         loop={false}
         index={activeIndex}
         showsPagination={false}
-        onIndexChanged={setActiveIndex}
+        onIndexChanged={(index) => {
+          if (index !== activeIndex) {
+            setActiveIndex(index);
+            // Clear navigation params when swiping between tabs
+            navigation.setParams({
+              navigateToTab: null,
+              reelId: null,
+              preloadedReels: null,
+              userId: null,
+              editingReel: null,
+              editingReelId: null
+            });
+          }
+        }}
         loadMinimal
         loadMinimalSize={1}>
         {TAB_ITEMS.map(({ key, component: ScreenComponent }, idx) => {
