@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useCallback, useEffect} from 'react';
 import {
   View,
   Text,
@@ -13,24 +13,39 @@ import {
   PermissionsAndroid,
   Linking,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useFocusEffect, useRoute} from '@react-navigation/native';
+import { SafeAreaView, StatusBar } from 'react-native';
+import Header from '../../components/Header/Header';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
 import useAppTheme from '../../theme/useAppTheme';
 import {getThemeColors} from '../../theme/themeColors';
 import {Colors} from '../../utils/Colors';
 import {ROUTES} from '../../utils/Routes';
-import {uploadFormData, getData} from '../../utils/APiCall';
+import {uploadFormData, getData, updateReel} from '../../utils/APiCall';
 
 // Import image picker
 import {launchImageLibrary} from 'react-native-image-picker';
 import Video from 'react-native-video';
 
+// Validation constants
+const MAX_VIDEO_SIZE_MB = 100;
+const MAX_VIDEO_DURATION = 60; // seconds
+const MAX_DESCRIPTION_LENGTH = 5000;
+const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska'];
+const ALLOWED_VIDEO_EXTENSIONS = ['.mp4', '.mov', '.avi', '.mkv'];
 
-const Post = () => {
+
+const Post = ({ routeParams }) => {
   const navigation = useNavigation();
+  const route = useRoute();
   const theme = useAppTheme();
   const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
+
+  // Check if we're editing a reel
+  const editingReel = routeParams?.editingReel || route.params?.editingReel;
+  const editingReelId = routeParams?.editingReelId || route.params?.editingReelId;
+  const isEditingMode = !!editingReel;
 
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -38,7 +53,71 @@ const Post = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [products, setProducts] = useState([]);
-  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
+  const [validationError, setValidationError] = useState('');
+
+  // Validation function
+  const validateUpload = async (video, product, desc) => {
+    try {
+      // 1. Video file validation
+      if (!video) {
+        throw new Error('Please select a video');
+      }
+
+      // 2. Check video file extension
+      const fileExtension = video.name ? '.' + video.name.split('.').pop().toLowerCase() : '';
+      if (!ALLOWED_VIDEO_EXTENSIONS.includes(fileExtension)) {
+        throw new Error(`Invalid video format. Allowed formats: ${ALLOWED_VIDEO_EXTENSIONS.join(', ')}`);
+      }
+
+      // 3. Check video file size (100MB max)
+      const maxSizeBytes = MAX_VIDEO_SIZE_MB * 1024 * 1024;
+      if (video.fileSize > maxSizeBytes) {
+        throw new Error(`Video size must be less than ${MAX_VIDEO_SIZE_MB}MB`);
+      }
+
+      // 4. Check video duration (60 seconds max)
+      if (video.duration > MAX_VIDEO_DURATION) {
+        throw new Error(`Video duration must be less than ${MAX_VIDEO_DURATION} seconds`);
+      }
+
+      // 5. MIME type validation
+      if (!ALLOWED_VIDEO_TYPES.includes(video.type?.toLowerCase())) {
+        throw new Error(`Invalid video type. Allowed types: ${ALLOWED_VIDEO_TYPES.join(', ')}`);
+      }
+
+      // 6. Product validation
+      if (!product?.id) {
+        throw new Error('Please select a product');
+      }
+
+      // 7. Description validation
+      if (!desc?.trim()) {
+        throw new Error('Please add a description');
+      }
+
+      // 8. Description length validation
+      if (desc.length > MAX_DESCRIPTION_LENGTH) {
+        throw new Error(`Description must be less than ${MAX_DESCRIPTION_LENGTH} characters`);
+      }
+
+      return true;
+    } catch (error) {
+      setValidationError(error.message);
+      throw error;
+    }
+  };
+
+  // Initialize with reel data if editing
+  useEffect(() => {
+    if (isEditingMode && editingReel) {
+      // Use caption or description field (API might return either)
+      const existingDescription = editingReel.description || editingReel.caption || '';
+      setDescription(existingDescription);
+      // Video already exists, so user can only edit description
+    }
+  }, [isEditingMode, editingReel]);
 
   // Format price to Indian currency format
   const formatPrice = price => {
@@ -46,11 +125,6 @@ const Post = () => {
       maximumFractionDigits: 2,
     })}`;
   };
-
-  // Fetch products from API
-  useEffect(() => {
-    fetchProducts();
-  }, []);
 
   const fetchProducts = async () => {
     try {
@@ -73,17 +147,31 @@ const Post = () => {
         }));
         
         setProducts(mappedProducts);
+        setHasFetched(true);
       } else {
         setProducts([]);
+        setHasFetched(true);
       }
     } catch (error) {
       console.log('Error fetching products:', error);
       Alert.alert('Error', 'Failed to load products. Please try again.');
       setProducts([]);
+      setHasFetched(true);
     } finally {
       setLoadingProducts(false);
     }
   };
+
+  // Fetch products only when screen comes into focus (not on mount)
+  useFocusEffect(
+    useCallback(() => {
+      // Only fetch if we haven't fetched yet
+      if (!hasFetched) {
+        fetchProducts();
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hasFetched])
+  );
 
   // Permission handling - react-native-image-picker handles it automatically
   // But we can check beforehand for better UX
@@ -225,297 +313,370 @@ const Post = () => {
   };
 
   const handleUpload = async () => {
-    if (!selectedVideo) {
-      Alert.alert('Error', 'Please select a video');
-      return;
-    }
-
-    if (!selectedProduct) {
-      Alert.alert('Error', 'Please select a product');
-      return;
-    }
-
-    if (!description.trim()) {
-      Alert.alert('Error', 'Please add a description');
-      return;
-    }
-
-    setUploading(true);
-    setUploadProgress(0);
     try {
-      // React Native FormData
-      const formData = new FormData();
-      formData.append('video', {
-        uri: selectedVideo.uri,
-        type: selectedVideo.type || 'video/mp4',
-        name: selectedVideo.name || 'video.mp4',
-      });
-      formData.append('url', selectedVideo.uri);
-      // Use product_id from API response
-      formData.append('product_id', selectedProduct.product_id.toString());
-      formData.append('description', description.trim());
-
-      // Upload with progress tracking
-      const response = await uploadFormData(
-        ROUTES.UPLOAD_REEL, 
-        formData,
-        (progress) => {
-          setUploadProgress(progress);
-        }
-      );
+      setValidationError('');
       
-      Alert.alert('Success', 'Video uploaded successfully!', [
-        {
-          text: 'OK',
-          onPress: () => {
-            // Reset form
-            setSelectedVideo(null);
-            setSelectedProduct(null);
-            setDescription('');
-            // Only go back if there's a screen to go back to
-            if (navigation.canGoBack()) {
-              navigation.goBack();
-            }
-            // Otherwise, stay on the same screen (form is already reset)
+      // For editing, only description is required
+      if (isEditingMode) {
+        if (!description.trim()) {
+          throw new Error('Please add a description');
+        }
+
+      setUploading(true);
+      try {
+        // Update reel with new description
+        const result = await updateReel(editingReelId, {
+          description: description.trim(),
+        });
+
+        Alert.alert('Success', 'Reel updated successfully!', [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Navigate back to MerchantBottomTab and show Profile tab
+              navigation.navigate('MerchantBottomTab', {
+                navigateToTab: 'Profile',
+              });
+            },
           },
-        },
-      ]);
-    } catch (error) {
-      console.log('Upload error:', error);
-      Alert.alert(
-        'Upload Failed',
-        error?.message || 'Failed to upload video. Please try again.',
-      );
-    } finally {
-      setUploading(false);
+        ]);
+      } catch (error) {
+        console.log('Update error:', error);
+        Alert.alert(
+          'Update Failed',
+          error?.message || 'Failed to update reel. Please try again.',
+        );
+      } finally {
+        setUploading(false);
+      }
+      return;
+    }
+
+      // For new upload, run all validations
+      try {
+        await validateUpload(selectedVideo, selectedProduct, description);
+      } catch (error) {
+        console.log('Validation error:', error);
+        Alert.alert('Validation Error', error.message);
+        return;
+      }
+
+      // If we get here, all validations passed
+
+      setUploading(true);
       setUploadProgress(0);
+      
+      try {
+        // React Native FormData
+        const formData = new FormData();
+        formData.append('video', {
+          uri: selectedVideo.uri,
+          type: selectedVideo.type || 'video/mp4',
+          name: selectedVideo.name || `video_${Date.now()}.mp4`,
+        });
+        formData.append('url', selectedVideo.uri);
+        formData.append('product_id', selectedProduct.product_id.toString());
+        formData.append('description', description.trim());
+
+        console.log('Starting upload with form data:', {
+          video: { uri: selectedVideo.uri, type: selectedVideo.type },
+          product_id: selectedProduct.product_id,
+          description: description.trim().substring(0, 20) + '...',
+        });
+
+        // Upload with progress tracking
+        const response = await uploadFormData(
+          ROUTES.UPLOAD_REEL, 
+          formData,
+          (progress) => {
+            console.log('Upload progress:', progress);
+            setUploadProgress(progress);
+          }
+        );
+        
+        console.log('Upload successful:', response);
+        
+        Alert.alert('Success', 'Video uploaded successfully!', [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Reset form
+              setSelectedVideo(null);
+              setSelectedProduct(null);
+              setDescription('');
+              setUploadProgress(0);
+              
+              // Navigate back if possible
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+              } else {
+                // If we can't go back, navigate to home or another appropriate screen
+                navigation.navigate('MerchantBottomTab', {
+                  screen: 'Home',
+                });
+              }
+            },
+          },
+        ]);
+      } catch (error) {
+        console.log('Upload error:', error);
+        Alert.alert(
+          'Upload Failed',
+          error?.message || 'Failed to upload video. Please try again.',
+        );
+      } finally {
+        setUploading(false);
+      }
+    } catch (error) {
+      console.log('Validation error:', error);
+      Alert.alert('Validation Error', error.message);
     }
   };
 
   return (
     <View style={[styles.container, {backgroundColor}]}>
-      {/* Header */}
-      <View style={[styles.header, {borderBottomColor: borderColor}]}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={textColor} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, {color: textColor}]}>Upload</Text>
-        <TouchableOpacity
-          onPress={handleUpload}
-          disabled={uploading || !selectedVideo || !selectedProduct || !description.trim()}
-          style={[
-            styles.uploadButton,
-            (!selectedVideo || !selectedProduct || !description.trim()) &&
-              styles.uploadButtonDisabled,
-          ]}>
-          {uploading ? (
-            <View style={styles.uploadProgressContainer}>
-              <ActivityIndicator size="large" color={Colors.PRIMARY} />
-              {uploadProgress > 0 && (
-                <View style={styles.uploadProgressOverlay}>
-                  <Text style={styles.uploadProgressText}>{uploadProgress}%</Text>
+      <StatusBar
+        barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={backgroundColor}
+        translucent={false}
+      />
+      <SafeAreaView style={{ flex: 1, backgroundColor }}>
+        <Header
+          title={isEditingMode ? 'Edit Reel' : 'Create Reel'}
+          leftType={false}
+          onLeftPress={() => navigation.goBack()}
+          rightType="text"
+          rightContent={
+            <TouchableOpacity
+              onPress={handleUpload}
+              disabled={!selectedVideo || !selectedProduct || !description.trim() || uploading}
+              style={[
+                styles.uploadButton,
+                ((!isEditingMode && (!selectedVideo || !selectedProduct)) || !description.trim()) &&
+                  styles.uploadButtonDisabled,
+              ]}
+              activeOpacity={0.7}>
+              {uploading ? (
+                <View style={styles.uploadProgressContainer}>
+                  <ActivityIndicator size="small" color={Colors.PRIMARY} />
+                  <View style={styles.uploadProgressOverlay}>
+                    <Text style={styles.uploadProgressText}>
+                      {uploadProgress > 0 ? `${uploadProgress}%` : 'Uploading...'}
+                    </Text>
+                  </View>
                 </View>
+              ) : (
+                <Text style={styles.uploadButtonText}>
+                  {isEditingMode ? 'Update' : 'Upload'}
+                </Text>
               )}
-            </View>
-          ) : (
-            <Text style={styles.uploadButtonText}>Upload</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+            </TouchableOpacity>
+          }
+          containerStyle={{
+            backgroundColor,
+            borderBottomWidth: 0,
+          }}
+          titleStyle={{ color: textColor }}
+        />
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}>
-        {/* Video Upload Section */}
-        <View style={styles.videoSection}>
-          {/* Video Thumbnail */}
-          <TouchableOpacity
-            style={styles.videoContainer}
-            onPress={handleVideoPick}
-            activeOpacity={0.9}>
-            {selectedVideo ? (
-              <View style={styles.videoThumbnailContainer}>
-                {/* Use Video component to show first frame as thumbnail */}
-                <Video
-                  source={{uri: selectedVideo.uri}}
-                  style={styles.videoThumbnail}
-                  resizeMode="cover"
-                  paused={true}
-                  muted={true}
-                  repeat={false}
-                  onLoad={() => {
-                    console.log('Video thumbnail loaded');
-                  }}
-                  onError={(error) => {
-                    console.log('Video thumbnail error:', error);
-                  }}
-                />
-                <View style={styles.playButton}>
-                  <Ionicons name="play-circle" size={48} color="#FFFFFF" />
-                </View>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}>
+          {/* Video Upload Section - Only show when creating new reel */}
+          {!isEditingMode && (
+            <View style={styles.videoSection}>
+              {/* Video Thumbnail */}
+              <TouchableOpacity
+                style={styles.videoContainer}
+                onPress={handleVideoPick}
+                activeOpacity={0.9}>
+                {selectedVideo ? (
+                  <View style={styles.videoThumbnailContainer}>
+                    {/* Use Video component to show first frame as thumbnail */}
+                    <Video
+                      source={{uri: selectedVideo.uri}}
+                      style={styles.videoThumbnail}
+                      resizeMode="cover"
+                      paused={true}
+                      muted={true}
+                      repeat={false}
+                      onLoad={() => {
+                        console.log('Video thumbnail loaded');
+                      }}
+                      onError={(error) => {
+                        console.log('Video thumbnail error:', error);
+                      }}
+                    />
+                    <View style={styles.playButton}>
+                      <Ionicons name="play-circle" size={48} color="#FFFFFF" />
+                    </View>
+                  </View>
+                ) : (
+                  <View style={[
+                    styles.videoPlaceholder, 
+                    {
+                      borderColor: borderColor,
+                      backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
+                    }
+                  ]}>
+                    <Ionicons name="videocam-outline" size={48} color={textColor} />
+                    <Text style={[styles.placeholderText, {color: textColor}]}>
+                      Tap to select video
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              {/* Product Details */}
+              <View style={styles.productInfoContainer}>
+                {selectedProduct ? (
+                  <>
+                    <Text style={[styles.productDescription, {color: textColor}]}>
+                      {selectedProduct.name}
+                    </Text>
+                    <Text style={[styles.productAttributes, {color: textColor}]}>
+                      Category: {selectedProduct.category}
+                    </Text>
+                    <Text style={[styles.productAttributes, {color: textColor}]}>
+                      Price: {selectedProduct.price}
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={[styles.productDescription, {color: textColor}]}>
+                      Crafted from premium silk, this kurta combines comfort with luxury.
+                    </Text>
+                    <Text style={[styles.productAttributes, {color: textColor}]}>
+                      Fabric: 100% Silk
+                    </Text>
+                    <Text style={[styles.productAttributes, {color: textColor}]}>
+                      Color: Royal Red
+                    </Text>
+                    <Text style={[styles.productAttributes, {color: textColor}]}>
+                      Fit: Regular, Comfortable
+                    </Text>
+                  </>
+                )}
               </View>
-            ) : (
-              <View style={[
-                styles.videoPlaceholder, 
+            </View>
+          )}
+
+          {/* Add Details Button - Only show when creating new reel */}
+          {!isEditingMode && (
+            <TouchableOpacity
+              style={[
+                styles.addDetailsButton, 
                 {
                   borderColor: borderColor,
-                  backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
+                  backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
                 }
-              ]}>
-                <Ionicons name="videocam-outline" size={48} color={textColor} />
-                <Text style={[styles.placeholderText, {color: textColor}]}>
-                  Tap to select video
+              ]}
+              onPress={handleAddDetails}
+              activeOpacity={0.7}>
+              <Text style={[styles.addDetailsText, {color: textColor}]}>
+                Add details....
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Description Input */}
+          <View style={styles.descriptionContainer}>
+            <TextInput
+              style={[
+                styles.descriptionInput, 
+                {
+                  color: textColor, 
+                  borderColor: borderColor,
+                  backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
+                }
+              ]}
+              placeholder="Add description..."
+              placeholderTextColor={textColor + '80'}
+              value={description}
+              onChangeText={setDescription}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+          </View>
+
+          {/* Products List Section */}
+          <View style={styles.productsListSection}>
+            <Text style={[styles.productsListTitle, {color: textColor}]}>
+              Products List
+            </Text>
+            
+            {loadingProducts ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color={Colors.PRIMARY} />
+                <Text style={[styles.loadingText, {color: textColor}]}>
+                  Loading products...
                 </Text>
               </View>
-            )}
-          </TouchableOpacity>
-
-          {/* Product Details */}
-          <View style={styles.productInfoContainer}>
-            {selectedProduct ? (
-              <>
-                <Text style={[styles.productDescription, {color: textColor}]}>
-                  {selectedProduct.name}
-                </Text>
-                <Text style={[styles.productAttributes, {color: textColor}]}>
-                  Category: {selectedProduct.category}
-                </Text>
-                <Text style={[styles.productAttributes, {color: textColor}]}>
-                  Price: {selectedProduct.price}
-                </Text>
-              </>
             ) : (
-              <>
-                <Text style={[styles.productDescription, {color: textColor}]}>
-                  Crafted from premium silk, this kurta combines comfort with luxury.
-                </Text>
-                <Text style={[styles.productAttributes, {color: textColor}]}>
-                  Fabric: 100% Silk
-                </Text>
-                <Text style={[styles.productAttributes, {color: textColor}]}>
-                  Color: Royal Red
-                </Text>
-                <Text style={[styles.productAttributes, {color: textColor}]}>
-                  Fit: Regular, Comfortable
-                </Text>
-              </>
+              <View style={styles.productsList}>
+                {products.length > 0 ? (
+                  products.map((product, index) => (
+                    <TouchableOpacity
+                      key={product.id + index}
+                      style={[
+                        styles.productItem,
+                        {borderBottomColor: borderColor},
+                        selectedProduct?.id === product.id && {
+                          backgroundColor: theme === 'dark' 
+                            ? 'rgba(242, 99, 31, 0.15)' 
+                            : 'rgba(242, 99, 31, 0.05)'
+                        },
+                      ]}
+                      onPress={() => handleProductSelect(product)}
+                      activeOpacity={0.7}>
+                      <Image
+                        source={{uri: product.image}}
+                        style={styles.productImage}
+                      />
+                      <View style={styles.productDetails}>
+                        <Text style={[styles.productName, {color: textColor}]}>
+                          {product.name}
+                        </Text>
+                        <Text style={[styles.productCategory, {color: textColor, opacity: 0.7}]}>
+                          {product.category}
+                        </Text>
+                        <Text style={[styles.productPrice, {color: Colors.PRIMARY}]}>
+                          {product.price}
+                        </Text>
+                      </View>
+                      {selectedProduct?.id === product.id && (
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={24}
+                          color={Colors.PRIMARY}
+                        />
+                      )}
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <View style={styles.emptyContainer}>
+                    <Ionicons
+                      name="cube-outline"
+                      size={moderateScale(48)}
+                      color={Colors.GRAY}
+                    />
+                    <Text style={[styles.emptyText, {color: Colors.GRAY}]}>
+                      No products available
+                    </Text>
+                  </View>
+                )}
+              </View>
             )}
           </View>
-        </View>
-
-        {/* Add Details Button */}
-        <TouchableOpacity
-          style={[
-            styles.addDetailsButton, 
-            {
-              borderColor: borderColor,
-              backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
-            }
-          ]}
-          onPress={handleAddDetails}
-          activeOpacity={0.7}>
-          <Text style={[styles.addDetailsText, {color: textColor}]}>
-            Add details....
-          </Text>
-        </TouchableOpacity>
-
-        {/* Description Input */}
-        <View style={styles.descriptionContainer}>
-          <TextInput
-            style={[
-              styles.descriptionInput, 
-              {
-                color: textColor, 
-                borderColor: borderColor,
-                backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
-              }
-            ]}
-            placeholder="Add description..."
-            placeholderTextColor={textColor + '80'}
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-          />
-        </View>
-
-        {/* Products List Section */}
-        <View style={styles.productsListSection}>
-          <Text style={[styles.productsListTitle, {color: textColor}]}>
-            Products List
-          </Text>
-          
-          {loadingProducts ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color={Colors.PRIMARY} />
-              <Text style={[styles.loadingText, {color: textColor}]}>
-                Loading products...
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.productsList}>
-              {products.length > 0 ? (
-                products.map((product, index) => (
-                  <TouchableOpacity
-                    key={product.id + index}
-                    style={[
-                      styles.productItem,
-                      {borderBottomColor: borderColor},
-                      selectedProduct?.id === product.id && {
-                        backgroundColor: theme === 'dark' 
-                          ? 'rgba(242, 99, 31, 0.15)' 
-                          : 'rgba(242, 99, 31, 0.05)'
-                      },
-                    ]}
-                    onPress={() => handleProductSelect(product)}
-                    activeOpacity={0.7}>
-                    <Image
-                      source={{uri: product.image}}
-                      style={styles.productImage}
-                    />
-                    <View style={styles.productDetails}>
-                      <Text style={[styles.productName, {color: textColor}]}>
-                        {product.name}
-                      </Text>
-                    <Text style={[styles.productCategory, {color: textColor, opacity: 0.7}]}>
-                      {product.category}
-                    </Text>
-                      <Text style={[styles.productPrice, {color: Colors.PRIMARY}]}>
-                        {product.price}
-                      </Text>
-                    </View>
-                    {selectedProduct?.id === product.id && (
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={24}
-                        color={Colors.PRIMARY}
-                      />
-                    )}
-                  </TouchableOpacity>
-                ))
-              ) : (
-                <View style={styles.emptyContainer}>
-                  <Ionicons
-                    name="cube-outline"
-                    size={moderateScale(48)}
-                    color={Colors.GRAY}
-                  />
-                  <Text style={[styles.emptyText, {color: Colors.GRAY}]}>
-                    No products available
-                  </Text>
-                </View>
-              )}
-            </View>
-          )}
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </SafeAreaView>
     </View>
   );
 };
+
+export default Post;
 
 const styles = StyleSheet.create({
   container: {
@@ -539,45 +700,36 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   uploadButton: {
-    paddingHorizontal: scale(16),
+    paddingHorizontal: scale(12),
     paddingVertical: verticalScale(6),
-    borderRadius: moderateScale(8),
+    borderRadius: 20,
+    backgroundColor: Colors.PRIMARY,
   },
   uploadButtonDisabled: {
     opacity: 0.5,
   },
   uploadButtonText: {
-    color: Colors.PRIMARY,
-    fontSize: moderateScale(14),
+    color: '#FFFFFF',
     fontWeight: '600',
+    fontSize: moderateScale(12),
   },
   uploadProgressContainer: {
-    position: 'relative',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: scale(80),
-    minHeight: verticalScale(40),
+    position: 'relative',
+    width: 40,
+    height: 20,
   },
   uploadProgressOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
-    zIndex: 1,
+    alignItems: 'center',
   },
   uploadProgressText: {
-    color: Colors.PRIMARY,
-    fontSize: moderateScale(9),
+    color: 'white',
     fontWeight: '600',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: verticalScale(20),
+    fontSize: moderateScale(12),
   },
   videoSection: {
     flexDirection: 'row',
@@ -744,4 +896,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Post;
+

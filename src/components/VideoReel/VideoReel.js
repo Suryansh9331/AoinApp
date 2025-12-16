@@ -11,7 +11,7 @@ import useAppTheme from '../../theme/useAppTheme';
 import { getThemeColors } from '../../theme/themeColors';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const HEADER_HEIGHT = 56; 
+const HEADER_HEIGHT = 56;
 
 const VideoReel = ({ data = [], initialReelId = null }) => {
   const theme = useAppTheme();
@@ -38,13 +38,13 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
   // Scroll to specific reel when initialReelId is provided
   useEffect(() => {
     if (initialReelId && reelsData.length > 0 && containerHeight > 0 && !hasScrolledToInitialReel.current) {
-      const reelIndex = reelsData.findIndex(reel => 
-        reel.id === initialReelId || 
+      const reelIndex = reelsData.findIndex(reel =>
+        reel.id === initialReelId ||
         reel.id?.toString() === initialReelId?.toString() ||
         reel.reel_id?.toString() === initialReelId?.toString() ||
         reel.reel_id === initialReelId
       );
-      
+
       if (reelIndex !== -1 && flatListRef.current) {
         // Use requestAnimationFrame for smoother scroll
         requestAnimationFrame(() => {
@@ -75,7 +75,7 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
 
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
     if (viewableItems.length > 0) {
-    
+
       const fullyVisibleItem = viewableItems.find(
         item => item.isViewable && item.index !== null
       );
@@ -148,7 +148,7 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
   }
 
   return (
-    <View 
+    <View
       style={[styles.container, { backgroundColor: '#000' }]}
       onLayout={onLayout}
     >
@@ -177,10 +177,10 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
           // Handle scroll to index failure
           const wait = new Promise(resolve => setTimeout(resolve, 500));
           wait.then(() => {
-            flatListRef.current?.scrollToIndex({ 
-              index: info.index, 
+            flatListRef.current?.scrollToIndex({
+              index: info.index,
               animated: true,
-              viewPosition: 0.5 
+              viewPosition: 0.5
             });
           });
         }}

@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -10,18 +10,21 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
-import {useSelector} from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native';
+import Header from '../../components/Header/Header';
+import { useSelector } from 'react-redux';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
+import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import useAppTheme from '../../theme/useAppTheme';
-import {getThemeColors} from '../../theme/themeColors';
-import {Colors} from '../../utils/Colors';
-import {launchImageLibrary} from 'react-native-image-picker';
+import { getThemeColors } from '../../theme/themeColors';
+import { Colors } from '../../utils/Colors';
+import { launchImageLibrary } from 'react-native-image-picker';
+import { StatusBar } from 'react-native';
 
 const EditProfile = () => {
   const theme = useAppTheme();
-  const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
+  const { backgroundColor, textColor, borderColor } = getThemeColors(theme);
   const navigation = useNavigation();
   const userData = useSelector(state => state.auth.data);
   const userInfo = userData?.data || userData || {};
@@ -43,10 +46,10 @@ const EditProfile = () => {
   const [languages, setLanguages] = useState('');
   const [profileImage, setProfileImage] = useState(
     userInfo.avatar ||
-      userInfo.avatar_url ||
-      userInfo.profile_picture ||
-      userInfo.profile_image ||
-      'https://i.pravatar.cc/150?img=1',
+    userInfo.avatar_url ||
+    userInfo.profile_picture ||
+    userInfo.profile_image ||
+    'https://i.pravatar.cc/150?img=1',
   );
 
   const handleChangePhoto = () => {
@@ -99,16 +102,16 @@ const EditProfile = () => {
   const renderField = (label, value, placeholder, onChangeText, onPress = null) => {
     return (
       <TouchableOpacity
-        style={[styles.fieldContainer, {borderBottomColor: borderColor}]}
+        style={[styles.fieldContainer, { borderBottomColor: borderColor }]}
         onPress={onPress}
         activeOpacity={onPress ? 0.7 : 1}>
-        <Text style={[styles.fieldLabel, {color: textColor}]}>{label}</Text>
+        <Text style={[styles.fieldLabel, { color: textColor }]}>{label}</Text>
         {onPress ? (
           <View style={styles.fieldValueContainer}>
             <Text
               style={[
                 styles.fieldValue,
-                {color: value ? textColor : textColor + '80'},
+                { color: value ? textColor : textColor + '80' },
               ]}>
               {value || placeholder}
             </Text>
@@ -116,7 +119,7 @@ const EditProfile = () => {
           </View>
         ) : (
           <TextInput
-            style={[styles.fieldInput, {color: textColor}]}
+            style={[styles.fieldInput, { color: textColor }]}
             value={value}
             onChangeText={onChangeText}
             placeholder={placeholder}
@@ -128,19 +131,24 @@ const EditProfile = () => {
   };
 
   return (
-    <View style={[styles.container, {backgroundColor}]}>
-      {/* Header */}
-      <View style={[styles.header, {borderBottomColor: borderColor}]}>
-        <TouchableOpacity
-          onPress={handleCancel}
-          style={styles.headerButton}>
-          <Ionicons name="arrow-back" size={24} color={textColor} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, {color: textColor}]}>
-          Edit profile
-        </Text>
-        <View style={styles.headerButton} />
-      </View>
+    <View style={[styles.container, { backgroundColor }]}>
+      <StatusBar
+        barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={backgroundColor}
+        translucent={false}
+      />
+      <SafeAreaView style={{ backgroundColor }}>
+        <Header
+          title="Edit Profile"
+          leftType="back"
+          onLeftPress={() => navigation.goBack()}
+          containerStyle={{
+            backgroundColor,
+            borderBottomWidth: 0,
+          }}
+          titleStyle={{ color: textColor }}
+        />
+      </SafeAreaView>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -149,7 +157,7 @@ const EditProfile = () => {
         {/* Profile Picture Section */}
         <View style={styles.profilePictureSection}>
           <View style={styles.profilePictureContainer}>
-            <Image source={{uri: profileImage}} style={styles.profilePicture} />
+            <Image source={{ uri: profileImage }} style={styles.profilePicture} />
             <TouchableOpacity
               style={styles.cameraIconContainer}
               onPress={handleChangePhoto}
@@ -161,7 +169,7 @@ const EditProfile = () => {
             onPress={handleChangePhoto}
             activeOpacity={0.7}
             style={styles.changePhotoButton}>
-            <Text style={[styles.changePhotoText, {color: textColor}]}>
+            <Text style={[styles.changePhotoText, { color: textColor }]}>
               Change photo
             </Text>
           </TouchableOpacity>
@@ -213,10 +221,10 @@ const EditProfile = () => {
       </ScrollView>
 
       {/* Action Buttons */}
-      <View style={[styles.actionButtonsContainer, {borderTopColor: borderColor}]}>
+      <View style={[styles.actionButtonsContainer, { borderTopColor: borderColor }]}>
         <TouchableOpacity
           style={[
-            styles.cancelButton, 
+            styles.cancelButton,
             {
               borderColor: borderColor,
               backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
@@ -224,7 +232,7 @@ const EditProfile = () => {
           ]}
           onPress={handleCancel}
           activeOpacity={0.7}>
-          <Text style={[styles.cancelButtonText, {color: textColor}]}>Cancel</Text>
+          <Text style={[styles.cancelButtonText, { color: textColor }]}>Cancel</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.saveButton}

@@ -31,7 +31,7 @@ const Products = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
 
   // Format price to Indian currency format
@@ -80,21 +80,14 @@ const Products = () => {
     }
   };
 
-  // Fetch products from API on mount (only once)
-  useEffect(() => {
-    if (!hasFetched) {
-      fetchProducts();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Reset loading state when screen comes into focus
+  // Fetch products only when screen comes into focus (not on mount)
   useFocusEffect(
     useCallback(() => {
-      // If we have data, ensure loading is false
-      if (hasFetched) {
-        setLoading(false);
+      // Only fetch if we haven't fetched yet
+      if (!hasFetched) {
+        fetchProducts();
       }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [hasFetched])
   );
 
@@ -151,7 +144,7 @@ const Products = () => {
     <View style={[styles.container, {backgroundColor}]}>
       <Header
         title="My Products"
-        leftType="back"
+        leftType={false}
         onLeftPress={() => navigation.goBack()}
         containerStyle={{
           paddingTop: Platform.OS === 'ios' ? insets.top : 0,
@@ -180,7 +173,7 @@ const Products = () => {
       </View>
 
       {/* Products List Header */}
-      <View style={styles.listHeader}>
+      {/* <View style={styles.listHeader}>
         <Text style={[styles.listHeaderText, {color: textColor}]}>
           Products List
         </Text>
@@ -211,7 +204,7 @@ const Products = () => {
             <Text style={styles.sortButtonText}>Sort</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </View> */}
 
       {/* Products List */}
       {loading ? (
@@ -257,7 +250,6 @@ const styles = StyleSheet.create({
     marginTop: verticalScale(8),
     marginBottom: verticalScale(8),
     paddingHorizontal: scale(10),
-    paddingVertical: verticalScale(6),
     borderRadius: moderateScale(12),
   },
   searchIcon: {

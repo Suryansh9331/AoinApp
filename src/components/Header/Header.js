@@ -40,20 +40,20 @@ const Header = memo(({
     dispatch(setThemeMode(newTheme));
   };
 
- 
+
   const headerBg = bg || themeBackgroundColor;
   const isPrimaryBg = headerBg === Colors.PRIMARY;
   const renderLeft = () => {
     if (leftContent) return leftContent;
 
-   
+
     if (projectTitle) {
       return (
         <View style={styles.projectTitleContainer}>
-          <Text 
-            numberOfLines={1} 
+          <Text
+            numberOfLines={1}
             style={[
-              styles.projectTitle, 
+              styles.projectTitle,
               { color: isPrimaryBg ? '#FFFFFF' : themeTextColor },
               projectTitleStyle
             ]}>
@@ -75,7 +75,7 @@ const Header = memo(({
         style={styles.sideBtn}
       >
         <Text style={[
-          styles.arrow, 
+          styles.arrow,
           { color: isPrimaryBg ? '#FFFFFF' : themeTextColor }
         ]}>{label}</Text>
       </Pressable>
@@ -93,8 +93,8 @@ const Header = memo(({
           style={[
             styles.themeToggleBtn,
             {
-              backgroundColor: isPrimaryBg 
-                ? 'rgba(255, 255, 255, 0.2)' 
+              backgroundColor: isPrimaryBg
+                ? 'rgba(255, 255, 255, 0.2)'
                 : (themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'),
             }
           ]}>
@@ -118,7 +118,7 @@ const Header = memo(({
         style={styles.sideBtn}
       >
         <Text style={[
-          styles.arrow, 
+          styles.arrow,
           { color: isPrimaryBg ? '#FFFFFF' : themeTextColor }
         ]}>{label}</Text>
       </Pressable>
@@ -130,9 +130,9 @@ const Header = memo(({
   return (
     <View style={[
       styles.wrapper,
-      { 
-        height: height + (Platform.OS === 'ios' ? 4 : 0), 
-        backgroundColor: headerBg 
+      {
+        height: height + (Platform.OS === 'ios' ? 4 : 0),
+        backgroundColor: headerBg
       },
       showShadow && [
         styles.shadow,
@@ -142,9 +142,9 @@ const Header = memo(({
     ]}>
       {renderLeft()}
 
-      <View style={[styles.center, 
-        align === 'left' && { alignItems: 'flex-start' },
-        align === 'right' && { alignItems: 'flex-end' }
+      <View style={[styles.center,
+      align === 'left' && { alignItems: 'flex-start' },
+      align === 'right' && { alignItems: 'flex-end' }
       ]}>
         {!!title && (
           <Text numberOfLines={1} style={[styles.title, { color: headerTextColor }, titleStyle]}>

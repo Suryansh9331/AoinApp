@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,40 +13,50 @@ import {
   StatusBar,
   Alert,
 } from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {useRoute, useNavigation, CommonActions} from '@react-navigation/native';
-import {useDispatch, useSelector} from 'react-redux';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRoute, useNavigation, CommonActions, useFocusEffect } from '@react-navigation/native';
+import { useDispatch, useSelector } from 'react-redux';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import useAppTheme from '../../theme/useAppTheme';
-import {getThemeColors} from '../../theme/themeColors';
-import {Colors} from '../../utils/Colors';
-import {fetchMerchantReels_Request} from '../../redux/slices/reelSlice';
-import {clearCredentials} from '../../redux/slices/authSlice';
-import {clearAuthToken} from '../../utils/APiCall';
-import {removeItem, AUTH_STORAGE_KEY} from '../../utils/MMKVStorage';
+import { getThemeColors } from '../../theme/themeColors';
+import { Colors } from '../../utils/Colors';
+import { fetchMerchantReels_Request } from '../../redux/slices/reelSlice';
+import { clearCredentials } from '../../redux/slices/authSlice';
+import { clearAuthToken } from '../../utils/APiCall';
+import { deleteReel, updateReel } from '../../utils/APiCall';
+import { removeItem, AUTH_STORAGE_KEY } from '../../utils/MMKVStorage';
 
-const {width: SCREEN_WIDTH} = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const POST_ITEM_SIZE = (SCREEN_WIDTH - 4) / 3;
 
-const Profile = ({routeParams}) => {
+const Profile = ({ routeParams }) => {
   const theme = useAppTheme();
-  const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
+  const { backgroundColor, textColor, borderColor } = getThemeColors(theme);
   const route = useRoute();
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const userId = routeParams?.userId || route.params?.userId;
   const insets = useSafeAreaInsets();
 
- 
-  const {reels, loading, error} = useSelector(state => state.reels);
+
+  const { reels, loading, error } = useSelector(state => state.reels);
 
 
   useEffect(() => {
     if (reels.length === 0 && !loading) {
-      dispatch(fetchMerchantReels_Request({page: 1, per_page: 20}));
+      dispatch(fetchMerchantReels_Request({ page: 1, per_page: 20 }));
     }
   }, [dispatch]);
+
+  // Refresh reels when Profile screen is focused (comes back from edit)
+  useFocusEffect(
+    useCallback(() => {
+      // Fetch latest reels when screen focuses
+      dispatch(fetchMerchantReels_Request({ page: 1, per_page: 20 }));
+    }, [dispatch])
+  );
 
   // Get current user data for profile
   const userData = useSelector(state => state.auth.data);
@@ -55,11 +65,11 @@ const Profile = ({routeParams}) => {
   // Sample profile data
   const profileData = {
     username: userId ? `merchant_${userId}` : userInfo.username || userInfo.user_name || '@merchant',
-    fullName: userId ? 'Merchant Store' : userInfo.first_name && userInfo.last_name 
-      ? `${userInfo.first_name} ${userInfo.last_name}` 
+    fullName: userId ? 'Merchant Store' : userInfo.first_name && userInfo.last_name
+      ? `${userInfo.first_name} ${userInfo.last_name}`
       : userInfo.name || 'Merchant Store',
     bio: userInfo.bio || userInfo.description || '', // Empty bio - will show "Tap to add bio"
-    avatar: userInfo.avatar || userInfo.avatar_url || userInfo.profile_picture || 
+    avatar: userInfo.avatar || userInfo.avatar_url || userInfo.profile_picture ||
       userInfo.profile_image || 'https://i.pravatar.cc/150?img=1',
     posts: reels?.length || 0,
     followers: 38,
@@ -81,6 +91,8 @@ const Profile = ({routeParams}) => {
   };
 
   const [pressedReels, setPressedReels] = useState({});
+  const [visibleMenuReelId, setVisibleMenuReelId] = useState(null);
+  const [deletingReelId, setDeletingReelId] = useState(null);
 
   const handleLogout = () => {
     Alert.alert(
@@ -97,9 +109,9 @@ const Profile = ({routeParams}) => {
           onPress: () => {
             dispatch(clearCredentials());
             clearAuthToken();
-           
+
             removeItem(AUTH_STORAGE_KEY);
-           
+
             navigation.dispatch(
               CommonActions.reset({
                 index: 0,
@@ -112,28 +124,79 @@ const Profile = ({routeParams}) => {
     );
   };
 
-  const renderReelItem = ({item}) => {
+  const handleDeleteReel = (item) => {
+    Alert.alert(
+      'Delete Reel',
+      'Are you sure you want to delete this reel?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => setVisibleMenuReelId(null),
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setDeletingReelId(item.id || item.reel_id);
+            try {
+              const reelId = item.id || item.reel_id;
+              const result = await deleteReel(reelId);
+              console.log('Reel deleted:', result);
+              
+              // Refresh reels after deletion
+              dispatch(fetchMerchantReels_Request({ page: 1, per_page: 20 }));
+              
+              setVisibleMenuReelId(null);
+              Alert.alert('Success', 'Reel deleted successfully');
+            } catch (error) {
+              console.log('Delete error:', error);
+              Alert.alert('Error', error?.message || 'Failed to delete reel');
+            } finally {
+              setDeletingReelId(null);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleEditReel = (item) => {
+    setVisibleMenuReelId(null);
+    // Navigate to MerchantBottomTab's Post screen with reel data for editing
+    navigation.navigate('MerchantBottomTab', {
+      navigateToTab: 'Post',
+      editingReel: item,
+      editingReelId: item.id || item.reel_id,
+    });
+  };
+
+  const renderReelItem = ({ item }) => {
     const isPressed = pressedReels[item.id] || false;
     const thumbnail = item.thumbnail || item.videoUrl;
     const views = formatViews(item.views || item.views_count || 0);
+    const isMenuVisible = visibleMenuReelId === (item.id || item.reel_id);
+    const isDeleting = deletingReelId === (item.id || item.reel_id);
 
     return (
       <TouchableOpacity
-        style={[styles.postItem, {borderColor: borderColor}]}
+        style={[styles.postItem, { borderColor: borderColor }]}
         activeOpacity={1}
-        onPressIn={() => setPressedReels(prev => ({...prev, [item.id]: true}))}
+        onPressIn={() => setPressedReels(prev => ({ ...prev, [item.id]: true }))}
         onPressOut={() =>
-          setPressedReels(prev => ({...prev, [item.id]: false}))
+          setPressedReels(prev => ({ ...prev, [item.id]: false }))
         }
         onPress={() => {
-          // Navigate to reels view or play video
+          // Navigate to reels view or play video and pass the selected reel
+          // as preloaded data so Home / VideoReel can display it immediately
           navigation.navigate('MerchantBottomTab', {
             navigateToTab: 'Home',
             reelId: item.id || item.reel_id,
+            preloadedReels: [item],
           });
         }}>
         <Image
-          source={{uri: thumbnail}}
+          source={{ uri: thumbnail }}
           style={styles.postImage}
           resizeMode="cover"
         />
@@ -141,6 +204,41 @@ const Profile = ({routeParams}) => {
         <View style={styles.cameraIconContainer}>
           <Ionicons name="videocam" size={14} color="#FFFFFF" />
         </View>
+        
+        {/* Three-dot menu in top left */}
+        <TouchableOpacity
+          style={styles.menuButton}
+          onPress={() => setVisibleMenuReelId(isMenuVisible ? null : (item.id || item.reel_id))}
+          disabled={isDeleting}>
+          <MaterialCommunityIcons name="dots-vertical" size={18} color="#FFFFFF" />
+        </TouchableOpacity>
+
+        {/* Menu options */}
+        {isMenuVisible && !isDeleting && (
+          <View style={[styles.menuOptions, { backgroundColor: theme === 'dark' ? '#2A2A2A' : '#FFFFFF' }]}>
+            <TouchableOpacity
+              style={styles.menuOption}
+              onPress={() => handleEditReel(item)}>
+              <MaterialCommunityIcons name="pencil" size={16} color={theme === 'dark' ? '#FFFFFF' : '#000000'} />
+              <Text style={[styles.menuOptionText, { color: theme === 'dark' ? '#FFFFFF' : '#000000' }]}>Edit</Text>
+            </TouchableOpacity>
+            <View style={[styles.menuDivider, { backgroundColor: borderColor }]} />
+            <TouchableOpacity
+              style={styles.menuOption}
+              onPress={() => handleDeleteReel(item)}>
+              <MaterialCommunityIcons name="delete" size={16} color="#FF3040" />
+              <Text style={[styles.menuOptionText, { color: '#FF3040' }]}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Loading indicator while deleting */}
+        {isDeleting && (
+          <View style={styles.deleteLoadingOverlay}>
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          </View>
+        )}
+
         {/* View count in bottom left */}
         <View style={styles.viewCountContainer}>
           <Text style={styles.viewCountText}>{views}</Text>
@@ -158,7 +256,7 @@ const Profile = ({routeParams}) => {
   };
 
   return (
-    <View style={[styles.container, {backgroundColor}]}>
+    <View style={[styles.container, { backgroundColor }]}>
       <StatusBar
         barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundColor}
@@ -166,12 +264,12 @@ const Profile = ({routeParams}) => {
       />
       {/* Header */}
       <View style={[
-        styles.header, 
-        {borderBottomColor: borderColor},
-        Platform.OS === 'ios' && {paddingTop: insets.top + verticalScale(10)}
+        styles.header,
+        { borderBottomColor: borderColor },
+        Platform.OS === 'ios' && { paddingTop: insets.top + verticalScale(10) }
       ]}>
         <View style={styles.headerLeft}>
-          <Text style={[styles.headerTitle, {color: textColor}]}>
+          <Text style={[styles.headerTitle, { color: textColor }]}>
             Profile
           </Text>
           <TouchableOpacity style={styles.headerButton}>
@@ -194,41 +292,41 @@ const Profile = ({routeParams}) => {
         <View style={styles.profileSection}>
           {/* Avatar */}
           <View style={styles.avatarContainer}>
-            <Image source={{uri: profileData.avatar}} style={styles.avatar} />
+            <Image source={{ uri: profileData.avatar }} style={styles.avatar} />
           </View>
 
           {/* Merchant Name */}
-          <Text style={[styles.username, {color: textColor}]}>
+          <Text style={[styles.username, { color: textColor }]}>
             {profileData.fullName}
           </Text>
           {/* Username below name */}
-          <Text style={[styles.userHandle, {color: textColor}]}>
+          <Text style={[styles.userHandle, { color: textColor }]}>
             {profileData.username}
           </Text>
 
           {/* Stats */}
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
-              <Text style={[styles.statNumber, {color: textColor}]}>
+              <Text style={[styles.statNumber, { color: textColor }]}>
                 {profileData.posts}
               </Text>
-              <Text style={[styles.statLabel, {color: textColor}]}>
+              <Text style={[styles.statLabel, { color: textColor }]}>
                 Reels
               </Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={[styles.statNumber, {color: textColor}]}>
+              <Text style={[styles.statNumber, { color: textColor }]}>
                 {profileData.followers}
               </Text>
-              <Text style={[styles.statLabel, {color: textColor}]}>
+              <Text style={[styles.statLabel, { color: textColor }]}>
                 Followers
               </Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={[styles.statNumber, {color: textColor}]}>
+              <Text style={[styles.statNumber, { color: textColor }]}>
                 {profileData.likes}
               </Text>
-              <Text style={[styles.statLabel, {color: textColor}]}>
+              <Text style={[styles.statLabel, { color: textColor }]}>
                 Likes
               </Text>
             </View>
@@ -238,7 +336,7 @@ const Profile = ({routeParams}) => {
           <View style={styles.actionButtons}>
             <TouchableOpacity
               style={[
-                styles.editButton, 
+                styles.editButton,
                 {
                   borderColor: borderColor,
                   backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
@@ -246,13 +344,13 @@ const Profile = ({routeParams}) => {
               ]}
               activeOpacity={0.7}
               onPress={() => navigation.navigate('EditProfile')}>
-              <Text style={[styles.editButtonText, {color: Colors.PRIMARY}]}>
+              <Text style={[styles.editButtonText, { color: Colors.PRIMARY }]}>
                 Edit profile
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
-                styles.bookmarkButton, 
+                styles.bookmarkButton,
                 {
                   borderColor: borderColor,
                   backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
@@ -265,12 +363,12 @@ const Profile = ({routeParams}) => {
 
           {/* Bio Section */}
           {profileData.bio ? (
-            <Text style={[styles.bio, {color: textColor}]}>
+            <Text style={[styles.bio, { color: textColor }]}>
               {profileData.bio}
             </Text>
           ) : (
             <TouchableOpacity activeOpacity={0.7}>
-              <Text style={[styles.addBioText, {color: textColor}]}>
+              <Text style={[styles.addBioText, { color: textColor }]}>
                 Tap to add bio
               </Text>
             </TouchableOpacity>
@@ -299,23 +397,23 @@ const Profile = ({routeParams}) => {
           ) : loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={Colors.PRIMARY} />
-              <Text style={[styles.loadingText, {color: textColor}]}>
+              <Text style={[styles.loadingText, { color: textColor }]}>
                 Loading reels...
               </Text>
             </View>
           ) : error ? (
             <View style={styles.errorContainer}>
-              <Text style={[styles.errorText, {color: Colors.PRIMARY}]}>
+              <Text style={[styles.errorText, { color: Colors.PRIMARY }]}>
                 {error}
               </Text>
             </View>
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="videocam-outline" size={48} color={textColor} />
-              <Text style={[styles.emptyText, {color: textColor}]}>
+              <Text style={[styles.emptyText, { color: textColor }]}>
                 No reels yet
               </Text>
-              <Text style={[styles.emptySubText, {color: textColor}]}>
+              <Text style={[styles.emptySubText, { color: textColor }]}>
                 Upload your first reel to get started
               </Text>
             </View>
@@ -515,6 +613,54 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     borderRadius: moderateScale(4),
     padding: scale(4),
+  },
+  menuButton: {
+    position: 'absolute',
+    top: scale(6),
+    left: scale(6),
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: moderateScale(4),
+    padding: scale(4),
+    zIndex: 100,
+  },
+  menuOptions: {
+    position: 'absolute',
+    top: scale(32),
+    left: scale(6),
+    borderRadius: moderateScale(8),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 101,
+    minWidth: moderateScale(120),
+  },
+  menuOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(10),
+    gap: scale(8),
+  },
+  menuOptionText: {
+    fontSize: moderateScale(14),
+    fontWeight: '500',
+  },
+  menuDivider: {
+    height: 1,
+    marginVertical: verticalScale(4),
+  },
+  deleteLoadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 102,
   },
   viewCountContainer: {
     position: 'absolute',

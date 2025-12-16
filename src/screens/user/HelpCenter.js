@@ -15,6 +15,7 @@ import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
 import useAppTheme from '../../theme/useAppTheme';
 import {getThemeColors} from '../../theme/themeColors';
 import {Colors} from '../../utils/Colors';
+import Header from '../../components/Header/Header';
 
 const HelpCenter = () => {
   const theme = useAppTheme();
@@ -112,23 +113,11 @@ const HelpCenter = () => {
   return (
     <View style={[styles.container, {backgroundColor}]}>
       {/* Header */}
-      <View style={[styles.header, {borderBottomColor: borderColor}]}>
-        <View style={styles.headerLeft}>
-          {navigation.canGoBack() && (
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={styles.headerButton}>
-              <Ionicons name="arrow-back" size={24} color={textColor} />
-            </TouchableOpacity>
-          )}
-          <Text style={[styles.headerTitle, {color: textColor}]}>
-            Help Center
-          </Text>
-        </View>
-        <TouchableOpacity style={styles.headerButton}>
-          <Ionicons name="notifications-outline" size={24} color={textColor} />
-        </TouchableOpacity>
-      </View>
+       <Header
+       title="Help Center"
+       
+       onLeftPress={() => navigation.goBack()}
+      />
 
       {/* Help Options List */}
       <View style={styles.optionsContainer}>

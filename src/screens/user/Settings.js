@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,18 +6,19 @@ import {
   TouchableOpacity,
   Switch,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
-import {useSelector, useDispatch} from 'react-redux';
+import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
+import { useSelector, useDispatch } from 'react-redux';
 import useAppTheme from '../../theme/useAppTheme';
-import {getThemeColors} from '../../theme/themeColors';
-import {Colors} from '../../utils/Colors';
-import {setThemeMode} from '../../redux/slices/themeSlice';
+import { getThemeColors } from '../../theme/themeColors';
+import { Colors } from '../../utils/Colors';
+import { setThemeMode } from '../../redux/slices/themeSlice';
+import Header from '../../components/Header/Header';
 
 const Settings = () => {
   const theme = useAppTheme();
-  const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
+  const { backgroundColor, textColor, borderColor } = getThemeColors(theme);
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const themeMode = useSelector(state => state.theme?.themeMode || 'light');
@@ -59,32 +60,20 @@ const Settings = () => {
   ];
 
   return (
-    <View style={[styles.container, {backgroundColor}]}>
+    <View style={[styles.container, { backgroundColor }]}>
       {/* Header */}
-      <View style={[styles.header, {borderBottomColor: borderColor}]}>
-        <View style={styles.headerLeft}>
-          {navigation.canGoBack() && (
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={styles.headerButton}>
-              <Ionicons name="arrow-back" size={24} color={textColor} />
-            </TouchableOpacity>
-          )}
-          <Text style={[styles.headerTitle, {color: textColor}]}>
-            Settings
-          </Text>
-        </View>
-        <TouchableOpacity style={styles.headerButton}>
-          <Ionicons name="notifications-outline" size={24} color={textColor} />
-        </TouchableOpacity>
-      </View>
+     <Header
+       title="Account Settings"
+       
+       onLeftPress={() => navigation.goBack()}
+      />
 
       {/* Settings Options List */}
       <View style={styles.settingsContainer}>
         {settingsOptions.map((item, index) => (
           <View key={item.id}>
             <View style={styles.settingItem}>
-              <Text style={[styles.settingText, {color: textColor}]}>
+              <Text style={[styles.settingText, { color: textColor }]}>
                 {item.title}
               </Text>
               <Switch
@@ -99,7 +88,7 @@ const Settings = () => {
               />
             </View>
             {index < settingsOptions.length - 1 && (
-              <View style={[styles.divider, {backgroundColor: borderColor}]} />
+              <View style={[styles.divider, { backgroundColor: borderColor }]} />
             )}
           </View>
         ))}
@@ -154,6 +143,8 @@ const styles = StyleSheet.create({
 });
 
 export default Settings;
+
+
 
 
 

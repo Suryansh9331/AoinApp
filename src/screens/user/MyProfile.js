@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,21 +8,22 @@ import {
   Modal,
   Platform,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
-import {useSelector} from 'react-redux';
+import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
+import { useSelector } from 'react-redux';
 import Input from '../../components/reuseable/Input';
 import ActionButton from '../../components/reuseable/ActionButton';
 import useAppTheme from '../../theme/useAppTheme';
-import {getThemeColors} from '../../theme/themeColors';
-import {Colors} from '../../utils/Colors';
+import { getThemeColors } from '../../theme/themeColors';
+import { Colors } from '../../utils/Colors';
 import FONTS from '../../utils/Font';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import Header from '../../components/Header/Header';
 
 const MyProfile = () => {
   const theme = useAppTheme();
-  const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
+  const { backgroundColor, textColor, borderColor } = getThemeColors(theme);
   const navigation = useNavigation();
   const userData = useSelector(state => state.auth.data);
 
@@ -71,25 +72,13 @@ const MyProfile = () => {
   const genders = ['Male', 'Female', 'Other'];
 
   return (
-    <View style={[styles.container, {backgroundColor}]}>
+    <View style={[styles.container, { backgroundColor }]}>
       {/* Header */}
-      <View style={[styles.header, {borderBottomColor: borderColor}]}>
-        <View style={styles.headerLeft}>
-          {navigation.canGoBack() && (
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={styles.headerButton}>
-              <Ionicons name="arrow-back" size={24} color={textColor} />
-            </TouchableOpacity>
-          )}
-          <Text style={[styles.headerTitle, {color: textColor}]}>
-            My Profile
-          </Text>
-        </View>
-        <TouchableOpacity style={styles.headerButton}>
-          <Ionicons name="notifications-outline" size={24} color={textColor} />
-        </TouchableOpacity>
-      </View>
+        <Header
+       title="Account Settings"
+       
+       onLeftPress={() => navigation.goBack()}
+      />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -97,7 +86,7 @@ const MyProfile = () => {
         contentContainerStyle={styles.scrollContent}>
         {/* Full Name */}
         <View style={styles.fieldContainer}>
-          <Text style={[styles.label, {color: textColor}]}>Full Name</Text>
+          <Text style={[styles.label, { color: textColor }]}>Full Name</Text>
           <Input
             placeholder="Full Name"
             value={fullName}
@@ -108,7 +97,7 @@ const MyProfile = () => {
 
         {/* Email Address */}
         <View style={styles.fieldContainer}>
-          <Text style={[styles.label, {color: textColor}]}>
+          <Text style={[styles.label, { color: textColor }]}>
             Email Address
           </Text>
           <Input
@@ -122,14 +111,14 @@ const MyProfile = () => {
 
         {/* Date of Birth */}
         <View style={styles.fieldContainer}>
-          <Text style={[styles.label, {color: textColor}]}>Date of Birth</Text>
+          <Text style={[styles.label, { color: textColor }]}>Date of Birth</Text>
           <TouchableOpacity
             style={[
               styles.datePickerButton,
-              {borderColor: borderColor, backgroundColor: backgroundColor},
+              { borderColor: borderColor, backgroundColor: backgroundColor },
             ]}
             onPress={() => setShowDatePicker(true)}>
-            <Text style={[styles.dateText, {color: textColor}]}>
+            <Text style={[styles.dateText, { color: textColor }]}>
               {formatDate(dateOfBirth)}
             </Text>
             <Ionicons name="calendar-outline" size={20} color={textColor} />
@@ -138,14 +127,14 @@ const MyProfile = () => {
 
         {/* Gender */}
         <View style={styles.fieldContainer}>
-          <Text style={[styles.label, {color: textColor}]}>Gender</Text>
+          <Text style={[styles.label, { color: textColor }]}>Gender</Text>
           <TouchableOpacity
             style={[
               styles.dropdownButton,
-              {borderColor: borderColor, backgroundColor: backgroundColor},
+              { borderColor: borderColor, backgroundColor: backgroundColor },
             ]}
             onPress={() => setShowGenderPicker(true)}>
-            <Text style={[styles.dropdownText, {color: textColor}]}>
+            <Text style={[styles.dropdownText, { color: textColor }]}>
               {gender}
             </Text>
             <Ionicons name="chevron-down" size={20} color={textColor} />
@@ -154,16 +143,16 @@ const MyProfile = () => {
 
         {/* Phone Number */}
         <View style={styles.fieldContainer}>
-          <Text style={[styles.label, {color: textColor}]}>Phone Number</Text>
+          <Text style={[styles.label, { color: textColor }]}>Phone Number</Text>
           <View style={styles.phoneContainer}>
             <TouchableOpacity
               style={[
                 styles.countryCodeButton,
-                {borderColor: borderColor, backgroundColor: backgroundColor},
+                { borderColor: borderColor, backgroundColor: backgroundColor },
               ]}>
               <Text style={styles.flagEmoji}>🇮🇳</Text>
               <Ionicons name="chevron-down" size={16} color={textColor} />
-              <Text style={[styles.countryCode, {color: textColor}]}>
+              <Text style={[styles.countryCode, { color: textColor }]}>
                 {countryCode}
               </Text>
             </TouchableOpacity>
@@ -215,13 +204,13 @@ const MyProfile = () => {
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => setShowGenderPicker(false)}>
-          <View style={[styles.modalContent, {backgroundColor}]}>
+          <View style={[styles.modalContent, { backgroundColor }]}>
             {genders.map(item => (
               <TouchableOpacity
                 key={item}
                 style={[
                   styles.genderOption,
-                  {borderBottomColor: borderColor},
+                  { borderBottomColor: borderColor },
                   gender === item && {
                     backgroundColor: `${Colors.PRIMARY}20`,
                   },
@@ -230,7 +219,7 @@ const MyProfile = () => {
                   setGender(item);
                   setShowGenderPicker(false);
                 }}>
-                <Text style={[styles.genderText, {color: textColor}]}>
+                <Text style={[styles.genderText, { color: textColor }]}>
                   {item}
                 </Text>
                 {gender === item && (

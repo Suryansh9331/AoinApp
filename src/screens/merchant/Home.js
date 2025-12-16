@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, StatusBar, Text, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, StatusBar, Text, ActivityIndicator, SafeAreaView } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useRoute } from '@react-navigation/native';
 import VideoReel from '../../components/VideoReel/VideoReel';
@@ -7,25 +7,37 @@ import useAppTheme from '../../theme/useAppTheme';
 import { getThemeColors } from '../../theme/themeColors';
 import { moderateScale } from 'react-native-size-matters';
 import { fetchPublicReels_Request } from '../../redux/slices/reelSlice';
+import Header from '../../components/Header/Header';
 
-const Home = ({ routeParams }) => {
+const Home = ({ routeParams, initialReels }) => {
   const theme = useAppTheme();
   const { backgroundColor } = getThemeColors(theme);
   const dispatch = useDispatch();
   const route = useRoute();
-  
+  const [hasFetched, setHasFetched] = React.useState(false);
+
   // Get public reels from Redux store
   const { publicReels, publicReelsLoading, publicReelsError } = useSelector(state => state.reels);
+
   
-  // Get reelId from route params (passed from Profile screen)
   const reelId = routeParams?.reelId || route.params?.reelId;
 
+  
+  const preloadedReels = initialReels || routeParams?.preloadedReels || route.params?.preloadedReels;
+  const initialData = (preloadedReels && preloadedReels.length > 0) ? preloadedReels : publicReels;
+
+  
   useEffect(() => {
-    // Fetch public reels on component mount
-    if (publicReels.length === 0 && !publicReelsLoading) {
+    // Only fetch public reels when no preloaded data is provided, no existing error, and we haven't fetched yet
+    if ((!preloadedReels || preloadedReels.length === 0) && 
+        publicReels.length === 0 && 
+        !publicReelsLoading && 
+        !publicReelsError &&
+        !hasFetched) {
+      setHasFetched(true);
       dispatch(fetchPublicReels_Request({ page: 1, per_page: 20 }));
     }
-  }, [dispatch]);
+  }, [dispatch, preloadedReels, publicReels.length, publicReelsLoading, publicReelsError, hasFetched]);
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
@@ -34,14 +46,21 @@ const Home = ({ routeParams }) => {
         backgroundColor="#000000"
         translucent={false}
       />
-      <View style={styles.headerContainer} pointerEvents="box-none">
-        <View style={styles.headerContent}>
-          <View style={styles.headerLeft} />
-          <Text style={styles.headerTitle}>Reels</Text>
-          <View style={styles.headerRight} />
-        </View>
-      </View>
-      {publicReelsLoading && publicReels.length === 0 ? (
+      <SafeAreaView style={{ backgroundColor: '#000000' }}>
+        <Header 
+          title="Reels" 
+          leftType="none" 
+          rightType="none" 
+          containerStyle={{ 
+            backgroundColor: '#000000',
+            borderBottomWidth: 0
+          }}
+          titleStyle={{ color: '#FFFFFF' }}
+        />
+      </SafeAreaView>
+      {initialData.length > 0 ? (
+        <VideoReel data={initialData} initialReelId={reelId} />
+      ) : publicReelsLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#F2631F" />
           <Text style={styles.loadingText}>Loading reels...</Text>
@@ -50,8 +69,6 @@ const Home = ({ routeParams }) => {
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{publicReelsError}</Text>
         </View>
-      ) : publicReels.length > 0 ? (
-        <VideoReel data={publicReels} initialReelId={reelId} />
       ) : (
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>No reels available</Text>

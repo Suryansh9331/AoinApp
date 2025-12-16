@@ -117,13 +117,17 @@ const VerifyOTP = ({ route }) => {
             })
           );
 
-          // The AppNavigator will automatically redirect to BottomTab based on token
-          // No need to manually navigate - just show success message
-          Alert.alert('Success', response?.message || 'Account created successfully!', [
+          // Clear auth data first
+          await setObject(AUTH_STORAGE_KEY, null);
+          setAuthToken(null);
+          console.log("12323343",response)
+          // Show success message and navigate to login
+          Alert.alert('Success', response?.message || 'Account created successfully! Please login to continue.', [
             {
               text: 'OK',
               onPress: () => {
-                // AppNavigator will automatically show BottomTab when token is set
+                // Navigate to login screen
+                navigation.replace('Login');
               },
             },
           ]);

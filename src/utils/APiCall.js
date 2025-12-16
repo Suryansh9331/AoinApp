@@ -138,3 +138,21 @@ export const uploadFormData = async (endpoint, formData, onProgress = null) => {
     throw handleApiError(error);
   }
 };
+
+export const deleteReel = async (reelId) => {
+  try {
+    const {data} = await apiClient.delete(`/api/reels/${reelId}`);
+    return data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+export const updateReel = async (reelId, body = {}) => {
+  try {
+    const {data} = await apiClient.put(`/api/reels/${reelId}`, body);
+    return data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};

@@ -23,10 +23,10 @@ const Home = () => {
         </View>
       </View>
       <View style={styles.emptyContainer}>
-        <Text style={[styles.emptyText, {color: textColor}]}>
+        <Text style={[styles.emptyText, { color: textColor }]}>
           Reels feature coming soon
         </Text>
-        <Text style={[styles.emptySubText, {color: textColor}]}>
+        <Text style={[styles.emptySubText, { color: textColor }]}>
           Check back later for exciting content
         </Text>
       </View>

@@ -7,22 +7,23 @@ import {
   StatusBar,
   Alert,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import {useDispatch} from 'react-redux';
-import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
+import { useDispatch } from 'react-redux';
+import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import useAppTheme from '../../theme/useAppTheme';
-import {getThemeColors} from '../../theme/themeColors';
-import {Colors} from '../../utils/Colors';
-import {clearCredentials} from '../../redux/slices/authSlice';
-import {clearAuthToken} from '../../utils/APiCall';
-import {removeItem, AUTH_STORAGE_KEY} from '../../utils/MMKVStorage';
+import { getThemeColors } from '../../theme/themeColors';
+import { Colors } from '../../utils/Colors';
+import { clearCredentials } from '../../redux/slices/authSlice';
+import { clearAuthToken } from '../../utils/APiCall';
+import { removeItem, AUTH_STORAGE_KEY } from '../../utils/MMKVStorage';
+import Header from '../../components/Header/Header';
 
 const MerchantSettings = () => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const theme = useAppTheme();
-  const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
+  const { backgroundColor, textColor, borderColor } = getThemeColors(theme);
 
   const rows = [
     {
@@ -52,7 +53,7 @@ const MerchantSettings = () => {
       'Sign Out',
       'Are you sure you want to sign out?',
       [
-        {text: 'Cancel', style: 'cancel'},
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Sign Out',
           style: 'destructive',
@@ -62,7 +63,7 @@ const MerchantSettings = () => {
             removeItem(AUTH_STORAGE_KEY);
             navigation.reset({
               index: 0,
-              routes: [{name: 'Splash'}],
+              routes: [{ name: 'Splash' }],
             });
           },
         },
@@ -75,12 +76,12 @@ const MerchantSettings = () => {
       key={item.title}
       style={[
         styles.row,
-        {borderBottomColor: isLast ? 'transparent' : borderColor},
+        { borderBottomColor: isLast ? 'transparent' : borderColor },
         item.disabled && styles.rowDisabled,
       ]}
       activeOpacity={item.disabled ? 1 : 0.7}
       onPress={!item.disabled ? item.onPress : undefined}>
-      <Text style={[styles.rowText, {color: textColor, opacity: item.disabled ? 0.5 : 1}]}>
+      <Text style={[styles.rowText, { color: textColor, opacity: item.disabled ? 0.5 : 1 }]}>
         {item.title}
       </Text>
       {!item.disabled && (
@@ -90,25 +91,23 @@ const MerchantSettings = () => {
   );
 
   return (
-    <View style={[styles.container, {backgroundColor}]}>
+    <View style={[styles.container, { backgroundColor }]}>
       <StatusBar
         barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundColor}
         translucent={false}
       />
 
-      <View style={[styles.header, {borderBottomColor: borderColor}]}>
-        <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={22} color={textColor} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, {color: textColor}]}>Account Settings</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <Header
+       title="Account Settings"
+       
+       onLeftPress={() => navigation.goBack()}
+      />
 
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, {color: textColor}]}>Account Information</Text>
+        <Text style={[styles.sectionTitle, { color: textColor }]}>Account Information</Text>
         <View style={[
-          styles.card, 
+          styles.card,
           {
             borderColor: borderColor,
             backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
@@ -119,9 +118,9 @@ const MerchantSettings = () => {
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, {color: textColor}]}>Service Support</Text>
+        <Text style={[styles.sectionTitle, { color: textColor }]}>Service Support</Text>
         <View style={[
-          styles.card, 
+          styles.card,
           {
             borderColor: borderColor,
             backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
