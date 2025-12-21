@@ -12,6 +12,8 @@ import {
   Platform,
   StatusBar,
   Alert,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, CommonActions, useFocusEffect } from '@react-navigation/native';
@@ -93,6 +95,10 @@ const Profile = ({ routeParams }) => {
   const [pressedReels, setPressedReels] = useState({});
   const [visibleMenuReelId, setVisibleMenuReelId] = useState(null);
   const [deletingReelId, setDeletingReelId] = useState(null);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingReelData, setEditingReelData] = useState(null);
+  const [editDescription, setEditDescription] = useState('');
+  const [updatingReel, setUpdatingReel] = useState(false);
 
   const handleLogout = () => {
     Alert.alert(
@@ -163,14 +169,50 @@ const Profile = ({ routeParams }) => {
 
   const handleEditReel = (item) => {
     setVisibleMenuReelId(null);
-    // Navigate directly to the Post screen with reel data for editing
-    navigation.navigate('Post', {
-      screen: 'Post',
-      params: {
-        editingReel: item,
-        editingReelId: item.id || item.reel_id,
-      },
-    });
+    // Set the reel data and current description
+    const currentDescription = item.description || item.caption || '';
+    setEditingReelData(item);
+    setEditDescription(currentDescription);
+    setEditModalVisible(true);
+  };
+
+  const handleSaveDescription = async () => {
+    if (!editDescription.trim()) {
+      Alert.alert('Error', 'Please add a description');
+      return;
+    }
+
+    if (!editingReelData) {
+      return;
+    }
+
+    setUpdatingReel(true);
+    try {
+      const reelId = editingReelData.id || editingReelData.reel_id;
+      const result = await updateReel(reelId, {
+        description: editDescription.trim(),
+      });
+      console.log('Reel updated:', result);
+      
+      // Refresh reels after update
+      dispatch(fetchMerchantReels_Request({ page: 1, per_page: 20 }));
+      
+      setEditModalVisible(false);
+      setEditingReelData(null);
+      setEditDescription('');
+      Alert.alert('Success', 'Description updated successfully');
+    } catch (error) {
+      console.log('Update error:', error);
+      Alert.alert('Error', error?.message || 'Failed to update description');
+    } finally {
+      setUpdatingReel(false);
+    }
+  };
+
+  const handleCloseEditModal = () => {
+    setEditModalVisible(false);
+    setEditingReelData(null);
+    setEditDescription('');
   };
 
   const renderReelItem = ({ item }) => {
@@ -190,7 +232,30 @@ const Profile = ({ routeParams }) => {
         }
         onPress={() => {
           // Navigate to reels view with the selected reel
-          // First reset the navigation stack to avoid multiple navigations
+          // Pass all reels so user can scroll through them
+          // The clicked reel will be shown first, then user can scroll to see more
+          const clickedReelId = item.id || item.reel_id;
+          
+          // Find the index of clicked reel in the reels array
+          const clickedReelIndex = reels.findIndex(r => 
+            (r.id || r.reel_id)?.toString() === clickedReelId?.toString()
+          );
+          
+          // Reorder reels: start from clicked reel, then show rest
+          let orderedReels = [];
+          if (clickedReelIndex !== -1) {
+            // Start from clicked reel, then add remaining reels
+            orderedReels = [
+              ...reels.slice(clickedReelIndex),
+              ...reels.slice(0, clickedReelIndex)
+            ];
+          } else {
+            // If reel not found in list, use all reels and put clicked one first
+            orderedReels = [item, ...reels.filter(r => 
+              (r.id || r.reel_id)?.toString() !== clickedReelId?.toString()
+            )];
+          }
+          
           navigation.dispatch(
             CommonActions.reset({
               index: 0,
@@ -199,8 +264,8 @@ const Profile = ({ routeParams }) => {
                   name: 'MerchantBottomTab',
                   params: { 
                     navigateToTab: 'Home',
-                    reelId: item.id || item.reel_id,
-                    preloadedReels: [item],
+                    reelId: clickedReelId,
+                    preloadedReels: orderedReels,
                     // Force a new navigation by adding a timestamp
                     timestamp: Date.now()
                   }
@@ -434,6 +499,63 @@ const Profile = ({ routeParams }) => {
           )}
         </View>
       </ScrollView>
+
+      {/* Edit Description Modal */}
+      <Modal
+        visible={editModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={handleCloseEditModal}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: backgroundColor }]}>
+            {/* Modal Header */}
+            <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
+              <TouchableOpacity
+                onPress={handleCloseEditModal}
+                disabled={updatingReel}
+                style={styles.modalCancelButton}>
+                <Text style={[styles.modalCancelText, { color: textColor }]}>Cancel</Text>
+              </TouchableOpacity>
+              <Text style={[styles.modalTitle, { color: textColor }]}>Edit Description</Text>
+              <TouchableOpacity
+                onPress={handleSaveDescription}
+                disabled={updatingReel || !editDescription.trim()}
+                style={[
+                  styles.modalSaveButton,
+                  (!editDescription.trim() || updatingReel) && styles.modalSaveButtonDisabled
+                ]}>
+                {updatingReel ? (
+                  <ActivityIndicator size="small" color={Colors.PRIMARY} />
+                ) : (
+                  <Text style={[styles.modalSaveText, { color: Colors.PRIMARY }]}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {/* Description Input */}
+            <View style={styles.modalBody}>
+              <TextInput
+                style={[
+                  styles.editDescriptionInput,
+                  {
+                    color: textColor,
+                    borderColor: borderColor,
+                    backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
+                  }
+                ]}
+                placeholder="Add description..."
+                placeholderTextColor={textColor + '80'}
+                value={editDescription}
+                onChangeText={setEditDescription}
+                multiline
+                numberOfLines={8}
+                textAlignVertical="top"
+                editable={!updatingReel}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -768,6 +890,60 @@ const styles = StyleSheet.create({
   logoutButtonText: {
     fontSize: moderateScale(14),
     fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: moderateScale(20),
+    borderTopRightRadius: moderateScale(20),
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: scale(16),
+    paddingVertical: verticalScale(16),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  modalCancelButton: {
+    padding: scale(8),
+    minWidth: scale(60),
+  },
+  modalCancelText: {
+    fontSize: moderateScale(16),
+    fontWeight: '500',
+  },
+  modalTitle: {
+    fontSize: moderateScale(18),
+    fontWeight: '700',
+    flex: 1,
+    textAlign: 'center',
+  },
+  modalSaveButton: {
+    padding: scale(8),
+    minWidth: scale(60),
+    alignItems: 'flex-end',
+  },
+  modalSaveButtonDisabled: {
+    opacity: 0.5,
+  },
+  modalSaveText: {
+    fontSize: moderateScale(16),
+    fontWeight: '600',
+  },
+  modalBody: {
+    padding: scale(16),
+  },
+  editDescriptionInput: {
+    minHeight: verticalScale(150),
+    padding: scale(12),
+    borderRadius: moderateScale(8),
+    borderWidth: 1,
+    fontSize: moderateScale(14),
   },
 });
 

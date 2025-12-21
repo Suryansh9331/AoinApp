@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { View, StyleSheet, StatusBar, Text, ActivityIndicator, SafeAreaView } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useRoute } from '@react-navigation/native';
@@ -23,6 +23,10 @@ const Home = ({ routeParams, initialReels }) => {
   const [currentReelId, setCurrentReelId] = React.useState(routeParams?.reelId || route.params?.reelId);
   const [preloadedReels, setPreloadedReels] = React.useState(initialReels || routeParams?.preloadedReels || route.params?.preloadedReels || []);
   
+  // Track previous data to detect actual changes (not just like updates)
+  const previousReelsRef = useRef([]);
+  const previousPreloadedRef = useRef([]);
+  
   // Update state when route params change
   React.useEffect(() => {
     const newReelId = routeParams?.reelId || route.params?.reelId;
@@ -32,38 +36,44 @@ const Home = ({ routeParams, initialReels }) => {
       setCurrentReelId(newReelId);
     }
     
-    if (JSON.stringify(newPreloadedReels) !== JSON.stringify(preloadedReels)) {
+    // Only update if preloaded reels actually changed (new items, not just like state)
+    const preloadedChanged = JSON.stringify(newPreloadedReels.map(r => r.id || r.reel_id)) !== 
+                            JSON.stringify(previousPreloadedRef.current.map(r => r.id || r.reel_id));
+    if (preloadedChanged) {
       setPreloadedReels(newPreloadedReels);
+      previousPreloadedRef.current = newPreloadedReels;
     }
   }, [routeParams, route.params, initialReels]);
   
-  // Determine which data to use - prioritize preloaded reels if available
-  const [displayData, setDisplayData] = React.useState(preloadedReels.length > 0 ? preloadedReels : publicReels);
-  
-  // Update display data when either preloadedReels or publicReels change
-  useEffect(() => {
-    if (preloadedReels && preloadedReels.length > 0) {
-      setDisplayData(preloadedReels);
-    } else if (publicReels.length > 0) {
-      setDisplayData(publicReels);
-    } else {
-      setDisplayData([]);
+  // Merge preloaded reels with public reels, avoiding duplicates
+  const displayData = useMemo(() => {
+    if (preloadedReels.length > 0) {
+      // Get IDs of preloaded reels to avoid duplicates
+      const preloadedIds = new Set(
+        preloadedReels.map(r => (r.id || r.reel_id)?.toString()).filter(Boolean)
+      );
+      
+      // Add public reels that are not in preloaded reels
+      const additionalReels = publicReels.filter(r => {
+        const reelId = (r.id || r.reel_id)?.toString();
+        return reelId && !preloadedIds.has(reelId);
+      });
+      
+      // Combine: preloaded reels first, then additional public reels
+      return [...preloadedReels, ...additionalReels];
     }
+    return publicReels;
   }, [preloadedReels, publicReels]);
   
-  // Fetch public reels if we don't have any data
+  // Fetch public reels in the background (even if we have preloaded reels)
   useEffect(() => {
-    // If we have preloaded reels, use them and don't fetch
-    if (preloadedReels && preloadedReels.length > 0) {
-      return;
-    }
-    
-    // Only fetch if we don't have any data and we're not already loading
-    if (displayData.length === 0 && !publicReelsLoading && !hasFetched) {
+    // Always fetch public reels to get more content for scrolling
+    // But only fetch once initially
+    if (!publicReelsLoading && !hasFetched) {
       setHasFetched(true);
       dispatch(fetchPublicReels_Request({ page: 1, per_page: 20 }));
     }
-  }, [dispatch, displayData.length, publicReelsLoading, hasFetched, preloadedReels]);
+  }, [dispatch, publicReelsLoading, hasFetched]);
   
   // Show loading state only if we don't have any data and we're loading
   const showLoading = displayData.length === 0 && (publicReelsLoading || !hasFetched);
@@ -100,7 +110,7 @@ const Home = ({ routeParams, initialReels }) => {
         <VideoReel 
           data={displayData} 
           initialReelId={currentReelId}
-          key={`video-reel-${currentReelId || 'default'}-${Date.now()}`} // Force re-render with new key
+          key={`video-reel-${currentReelId || 'default'}`} // Stable key - only changes when navigating to new reel
         />
       ) : (
         <View style={styles.loadingContainer}>

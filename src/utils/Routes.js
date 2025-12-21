@@ -1,4 +1,4 @@
-export const BASE_URL = "http://172.27.163.220:5110";
+export const BASE_URL = "http://10.126.15.132:5110";
 
 
 export const ROUTES = Object.freeze({

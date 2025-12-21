@@ -59,21 +59,23 @@ const TAB_ITEMS = [
 ];
 
 const MerchantBottomTab = () => {
+  const navigation = useNavigation();
+  const route = useRoute();
+  const swiperRef = useRef(null);
+  const isManualChangeRef = useRef(false);
+  const theme = useAppTheme();
+  const { backgroundColor, textColor, borderColor } = getThemeColors(theme);
+  const dispatch = useDispatch();
+
   // Initialize activeIndex from route params so the correct tab is mounted
   // immediately (prevents brief mount of Home with no params).
   const initialTabIndex = (() => {
-    const navTo = (typeof route?.params !== 'undefined') ? route.params?.navigateToTab : undefined;
+    const navTo = route?.params?.navigateToTab;
     const idx = navTo ? TAB_ITEMS.findIndex(tab => tab.key === navTo) : -1;
     return idx >= 0 ? idx : 0;
   })();
 
   const [activeIndex, setActiveIndex] = useState(initialTabIndex);
-  const swiperRef = useRef(null);
-  const navigation = useNavigation();
-  const route = useRoute();
-  const theme = useAppTheme();
-  const { backgroundColor, textColor, borderColor } = getThemeColors(theme);
-  const dispatch = useDispatch();
 
   // Handle navigation to specific tab with params
   useEffect(() => {
@@ -97,27 +99,47 @@ const MerchantBottomTab = () => {
       const tabIndex = TAB_ITEMS.findIndex(tab => tab.key === params.navigateToTab);
       if (tabIndex !== -1 && tabIndex !== activeIndex) {
         setActiveIndex(tabIndex);
-        if (swiperRef.current) {
-          swiperRef.current.scrollTo(tabIndex, true);
-        }
+        // Use setTimeout to ensure swiper is ready
+        setTimeout(() => {
+          if (swiperRef.current) {
+            swiperRef.current.scrollTo(tabIndex, true);
+          }
+        }, 0);
       }
     }
-  }, [route.params]);
+  }, [route.params, activeIndex]);
 
   const handleTabPress = index => {
-    if (swiperRef.current && index !== activeIndex) {
-      setActiveIndex(index);
-      swiperRef.current.scrollTo(index, true);
-      // Clear any navigation params that might be causing issues
-      navigation.setParams({ 
-        navigateToTab: null,
-        reelId: null,
-        preloadedReels: null,
-        userId: null,
-        editingReel: null,
-        editingReelId: null
-      });
+    // Prevent action if already on this tab
+    if (index === activeIndex) {
+      return;
     }
+    
+    // Mark as manual change to prevent onIndexChanged from interfering
+    isManualChangeRef.current = true;
+    
+    // Update state immediately for instant visual feedback
+    setActiveIndex(index);
+    
+    // Scroll swiper to the new index
+    if (swiperRef.current) {
+      swiperRef.current.scrollTo(index, true);
+    }
+    
+    // Clear any navigation params that might be causing issues
+    navigation.setParams({ 
+      navigateToTab: null,
+      reelId: null,
+      preloadedReels: null,
+      userId: null,
+      editingReel: null,
+      editingReelId: null
+    });
+    
+    // Reset manual change flag after a short delay
+    setTimeout(() => {
+      isManualChangeRef.current = false;
+    }, 100);
   };
 
   return (
@@ -128,7 +150,8 @@ const MerchantBottomTab = () => {
         index={activeIndex}
         showsPagination={false}
         onIndexChanged={(index) => {
-          if (index !== activeIndex) {
+          // Only update if this is a swipe gesture (not manual tab press)
+          if (!isManualChangeRef.current && index !== activeIndex) {
             setActiveIndex(index);
             // Clear navigation params when swiping between tabs
             navigation.setParams({

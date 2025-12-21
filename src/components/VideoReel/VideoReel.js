@@ -1,10 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   FlatList,
   StyleSheet,
   Dimensions,
   ActivityIndicator,
+  Text,
 } from 'react-native';
 import VideoReelItem from './VideoReelItem';
 import useAppTheme from '../../theme/useAppTheme';
@@ -18,14 +19,30 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
   const { backgroundColor } = getThemeColors(theme);
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef(null);
-  const [reelsData, setReelsData] = useState(data);
   const [containerHeight, setContainerHeight] = useState(SCREEN_HEIGHT - HEADER_HEIGHT);
   const hasScrolledToInitialReel = useRef(false);
   const lastInitialReelId = useRef(null);
+  const previousDataIdsRef = useRef([]);
+  const isDataStructureChanged = useRef(false);
 
-  useEffect(() => {
-    setReelsData(data);
-  }, [data]);
+  // Get current IDs for comparison
+  const currentIds = data.map(r => (r.id || r.reel_id)?.toString()).filter(Boolean);
+  const currentIdsString = currentIds.join(',');
+  const previousIdsStringRef = useRef('');
+  
+  // Check if structure changed (new items added/removed)
+  const structureChanged = currentIdsString !== previousIdsStringRef.current;
+  if (structureChanged) {
+    previousIdsStringRef.current = currentIdsString;
+    isDataStructureChanged.current = true;
+  } else {
+    isDataStructureChanged.current = false;
+  }
+  
+  // Memoize reels data - always return latest data, but track structure changes
+  const reelsData = useMemo(() => {
+    return data;
+  }, [data.length, currentIdsString]);
 
   // Reset scroll flag when initialReelId changes
   useEffect(() => {
@@ -89,17 +106,29 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
     }
   }, [initialReelId, reelsData, containerHeight]);
 
-  const onViewableItemsChanged = useRef(({ viewableItems }) => {
-    if (viewableItems.length > 0) {
+  // Preserve current index when data structure hasn't changed (only like state updated)
+  useEffect(() => {
+    // Only reset if data structure actually changed (new items added/removed)
+    // Don't reset if only like state changed
+    if (isDataStructureChanged.current && reelsData.length > 0) {
+      // If structure changed and we have data, maintain current index if possible
+      if (currentIndex >= reelsData.length) {
+        setCurrentIndex(reelsData.length - 1);
+      }
+      isDataStructureChanged.current = false;
+    }
+  }, [reelsData, currentIndex]);
 
+  const onViewableItemsChanged = useCallback(({ viewableItems }) => {
+    if (viewableItems.length > 0) {
       const fullyVisibleItem = viewableItems.find(
         item => item.isViewable && item.index !== null
       );
-      if (fullyVisibleItem) {
+      if (fullyVisibleItem && fullyVisibleItem.index !== currentIndex) {
         setCurrentIndex(fullyVisibleItem.index);
       }
     }
-  }).current;
+  }, [currentIndex]);
 
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 80,
@@ -108,19 +137,19 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
 
   // These handlers are kept for backward compatibility
   // But VideoReelItem now uses Redux actions directly
-  const handleLike = (id, isLiked) => {
+  const handleLike = useCallback((id, isLiked) => {
     // Redux actions are handled in VideoReelItem
     // This is just for any parent component callbacks
     // Local state will be updated via data prop from Redux
-  };
+  }, []);
 
-  const handleShare = (id) => {
+  const handleShare = useCallback((id) => {
     // Redux actions are handled in VideoReelItem
     // This is just for any parent component callbacks
     // Local state will be updated via data prop from Redux
-  };
+  }, []);
 
-  const renderItem = ({ item, index }) => {
+  const renderItem = useCallback(({ item, index }) => {
     return (
       <VideoReelItem
         item={item}
@@ -130,13 +159,17 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
         itemHeight={containerHeight}
       />
     );
-  };
+  }, [currentIndex, containerHeight, handleLike, handleShare]);
 
-  const getItemLayout = containerHeight > 0 ? (data, index) => ({
+  const getItemLayout = useCallback((data, index) => ({
     length: containerHeight,
     offset: containerHeight * index,
     index,
-  }) : undefined;
+  }), [containerHeight]);
+
+  const keyExtractor = useCallback((item) => {
+    return (item.id || item.reel_id)?.toString() || `reel-${item.index}`;
+  }, []);
 
   const onLayout = (event) => {
     const { height } = event.nativeEvent.layout;
@@ -173,7 +206,7 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
         ref={flatListRef}
         data={reelsData}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
         pagingEnabled={true}
         showsVerticalScrollIndicator={false}
         snapToInterval={containerHeight > 0 ? containerHeight : undefined}
@@ -182,11 +215,11 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
         disableIntervalMomentum={true}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
-        getItemLayout={getItemLayout}
-        removeClippedSubviews={false}
-        maxToRenderPerBatch={2}
-        windowSize={3}
-        initialNumToRender={1}
+        getItemLayout={containerHeight > 0 ? getItemLayout : undefined}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={3}
+        windowSize={5}
+        initialNumToRender={2}
         scrollEventThrottle={16}
         bounces={false}
         onMomentumScrollEnd={onMomentumScrollEnd}
@@ -200,6 +233,9 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
               viewPosition: 0.5
             });
           });
+        }}
+        maintainVisibleContentPosition={{
+          minIndexForVisible: 0,
         }}
       />
     </View>
