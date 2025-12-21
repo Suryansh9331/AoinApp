@@ -271,11 +271,11 @@ const Profile = ({ routeParams }) => {
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
-      <StatusBar
+      {/* <StatusBar
         barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundColor}
         translucent={false}
-      />
+      /> */}
       {/* Header */}
       <View style={[
         styles.header,

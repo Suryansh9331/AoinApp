@@ -10,11 +10,11 @@ const Home = () => {
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
-      <StatusBar
+      {/* <StatusBar
         barStyle="light-content"
         backgroundColor="#000000"
         translucent={false}
-      />
+      /> */}
       <View style={styles.headerContainer} pointerEvents="box-none">
         <View style={styles.headerContent}>
           <View style={styles.headerLeft} />

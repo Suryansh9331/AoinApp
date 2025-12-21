@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StatusBar,
   Alert,
+  SafeAreaView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -91,17 +92,18 @@ const MerchantSettings = () => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
-      <StatusBar
+    <SafeAreaView style={[styles.container, { backgroundColor }]}>
+      {/* <StatusBar
         barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundColor}
         translucent={false}
-      />
+      /> */}
 
       <Header
        title="Account Settings"
        
        onLeftPress={() => navigation.goBack()}
+       
       />
 
       <View style={styles.section}>
@@ -135,7 +137,7 @@ const MerchantSettings = () => {
           <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 

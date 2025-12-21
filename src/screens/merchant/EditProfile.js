@@ -132,11 +132,11 @@ const EditProfile = () => {
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
-      <StatusBar
+      {/* <StatusBar
         barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundColor}
         translucent={false}
-      />
+      /> */}
       <SafeAreaView style={{ backgroundColor }}>
         <Header
           title="Edit Profile"

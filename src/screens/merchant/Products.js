@@ -13,7 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
 import useAppTheme from '../../theme/useAppTheme';
@@ -142,14 +142,12 @@ const Products = () => {
   );
 
   return (
-    <View style={[styles.container, {backgroundColor}]}>
+    <SafeAreaView style={[styles.container, {backgroundColor}]}>
       <Header
         title="My Products"
         leftType={false}
         onLeftPress={() => navigation.goBack()}
-        containerStyle={{
-          paddingTop: Platform.OS === 'ios' ? insets.top : 0,
-        }}
+        
       />
 
       {/* Search Bar */}
@@ -236,7 +234,7 @@ const Products = () => {
           }
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -250,9 +248,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: scale(16),
-    marginTop: verticalScale(8),
-    marginBottom: verticalScale(8),
-    paddingHorizontal: scale(10),
+    marginTop: verticalScale(2),
+    marginBottom: verticalScale(4),
+    paddingHorizontal: scale(12),
+    paddingVertical: Platform.OS === 'ios' ? verticalScale(8) : 0,
     borderRadius: moderateScale(12),
   },
   searchIcon: {

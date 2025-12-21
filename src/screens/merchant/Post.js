@@ -435,11 +435,11 @@ const Post = ({ routeParams }) => {
 
   return (
     <View style={[styles.container, {backgroundColor}]}>
-      <StatusBar
+      {/* <StatusBar
         barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundColor}
         translucent={false}
-      />
+      /> */}
       <SafeAreaView style={{ flex: 1, backgroundColor }}>
         <Header
           title={isEditingMode ? 'Edit Reel' : 'Create Reel'}
