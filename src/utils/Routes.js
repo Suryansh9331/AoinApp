@@ -1,4 +1,5 @@
-export const BASE_URL = "http://10.126.15.132:5110";
+export const BASE_URL = "http://10.40.43.220:5110";
+
 
 
 export const ROUTES = Object.freeze({
@@ -34,4 +35,4 @@ export const ROUTES = Object.freeze({
 });
 
 
-export const GOOGLE_CLIENT_ID = '968020800951-t89qvbb6ne0nh8oh4cne6a3blqr6gs3l.apps.googleusercontent.com'
+export const GOOGLE_CLIENT_ID = '879073904689-a01i3alljiurvhvd1a5f5onjb1q94ap3.apps.googleusercontent.com'

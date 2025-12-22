@@ -18,7 +18,7 @@ export const configureGoogleSignIn = () => {
   if (GoogleSignin) {
     try {
       GoogleSignin.configure({
-        webClientId: GOOGLE_CLIENT_ID, // This should be the Web Client ID from Google Cloud Console
+        webClientId: '879073904689-2pfm794vitu265spb2rvc5jvbt0io0gq.apps.googleusercontent.com', // This should be the Web Client ID from Google Cloud Console
         offlineAccess: true,
         forceCodeForRefreshToken: true,
       });
