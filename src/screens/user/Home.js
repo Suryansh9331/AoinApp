@@ -1,35 +1,146 @@
-import React from 'react';
-import { View, StyleSheet, StatusBar, Text } from 'react-native';
+import React, {useEffect, useMemo, useRef, useCallback} from 'react';
+import {
+  View,
+  StyleSheet,
+  StatusBar,
+  Text,
+  ActivityIndicator,
+  SafeAreaView,
+} from 'react-native';
+import {useDispatch, useSelector} from 'react-redux';
+import {useRoute} from '@react-navigation/native';
+import VideoReel from '../../components/VideoReel/VideoReel';
 import useAppTheme from '../../theme/useAppTheme';
-import { getThemeColors } from '../../theme/themeColors';
-import { moderateScale, verticalScale } from 'react-native-size-matters';
+import {getThemeColors} from '../../theme/themeColors';
+import {moderateScale, verticalScale} from 'react-native-size-matters';
+import {fetchPublicReels_Request} from '../../redux/slices/reelSlice';
+import Header from '../../components/Header/Header';
 
-const Home = () => {
+const Home = ({routeParams, initialReels}) => {
   const theme = useAppTheme();
-  const { backgroundColor, textColor } = getThemeColors(theme);
+  const {backgroundColor} = getThemeColors(theme);
+  const dispatch = useDispatch();
+  const route = useRoute();
+  const [hasFetched, setHasFetched] = React.useState(false);
+
+  const {publicReels, publicReelsLoading, publicReelsError} = useSelector(
+    state => state.reels,
+  );
+
+  const [currentReelId, setCurrentReelId] = React.useState(
+    routeParams?.reelId || route.params?.reelId,
+  );
+  const [preloadedReels, setPreloadedReels] = React.useState(
+    initialReels ||
+      routeParams?.preloadedReels ||
+      route.params?.preloadedReels ||
+      [],
+  );
+
+  const previousReelsRef = useRef([]);
+  const previousPreloadedRef = useRef([]);
+
+  React.useEffect(() => {
+    const newReelId = routeParams?.reelId || route.params?.reelId;
+    const newPreloadedReels =
+      initialReels ||
+      routeParams?.preloadedReels ||
+      route.params?.preloadedReels ||
+      [];
+
+    if (newReelId !== currentReelId) {
+      setCurrentReelId(newReelId);
+    }
+
+    const currentIds = previousPreloadedRef.current
+      .map(r => r.id || r.reel_id)
+      .sort()
+      .join(',');
+    const newIds = newPreloadedReels
+      .map(r => r.id || r.reel_id)
+      .sort()
+      .join(',');
+    const preloadedChanged = currentIds !== newIds;
+
+    if (preloadedChanged) {
+      setPreloadedReels(newPreloadedReels);
+      previousPreloadedRef.current = newPreloadedReels;
+    }
+  }, [routeParams, route.params, initialReels, currentReelId]);
+
+  const displayData = useMemo(() => {
+    if (preloadedReels.length > 0) {
+      const preloadedIds = new Set(
+        preloadedReels
+          .map(r => (r.id || r.reel_id)?.toString())
+          .filter(Boolean),
+      );
+
+      const additionalReels = publicReels.filter(r => {
+        const reelId = (r.id || r.reel_id)?.toString();
+        return reelId && !preloadedIds.has(reelId);
+      });
+
+      return [...preloadedReels, ...additionalReels];
+    }
+    return publicReels;
+  }, [preloadedReels, publicReels]);
+
+  const fetchReels = useCallback(() => {
+    if (!publicReelsLoading && !hasFetched) {
+      setHasFetched(true);
+      dispatch(fetchPublicReels_Request({page: 1, per_page: 20}));
+    }
+  }, [dispatch, publicReelsLoading, hasFetched]);
+
+  useEffect(() => {
+    fetchReels();
+  }, [fetchReels]);
+
+  const showLoading = useMemo(
+    () => displayData.length === 0 && (publicReelsLoading || !hasFetched),
+    [displayData.length, publicReelsLoading, hasFetched],
+  );
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
-      {/* <StatusBar
+    <View style={[styles.container, {backgroundColor}]}>
+      <StatusBar
         barStyle="light-content"
         backgroundColor="#000000"
         translucent={false}
-      /> */}
-      <View style={styles.headerContainer} pointerEvents="box-none">
-        <View style={styles.headerContent}>
-          <View style={styles.headerLeft} />
-          <Text style={styles.headerTitle}>Reels</Text>
-          <View style={styles.headerRight} />
+      />
+      <SafeAreaView style={{backgroundColor: '#000000'}}>
+        <Header
+          title="Reels"
+          leftType="none"
+          rightType="none"
+          containerStyle={{
+            backgroundColor: '#000000',
+            borderBottomWidth: 0,
+          }}
+          titleStyle={{color: '#FFFFFF'}}
+        />
+      </SafeAreaView>
+      {showLoading && displayData.length === 0 ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#F2631F" />
+          <Text style={styles.loadingText}>Loading reels...</Text>
         </View>
-      </View>
-      <View style={styles.emptyContainer}>
-        <Text style={[styles.emptyText, { color: textColor }]}>
-          Reels feature coming soon
-        </Text>
-        <Text style={[styles.emptySubText, { color: textColor }]}>
-          Check back later for exciting content
-        </Text>
-      </View>
+      ) : publicReelsError ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{publicReelsError}</Text>
+        </View>
+      ) : displayData.length > 0 ? (
+        <VideoReel
+          data={displayData}
+          initialReelId={currentReelId}
+          key={`video-reel-${currentReelId || 'default'}`}
+        />
+      ) : (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>No reels available</Text>
+        </View>
+      )}
     </View>
   );
 };
