@@ -1,100 +1,124 @@
-import React, { useEffect, useMemo, useRef } from 'react';
-import { View, StyleSheet, StatusBar, Text, ActivityIndicator, SafeAreaView } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-import { useRoute } from '@react-navigation/native';
+import React, {useEffect, useMemo, useRef, useCallback} from 'react';
+import {
+  View,
+  StyleSheet,
+  StatusBar,
+  Text,
+  ActivityIndicator,
+  SafeAreaView,
+} from 'react-native';
+import {useDispatch, useSelector} from 'react-redux';
+import {useRoute} from '@react-navigation/native';
 import VideoReel from '../../components/VideoReel/VideoReel';
 import useAppTheme from '../../theme/useAppTheme';
-import { getThemeColors } from '../../theme/themeColors';
-import { moderateScale } from 'react-native-size-matters';
-import { fetchPublicReels_Request } from '../../redux/slices/reelSlice';
+import {getThemeColors} from '../../theme/themeColors';
+import {moderateScale} from 'react-native-size-matters';
+import {fetchPublicReels_Request} from '../../redux/slices/reelSlice';
 import Header from '../../components/Header/Header';
 
-const Home = ({ routeParams, initialReels }) => {
+const Home = ({routeParams, initialReels}) => {
   const theme = useAppTheme();
-  const { backgroundColor } = getThemeColors(theme);
+  const {backgroundColor} = getThemeColors(theme);
   const dispatch = useDispatch();
   const route = useRoute();
   const [hasFetched, setHasFetched] = React.useState(false);
 
-  // Get public reels from Redux store
-  const { publicReels, publicReelsLoading, publicReelsError } = useSelector(state => state.reels);
-  
-  // Get the reel ID and preloaded reels from navigation params
-  const [currentReelId, setCurrentReelId] = React.useState(routeParams?.reelId || route.params?.reelId);
-  const [preloadedReels, setPreloadedReels] = React.useState(initialReels || routeParams?.preloadedReels || route.params?.preloadedReels || []);
-  
-  // Track previous data to detect actual changes (not just like updates)
+  const {publicReels, publicReelsLoading, publicReelsError} = useSelector(
+    state => state.reels,
+  );
+
+  const [currentReelId, setCurrentReelId] = React.useState(
+    routeParams?.reelId || route.params?.reelId,
+  );
+  const [preloadedReels, setPreloadedReels] = React.useState(
+    initialReels ||
+      routeParams?.preloadedReels ||
+      route.params?.preloadedReels ||
+      [],
+  );
+
   const previousReelsRef = useRef([]);
   const previousPreloadedRef = useRef([]);
-  
-  // Update state when route params change
+
   React.useEffect(() => {
     const newReelId = routeParams?.reelId || route.params?.reelId;
-    const newPreloadedReels = initialReels || routeParams?.preloadedReels || route.params?.preloadedReels || [];
-    
+    const newPreloadedReels =
+      initialReels ||
+      routeParams?.preloadedReels ||
+      route.params?.preloadedReels ||
+      [];
+
     if (newReelId !== currentReelId) {
       setCurrentReelId(newReelId);
     }
-    
-    // Only update if preloaded reels actually changed (new items, not just like state)
-    const preloadedChanged = JSON.stringify(newPreloadedReels.map(r => r.id || r.reel_id)) !== 
-                            JSON.stringify(previousPreloadedRef.current.map(r => r.id || r.reel_id));
+
+    const currentIds = previousPreloadedRef.current
+      .map(r => r.id || r.reel_id)
+      .sort()
+      .join(',');
+    const newIds = newPreloadedReels
+      .map(r => r.id || r.reel_id)
+      .sort()
+      .join(',');
+    const preloadedChanged = currentIds !== newIds;
+
     if (preloadedChanged) {
       setPreloadedReels(newPreloadedReels);
       previousPreloadedRef.current = newPreloadedReels;
     }
-  }, [routeParams, route.params, initialReels]);
-  
-  // Merge preloaded reels with public reels, avoiding duplicates
+  }, [routeParams, route.params, initialReels, currentReelId]);
+
   const displayData = useMemo(() => {
     if (preloadedReels.length > 0) {
-      // Get IDs of preloaded reels to avoid duplicates
       const preloadedIds = new Set(
-        preloadedReels.map(r => (r.id || r.reel_id)?.toString()).filter(Boolean)
+        preloadedReels
+          .map(r => (r.id || r.reel_id)?.toString())
+          .filter(Boolean),
       );
-      
-      // Add public reels that are not in preloaded reels
+
       const additionalReels = publicReels.filter(r => {
         const reelId = (r.id || r.reel_id)?.toString();
         return reelId && !preloadedIds.has(reelId);
       });
-      
-      // Combine: preloaded reels first, then additional public reels
+
       return [...preloadedReels, ...additionalReels];
     }
     return publicReels;
   }, [preloadedReels, publicReels]);
-  
-  // Fetch public reels in the background (even if we have preloaded reels)
-  useEffect(() => {
-    // Always fetch public reels to get more content for scrolling
-    // But only fetch once initially
+
+  const fetchReels = useCallback(() => {
     if (!publicReelsLoading && !hasFetched) {
       setHasFetched(true);
-      dispatch(fetchPublicReels_Request({ page: 1, per_page: 20 }));
+      dispatch(fetchPublicReels_Request({page: 1, per_page: 20}));
     }
   }, [dispatch, publicReelsLoading, hasFetched]);
-  
-  // Show loading state only if we don't have any data and we're loading
-  const showLoading = displayData.length === 0 && (publicReelsLoading || !hasFetched);
+
+  useEffect(() => {
+    fetchReels();
+  }, [fetchReels]);
+
+  const showLoading = useMemo(
+    () => displayData.length === 0 && (publicReelsLoading || !hasFetched),
+    [displayData.length, publicReelsLoading, hasFetched],
+  );
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
+    <View style={[styles.container, {backgroundColor}]}>
       <StatusBar
         barStyle="light-content"
         backgroundColor="#000000"
         translucent={false}
       />
-      <SafeAreaView style={{ backgroundColor: '#000000' }}>
-        <Header 
-          title="Reels" 
-          leftType="none" 
-          rightType="none" 
-          containerStyle={{ 
+      <SafeAreaView style={{backgroundColor: '#000000'}}>
+        <Header
+          title="Reels"
+          leftType="none"
+          rightType="none"
+          containerStyle={{
             backgroundColor: '#000000',
-            borderBottomWidth: 0
+            borderBottomWidth: 0,
           }}
-          titleStyle={{ color: '#FFFFFF' }}
+          titleStyle={{color: '#FFFFFF'}}
         />
       </SafeAreaView>
       {showLoading && displayData.length === 0 ? (
@@ -107,8 +131,8 @@ const Home = ({ routeParams, initialReels }) => {
           <Text style={styles.errorText}>{publicReelsError}</Text>
         </View>
       ) : displayData.length > 0 ? (
-        <VideoReel 
-          data={displayData} 
+        <VideoReel
+          data={displayData}
           initialReelId={currentReelId}
           key={`video-reel-${currentReelId || 'default'}`} // Stable key - only changes when navigating to new reel
         />
@@ -184,7 +208,3 @@ const styles = StyleSheet.create({
 });
 
 export default Home;
-
-
-
-

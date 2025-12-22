@@ -1,4 +1,4 @@
-import React, {useState, useCallback, useEffect} from 'react';
+import React, {useState, useCallback, useEffect, useMemo, memo} from 'react';
 import {
   View,
   Text,
@@ -42,10 +42,10 @@ const Post = ({ routeParams }) => {
   const theme = useAppTheme();
   const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
 
-  // Check if we're editing a reel
-  const editingReel = routeParams?.editingReel || route.params?.editingReel;
-  const editingReelId = routeParams?.editingReelId || route.params?.editingReelId;
-  const isEditingMode = !!editingReel;
+  // Check if we're editing a reel - memoized
+  const editingReel = useMemo(() => routeParams?.editingReel || route.params?.editingReel, [routeParams, route.params]);
+  const editingReelId = useMemo(() => routeParams?.editingReelId || route.params?.editingReelId, [routeParams, route.params]);
+  const isEditingMode = useMemo(() => !!editingReel, [editingReel]);
 
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -56,9 +56,117 @@ const Post = ({ routeParams }) => {
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
   const [validationError, setValidationError] = useState('');
- 
-  // Validation function
-  const validateUpload = async (video, product, desc) => {
+
+  // Format price to Indian currency format - memoized (must be before fetchProducts)
+  const formatPrice = useCallback((price) => {
+    return `₹${parseFloat(price).toLocaleString('en-IN', {
+      maximumFractionDigits: 2,
+    })}`;
+  }, []);
+
+  // Handler functions - defined early for use in other callbacks
+  const handleProductSelect = useCallback((product) => {
+    setSelectedProduct(product);
+  }, []);
+
+  // Memoize product list rendering
+  const renderProductItem = useCallback((product, index) => {
+    const isSelected = selectedProduct?.id === product.id;
+    return (
+      <TouchableOpacity
+        key={product.id + index}
+        style={[
+          styles.productItem,
+          {borderBottomColor: borderColor},
+          isSelected && {
+            backgroundColor: theme === 'dark' 
+              ? 'rgba(242, 99, 31, 0.15)' 
+              : 'rgba(242, 99, 31, 0.05)'
+          },
+        ]}
+        onPress={() => handleProductSelect(product)}
+        activeOpacity={0.7}>
+        <Image
+          source={{uri: product.image}}
+          style={styles.productImage}
+        />
+        <View style={styles.productDetails}>
+          <Text style={[styles.productName, {color: textColor}]}>
+            {product.name}
+          </Text>
+          <Text style={[styles.productCategory, {color: textColor, opacity: 0.7}]}>
+            {product.category}
+          </Text>
+          <Text style={[styles.productPrice, {color: Colors.PRIMARY}]}>
+            {product.price}
+          </Text>
+        </View>
+        {isSelected && (
+          <Ionicons
+            name="checkmark-circle"
+            size={24}
+            color={Colors.PRIMARY}
+          />
+        )}
+      </TouchableOpacity>
+    );
+  }, [selectedProduct, borderColor, theme, textColor, handleProductSelect]);
+
+  // Memoize products list
+  const productsList = useMemo(() => {
+    if (products.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons
+            name="cube-outline"
+            size={moderateScale(48)}
+            color={Colors.GRAY}
+          />
+          <Text style={[styles.emptyText, {color: Colors.GRAY}]}>
+            No products available
+          </Text>
+        </View>
+      );
+    }
+    return products.map((product, index) => renderProductItem(product, index));
+  }, [products, renderProductItem]);
+
+  // Memoize styles that depend on theme
+  const videoPlaceholderStyle = useMemo(() => [
+    styles.videoPlaceholder,
+    {
+      borderColor: borderColor,
+      backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
+    }
+  ], [borderColor, theme]);
+
+  const addDetailsButtonStyle = useMemo(() => [
+    styles.addDetailsButton,
+    {
+      borderColor: borderColor,
+      backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
+    }
+  ], [borderColor, theme]);
+
+  const descriptionInputStyle = useMemo(() => [
+    styles.descriptionInput,
+    {
+      color: textColor,
+      borderColor: borderColor,
+      backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
+    }
+  ], [textColor, borderColor, theme]);
+
+  // Memoize upload button disabled state
+  const isUploadDisabled = useMemo(() => {
+    if (isEditingMode) {
+      return !description.trim() || uploading;
+    }
+    return !selectedVideo || !selectedProduct || !description.trim() || uploading;
+  }, [isEditingMode, description, uploading, selectedVideo, selectedProduct]);
+
+  // Validation function - memoized
+  const validateUpload = useCallback(async (video, product, desc) => {
     try {
       // 1. Video file validation
       if (!video) {
@@ -107,7 +215,7 @@ const Post = ({ routeParams }) => {
       setValidationError(error.message);
       throw error;
     }
-  };
+  }, []);
 
   // Initialize with reel data if editing
   useEffect(() => {
@@ -119,14 +227,7 @@ const Post = ({ routeParams }) => {
     }
   }, [isEditingMode, editingReel]);
 
-  // Format price to Indian currency format
-  const formatPrice = price => {
-    return `₹${parseFloat(price).toLocaleString('en-IN', {
-      maximumFractionDigits: 2,
-    })}`;
-  };
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       setLoadingProducts(true);
       const response = await getData(ROUTES.PRODUCTS_AVAILABLE);
@@ -160,7 +261,7 @@ const Post = ({ routeParams }) => {
     } finally {
       setLoadingProducts(false);
     }
-  };
+  }, [formatPrice]);
 
   // Fetch products only when screen comes into focus (not on mount)
   useFocusEffect(
@@ -170,12 +271,12 @@ const Post = ({ routeParams }) => {
         fetchProducts();
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [hasFetched])
+    }, [hasFetched, fetchProducts])
   );
 
   // Permission handling - react-native-image-picker handles it automatically
   // But we can check beforehand for better UX
-  const checkAndRequestPermission = async () => {
+  const checkAndRequestPermission = useCallback(async () => {
     if (Platform.OS !== 'android') {
       return true;
     }
@@ -213,9 +314,9 @@ const Post = ({ routeParams }) => {
       // Let the library handle it
       return true;
     }
-  };
+  }, []);
 
-  const handleVideoPick = async () => {
+  const handleVideoPick = useCallback(async () => {
     // Let react-native-image-picker handle permissions automatically
     const options = {
       mediaType: 'video',
@@ -297,22 +398,18 @@ const Post = ({ routeParams }) => {
         });
       }
     });
-  };
+  }, []);
 
-  const handleProductSelect = product => {
-    setSelectedProduct(product);
-  };
-
-  const handleAddDetails = () => {
+  const handleAddDetails = useCallback(() => {
     if (!selectedVideo) {
       Alert.alert('Error', 'Please select a video first');
       return;
     }
     // TODO: Navigate to details screen or show modal
     Alert.alert('Add Details', 'Details screen will open here');
-  };
+  }, [selectedVideo]);
 
-  const handleUpload = async () => {
+  const handleUpload = useCallback(async () => {
     try {
       setValidationError('');
       
@@ -431,7 +528,7 @@ const Post = ({ routeParams }) => {
       console.log('Validation error:', error);
       Alert.alert('Validation Error', error.message);
     }
-  };
+  }, [isEditingMode, description, editingReelId, selectedVideo, selectedProduct, validateUpload, navigation]);
 
   return (
     <View style={[styles.container, {backgroundColor}]}>
@@ -449,11 +546,10 @@ const Post = ({ routeParams }) => {
           rightContent={
             <TouchableOpacity
               onPress={handleUpload}
-              disabled={!selectedVideo || !selectedProduct || !description.trim() || uploading}
+              disabled={isUploadDisabled}
               style={[
                 styles.uploadButton,
-                ((!isEditingMode && (!selectedVideo || !selectedProduct)) || !description.trim()) &&
-                  styles.uploadButtonDisabled,
+                isUploadDisabled && styles.uploadButtonDisabled,
               ]}
               activeOpacity={0.7}>
               {uploading ? (
@@ -513,13 +609,7 @@ const Post = ({ routeParams }) => {
                     </View>
                   </View>
                 ) : (
-                  <View style={[
-                    styles.videoPlaceholder, 
-                    {
-                      borderColor: borderColor,
-                      backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
-                    }
-                  ]}>
+                  <View style={videoPlaceholderStyle}>
                     <Ionicons name="videocam-outline" size={48} color={textColor} />
                     <Text style={[styles.placeholderText, {color: textColor}]}>
                       Tap to select video
@@ -565,13 +655,7 @@ const Post = ({ routeParams }) => {
           {/* Add Details Button - Only show when creating new reel */}
           {!isEditingMode && (
             <TouchableOpacity
-              style={[
-                styles.addDetailsButton, 
-                {
-                  borderColor: borderColor,
-                  backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
-                }
-              ]}
+              style={addDetailsButtonStyle}
               onPress={handleAddDetails}
               activeOpacity={0.7}>
               <Text style={[styles.addDetailsText, {color: textColor}]}>
@@ -583,14 +667,7 @@ const Post = ({ routeParams }) => {
           {/* Description Input */}
           <View style={styles.descriptionContainer}>
             <TextInput
-              style={[
-                styles.descriptionInput, 
-                {
-                  color: textColor, 
-                  borderColor: borderColor,
-                  backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
-                }
-              ]}
+              style={descriptionInputStyle}
               placeholder="Add description..."
               placeholderTextColor={textColor + '80'}
               value={description}
@@ -616,57 +693,7 @@ const Post = ({ routeParams }) => {
               </View>
             ) : (
               <View style={styles.productsList}>
-                {products.length > 0 ? (
-                  products.map((product, index) => (
-                    <TouchableOpacity
-                      key={product.id + index}
-                      style={[
-                        styles.productItem,
-                        {borderBottomColor: borderColor},
-                        selectedProduct?.id === product.id && {
-                          backgroundColor: theme === 'dark' 
-                            ? 'rgba(242, 99, 31, 0.15)' 
-                            : 'rgba(242, 99, 31, 0.05)'
-                        },
-                      ]}
-                      onPress={() => handleProductSelect(product)}
-                      activeOpacity={0.7}>
-                      <Image
-                        source={{uri: product.image}}
-                        style={styles.productImage}
-                      />
-                      <View style={styles.productDetails}>
-                        <Text style={[styles.productName, {color: textColor}]}>
-                          {product.name}
-                        </Text>
-                        <Text style={[styles.productCategory, {color: textColor, opacity: 0.7}]}>
-                          {product.category}
-                        </Text>
-                        <Text style={[styles.productPrice, {color: Colors.PRIMARY}]}>
-                          {product.price}
-                        </Text>
-                      </View>
-                      {selectedProduct?.id === product.id && (
-                        <Ionicons
-                          name="checkmark-circle"
-                          size={24}
-                          color={Colors.PRIMARY}
-                        />
-                      )}
-                    </TouchableOpacity>
-                  ))
-                ) : (
-                  <View style={styles.emptyContainer}>
-                    <Ionicons
-                      name="cube-outline"
-                      size={moderateScale(48)}
-                      color={Colors.GRAY}
-                    />
-                    <Text style={[styles.emptyText, {color: Colors.GRAY}]}>
-                      No products available
-                    </Text>
-                  </View>
-                )}
+                {productsList}
               </View>
             )}
           </View>

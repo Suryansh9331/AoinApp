@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import {
   View,
   Text,
@@ -10,21 +10,21 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native';
+import {useNavigation} from '@react-navigation/native';
+import {SafeAreaView} from 'react-native';
 import Header from '../../components/Header/Header';
-import { useSelector } from 'react-redux';
+import {useSelector} from 'react-redux';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
+import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
 import useAppTheme from '../../theme/useAppTheme';
-import { getThemeColors } from '../../theme/themeColors';
-import { Colors } from '../../utils/Colors';
-import { launchImageLibrary } from 'react-native-image-picker';
-import { StatusBar } from 'react-native';
+import {getThemeColors} from '../../theme/themeColors';
+import {Colors} from '../../utils/Colors';
+import {launchImageLibrary} from 'react-native-image-picker';
+import {StatusBar} from 'react-native';
 
 const EditProfile = () => {
   const theme = useAppTheme();
-  const { backgroundColor, textColor, borderColor } = getThemeColors(theme);
+  const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
   const navigation = useNavigation();
   const userData = useSelector(state => state.auth.data);
   const userInfo = userData?.data || userData || {};
@@ -46,10 +46,10 @@ const EditProfile = () => {
   const [languages, setLanguages] = useState('');
   const [profileImage, setProfileImage] = useState(
     userInfo.avatar ||
-    userInfo.avatar_url ||
-    userInfo.profile_picture ||
-    userInfo.profile_image ||
-    'https://i.pravatar.cc/150?img=1',
+      userInfo.avatar_url ||
+      userInfo.profile_picture ||
+      userInfo.profile_image ||
+      'https://i.pravatar.cc/150?img=1',
   );
 
   const handleChangePhoto = () => {
@@ -76,7 +76,6 @@ const EditProfile = () => {
   };
 
   const handleSave = () => {
-    // TODO: Implement save profile API call
     console.log('Saving profile:', {
       name,
       username,
@@ -99,27 +98,37 @@ const EditProfile = () => {
     navigation.goBack();
   };
 
-  const renderField = (label, value, placeholder, onChangeText, onPress = null) => {
+  const renderField = (
+    label,
+    value,
+    placeholder,
+    onChangeText,
+    onPress = null,
+  ) => {
     return (
       <TouchableOpacity
-        style={[styles.fieldContainer, { borderBottomColor: borderColor }]}
+        style={[styles.fieldContainer, {borderBottomColor: borderColor}]}
         onPress={onPress}
         activeOpacity={onPress ? 0.7 : 1}>
-        <Text style={[styles.fieldLabel, { color: textColor }]}>{label}</Text>
+        <Text style={[styles.fieldLabel, {color: textColor}]}>{label}</Text>
         {onPress ? (
           <View style={styles.fieldValueContainer}>
             <Text
               style={[
                 styles.fieldValue,
-                { color: value ? textColor : textColor + '80' },
+                {color: value ? textColor : textColor + '80'},
               ]}>
               {value || placeholder}
             </Text>
-            <Ionicons name="chevron-forward" size={16} color={textColor + '80'} />
+            <Ionicons
+              name="chevron-forward"
+              size={16}
+              color={textColor + '80'}
+            />
           </View>
         ) : (
           <TextInput
-            style={[styles.fieldInput, { color: textColor }]}
+            style={[styles.fieldInput, {color: textColor}]}
             value={value}
             onChangeText={onChangeText}
             placeholder={placeholder}
@@ -131,13 +140,8 @@ const EditProfile = () => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
-      {/* <StatusBar
-        barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundColor}
-        translucent={false}
-      /> */}
-      <SafeAreaView style={{ backgroundColor }}>
+    <View style={[styles.container, {backgroundColor}]}>
+      <SafeAreaView style={{backgroundColor}}>
         <Header
           title="Edit Profile"
           leftType="back"
@@ -146,7 +150,7 @@ const EditProfile = () => {
             backgroundColor,
             borderBottomWidth: 0,
           }}
-          titleStyle={{ color: textColor }}
+          titleStyle={{color: textColor}}
         />
       </SafeAreaView>
 
@@ -154,10 +158,9 @@ const EditProfile = () => {
         showsVerticalScrollIndicator={false}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}>
-        {/* Profile Picture Section */}
         <View style={styles.profilePictureSection}>
           <View style={styles.profilePictureContainer}>
-            <Image source={{ uri: profileImage }} style={styles.profilePicture} />
+            <Image source={{uri: profileImage}} style={styles.profilePicture} />
             <TouchableOpacity
               style={styles.cameraIconContainer}
               onPress={handleChangePhoto}
@@ -169,13 +172,12 @@ const EditProfile = () => {
             onPress={handleChangePhoto}
             activeOpacity={0.7}
             style={styles.changePhotoButton}>
-            <Text style={[styles.changePhotoText, { color: textColor }]}>
+            <Text style={[styles.changePhotoText, {color: textColor}]}>
               Change photo
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Form Fields */}
         <View style={styles.fieldsContainer}>
           {renderField('Name', name, 'Enter name', setName)}
           {renderField('Username', username, 'Enter username', setUsername)}
@@ -186,8 +188,10 @@ const EditProfile = () => {
             'Select Categories',
             null,
             () => {
-              // TODO: Open categories selection modal
-              Alert.alert('Business Categories', 'Select categories feature coming soon');
+              Alert.alert(
+                'Business Categories',
+                'Select categories feature coming soon',
+              );
             },
           )}
           {renderField('Email', email, 'Enter the email Address', setEmail)}
@@ -204,7 +208,10 @@ const EditProfile = () => {
             null,
             () => {
               // TODO: Open address selection
-              Alert.alert('Store Address', 'Address selection feature coming soon');
+              Alert.alert(
+                'Store Address',
+                'Address selection feature coming soon',
+              );
             },
           )}
           {renderField(
@@ -214,25 +221,31 @@ const EditProfile = () => {
             null,
             () => {
               // TODO: Open languages selection
-              Alert.alert('Languages', 'Language selection feature coming soon');
+              Alert.alert(
+                'Languages',
+                'Language selection feature coming soon',
+              );
             },
           )}
         </View>
       </ScrollView>
 
       {/* Action Buttons */}
-      <View style={[styles.actionButtonsContainer, { borderTopColor: borderColor }]}>
+      <View
+        style={[styles.actionButtonsContainer, {borderTopColor: borderColor}]}>
         <TouchableOpacity
           style={[
             styles.cancelButton,
             {
               borderColor: borderColor,
-              backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
-            }
+              backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF',
+            },
           ]}
           onPress={handleCancel}
           activeOpacity={0.7}>
-          <Text style={[styles.cancelButtonText, { color: textColor }]}>Cancel</Text>
+          <Text style={[styles.cancelButtonText, {color: textColor}]}>
+            Cancel
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.saveButton}
@@ -374,4 +387,3 @@ const styles = StyleSheet.create({
 });
 
 export default EditProfile;
-

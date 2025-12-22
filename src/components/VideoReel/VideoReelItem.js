@@ -32,8 +32,15 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
   const userRole = userData?.data?.role || userData?.role || 'user';
   const theme = useAppTheme();
   const { backgroundColor, textColor } = getThemeColors(theme);
-  const [isLiked, setIsLiked] = useState(item.isLiked);
-  const [likes, setLikes] = useState(item.likes);
+  // Convert isLiked to boolean (handle string "true"/"false" from API)
+  const getIsLiked = (value) => {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') return value.toLowerCase() === 'true';
+    return false;
+  };
+
+  const [isLiked, setIsLiked] = useState(() => getIsLiked(item.isLiked));
+  const [likes, setLikes] = useState(item.likes || 0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   
@@ -51,10 +58,12 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
   }, [isActive, isPaused]);
 
   // Sync local state with item props (from Redux)
+  // Use item.id or item.reel_id to detect when item changes
   useEffect(() => {
-    setIsLiked(item.isLiked || false);
+    const itemIsLiked = getIsLiked(item.isLiked);
+    setIsLiked(itemIsLiked);
     setLikes(item.likes || 0);
-  }, [item.isLiked, item.likes]);
+  }, [item.id, item.reel_id, item.isLiked, item.likes]);
 
   const handleLike = () => {
     const newLikedState = !isLiked;

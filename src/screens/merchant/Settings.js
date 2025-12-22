@@ -93,11 +93,7 @@ const MerchantSettings = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
-      {/* <StatusBar
-        barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundColor}
-        translucent={false}
-      /> */}
+      
 
       <Header
        title="Account Settings"

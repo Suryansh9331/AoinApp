@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, {useState, useEffect, useCallback, useMemo, memo} from 'react';
 import {
   View,
   Text,
@@ -15,74 +15,83 @@ import {
   Modal,
   TextInput,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRoute, useNavigation, CommonActions, useFocusEffect } from '@react-navigation/native';
-import { useDispatch, useSelector } from 'react-redux';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {
+  useRoute,
+  useNavigation,
+  CommonActions,
+  useFocusEffect,
+} from '@react-navigation/native';
+import {useDispatch, useSelector} from 'react-redux';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
+import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
 import useAppTheme from '../../theme/useAppTheme';
-import { getThemeColors } from '../../theme/themeColors';
-import { Colors } from '../../utils/Colors';
-import { fetchMerchantReels_Request } from '../../redux/slices/reelSlice';
-import { clearCredentials } from '../../redux/slices/authSlice';
-import { clearAuthToken } from '../../utils/APiCall';
-import { deleteReel, updateReel } from '../../utils/APiCall';
-import { removeItem, AUTH_STORAGE_KEY } from '../../utils/MMKVStorage';
+import {getThemeColors} from '../../theme/themeColors';
+import {Colors} from '../../utils/Colors';
+import {fetchMerchantReels_Request} from '../../redux/slices/reelSlice';
+import {clearCredentials} from '../../redux/slices/authSlice';
+import {clearAuthToken} from '../../utils/APiCall';
+import {deleteReel, updateReel} from '../../utils/APiCall';
+import {removeItem, AUTH_STORAGE_KEY} from '../../utils/MMKVStorage';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const {width: SCREEN_WIDTH} = Dimensions.get('window');
 const POST_ITEM_SIZE = (SCREEN_WIDTH - 4) / 3;
 
-const Profile = ({ routeParams }) => {
+const Profile = ({routeParams}) => {
   const theme = useAppTheme();
-  const { backgroundColor, textColor, borderColor } = getThemeColors(theme);
+  const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
   const route = useRoute();
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const userId = routeParams?.userId || route.params?.userId;
   const insets = useSafeAreaInsets();
 
-
-  const { reels, loading, error } = useSelector(state => state.reels);
-
+  const {reels, loading, error} = useSelector(state => state.reels);
 
   useEffect(() => {
     if (reels.length === 0 && !loading) {
-      dispatch(fetchMerchantReels_Request({ page: 1, per_page: 20 }));
+      dispatch(fetchMerchantReels_Request({page: 1, per_page: 20}));
     }
-  }, [dispatch]);
+  }, [dispatch, reels.length, loading]);
 
-  // Refresh reels when Profile screen is focused (comes back from edit)
   useFocusEffect(
     useCallback(() => {
-      // Fetch latest reels when screen focuses
-      dispatch(fetchMerchantReels_Request({ page: 1, per_page: 20 }));
-    }, [dispatch])
+      dispatch(fetchMerchantReels_Request({page: 1, per_page: 20}));
+    }, [dispatch]),
   );
 
-  // Get current user data for profile
   const userData = useSelector(state => state.auth.data);
-  const userInfo = userData?.data || userData || {};
+  const userInfo = useMemo(() => userData?.data || userData || {}, [userData]);
 
-  // Sample profile data
-  const profileData = {
-    username: userId ? `merchant_${userId}` : userInfo.username || userInfo.user_name || '@merchant',
-    fullName: userId ? 'Merchant Store' : userInfo.first_name && userInfo.last_name
-      ? `${userInfo.first_name} ${userInfo.last_name}`
-      : userInfo.name || 'Merchant Store',
-    bio: userInfo.bio || userInfo.description || '', // Empty bio - will show "Tap to add bio"
-    avatar: userInfo.avatar || userInfo.avatar_url || userInfo.profile_picture ||
-      userInfo.profile_image || 'https://i.pravatar.cc/150?img=1',
-    posts: reels?.length || 0,
-    followers: 38,
-    following: 14,
-    likes: reels?.reduce((sum, reel) => sum + (reel.likes || 0), 0) || 0,
-    isFollowing: false,
-    isOwnProfile: !userId,
-  };
+  const profileData = useMemo(
+    () => ({
+      username: userId
+        ? `merchant_${userId}`
+        : userInfo.username || userInfo.user_name || '@merchant',
+      fullName: userId
+        ? 'Merchant Store'
+        : userInfo.first_name && userInfo.last_name
+        ? `${userInfo.first_name} ${userInfo.last_name}`
+        : userInfo.name || 'Merchant Store',
+      bio: userInfo.bio || userInfo.description || '', // Empty bio - will show "Tap to add bio"
+      avatar:
+        userInfo.avatar ||
+        userInfo.avatar_url ||
+        userInfo.profile_picture ||
+        userInfo.profile_image ||
+        'https://i.pravatar.cc/150?img=1',
+      posts: reels?.length || 0,
+      followers: 38,
+      following: 14,
+      likes: reels?.reduce((sum, reel) => sum + (reel.likes || 0), 0) || 0,
+      isFollowing: false,
+      isOwnProfile: !userId,
+    }),
+    [userId, userInfo, reels],
+  );
 
-  // Format views count
-  const formatViews = (views) => {
+  const formatViews = useCallback(views => {
     if (!views) return '0';
     if (views >= 1000000) {
       return (views / 1000000).toFixed(1) + 'M';
@@ -90,7 +99,7 @@ const Profile = ({ routeParams }) => {
       return (views / 1000).toFixed(1) + 'K';
     }
     return views.toString();
-  };
+  }, []);
 
   const [pressedReels, setPressedReels] = useState({});
   const [visibleMenuReelId, setVisibleMenuReelId] = useState(null);
@@ -100,41 +109,35 @@ const Profile = ({ routeParams }) => {
   const [editDescription, setEditDescription] = useState('');
   const [updatingReel, setUpdatingReel] = useState(false);
 
-  const handleLogout = () => {
-    Alert.alert(
-      'Log Out',
-      'Are you sure you want to log out?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
+  const handleLogout = useCallback(() => {
+    Alert.alert('Log Out', 'Are you sure you want to log out?', [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Log Out',
+        style: 'destructive',
+        onPress: () => {
+          dispatch(clearCredentials());
+          clearAuthToken();
+
+          removeItem(AUTH_STORAGE_KEY);
+
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [{name: 'Splash'}],
+            }),
+          );
         },
-        {
-          text: 'Log Out',
-          style: 'destructive',
-          onPress: () => {
-            dispatch(clearCredentials());
-            clearAuthToken();
+      },
+    ]);
+  }, [dispatch, navigation]);
 
-            removeItem(AUTH_STORAGE_KEY);
-
-            navigation.dispatch(
-              CommonActions.reset({
-                index: 0,
-                routes: [{ name: 'Splash' }],
-              })
-            );
-          },
-        },
-      ]
-    );
-  };
-
-  const handleDeleteReel = (item) => {
-    Alert.alert(
-      'Delete Reel',
-      'Are you sure you want to delete this reel?',
-      [
+  const handleDeleteReel = useCallback(
+    item => {
+      Alert.alert('Delete Reel', 'Are you sure you want to delete this reel?', [
         {
           text: 'Cancel',
           style: 'cancel',
@@ -149,10 +152,10 @@ const Profile = ({ routeParams }) => {
               const reelId = item.id || item.reel_id;
               const result = await deleteReel(reelId);
               console.log('Reel deleted:', result);
-              
+
               // Refresh reels after deletion
-              dispatch(fetchMerchantReels_Request({ page: 1, per_page: 20 }));
-              
+              dispatch(fetchMerchantReels_Request({page: 1, per_page: 20}));
+
               setVisibleMenuReelId(null);
               Alert.alert('Success', 'Reel deleted successfully');
             } catch (error) {
@@ -163,20 +166,21 @@ const Profile = ({ routeParams }) => {
             }
           },
         },
-      ]
-    );
-  };
+      ]);
+    },
+    [dispatch],
+  );
 
-  const handleEditReel = (item) => {
+  const handleEditReel = useCallback(item => {
     setVisibleMenuReelId(null);
-    // Set the reel data and current description
+
     const currentDescription = item.description || item.caption || '';
     setEditingReelData(item);
     setEditDescription(currentDescription);
     setEditModalVisible(true);
-  };
+  }, []);
 
-  const handleSaveDescription = async () => {
+  const handleSaveDescription = useCallback(async () => {
     if (!editDescription.trim()) {
       Alert.alert('Error', 'Please add a description');
       return;
@@ -193,10 +197,9 @@ const Profile = ({ routeParams }) => {
         description: editDescription.trim(),
       });
       console.log('Reel updated:', result);
-      
-      // Refresh reels after update
-      dispatch(fetchMerchantReels_Request({ page: 1, per_page: 20 }));
-      
+
+      dispatch(fetchMerchantReels_Request({page: 1, per_page: 20}));
+
       setEditModalVisible(false);
       setEditingReelData(null);
       setEditDescription('');
@@ -207,150 +210,188 @@ const Profile = ({ routeParams }) => {
     } finally {
       setUpdatingReel(false);
     }
-  };
+  }, [editDescription, editingReelData, dispatch]);
 
-  const handleCloseEditModal = () => {
+  const handleCloseEditModal = useCallback(() => {
     setEditModalVisible(false);
     setEditingReelData(null);
     setEditDescription('');
-  };
+  }, []);
 
-  const renderReelItem = ({ item }) => {
-    const isPressed = pressedReels[item.id] || false;
-    const thumbnail = item.thumbnail || item.videoUrl;
-    const views = formatViews(item.views || item.views_count || 0);
-    const isMenuVisible = visibleMenuReelId === (item.id || item.reel_id);
-    const isDeleting = deletingReelId === (item.id || item.reel_id);
+  const renderReelItem = useCallback(
+    ({item}) => {
+      const isPressed = pressedReels[item.id] || false;
+      const thumbnail = item.thumbnail || item.videoUrl;
+      const views = formatViews(item.views || item.views_count || 0);
+      const isMenuVisible = visibleMenuReelId === (item.id || item.reel_id);
+      const isDeleting = deletingReelId === (item.id || item.reel_id);
 
-    return (
-      <TouchableOpacity
-        style={[styles.postItem, { borderColor: borderColor }]}
-        activeOpacity={1}
-        onPressIn={() => setPressedReels(prev => ({ ...prev, [item.id]: true }))}
-        onPressOut={() =>
-          setPressedReels(prev => ({ ...prev, [item.id]: false }))
-        }
-        onPress={() => {
-          // Navigate to reels view with the selected reel
-          // Pass all reels so user can scroll through them
-          // The clicked reel will be shown first, then user can scroll to see more
-          const clickedReelId = item.id || item.reel_id;
-          
-          // Find the index of clicked reel in the reels array
-          const clickedReelIndex = reels.findIndex(r => 
-            (r.id || r.reel_id)?.toString() === clickedReelId?.toString()
-          );
-          
-          // Reorder reels: start from clicked reel, then show rest
-          let orderedReels = [];
-          if (clickedReelIndex !== -1) {
-            // Start from clicked reel, then add remaining reels
-            orderedReels = [
-              ...reels.slice(clickedReelIndex),
-              ...reels.slice(0, clickedReelIndex)
-            ];
-          } else {
-            // If reel not found in list, use all reels and put clicked one first
-            orderedReels = [item, ...reels.filter(r => 
-              (r.id || r.reel_id)?.toString() !== clickedReelId?.toString()
-            )];
-          }
-          
-          navigation.dispatch(
-            CommonActions.reset({
-              index: 0,
-              routes: [
-                { 
-                  name: 'MerchantBottomTab',
-                  params: { 
-                    navigateToTab: 'Home',
-                    reelId: clickedReelId,
-                    preloadedReels: orderedReels,
-                    // Force a new navigation by adding a timestamp
-                    timestamp: Date.now()
-                  }
-                }
-              ],
-            })
-          );
-        }}>
-        <Image
-          source={{ uri: thumbnail }}
-          style={styles.postImage}
-          resizeMode="cover"
-        />
-        {/* Video icon in top right */}
-        <View style={styles.cameraIconContainer}>
-          <Ionicons name="videocam" size={14} color="#FFFFFF" />
-        </View>
-        
-        {/* Three-dot menu in top left */}
+      return (
         <TouchableOpacity
-          style={styles.menuButton}
-          onPress={() => setVisibleMenuReelId(isMenuVisible ? null : (item.id || item.reel_id))}
-          disabled={isDeleting}>
-          <MaterialCommunityIcons name="dots-vertical" size={18} color="#FFFFFF" />
+          style={[styles.postItem, {borderColor: borderColor}]}
+          activeOpacity={1}
+          onPressIn={() =>
+            setPressedReels(prev => ({...prev, [item.id]: true}))
+          }
+          onPressOut={() =>
+            setPressedReels(prev => ({...prev, [item.id]: false}))
+          }
+          onPress={() => {
+            const clickedReelId = item.id || item.reel_id;
+
+            const clickedReelIndex = reels.findIndex(
+              r =>
+                (r.id || r.reel_id)?.toString() === clickedReelId?.toString(),
+            );
+
+            let orderedReels = [];
+            if (clickedReelIndex !== -1) {
+              orderedReels = [
+                ...reels.slice(clickedReelIndex),
+                ...reels.slice(0, clickedReelIndex),
+              ];
+            } else {
+              orderedReels = [
+                item,
+                ...reels.filter(
+                  r =>
+                    (r.id || r.reel_id)?.toString() !==
+                    clickedReelId?.toString(),
+                ),
+              ];
+            }
+
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [
+                  {
+                    name: 'MerchantBottomTab',
+                    params: {
+                      navigateToTab: 'Home',
+                      reelId: clickedReelId,
+                      preloadedReels: orderedReels,
+
+                      timestamp: Date.now(),
+                    },
+                  },
+                ],
+              }),
+            );
+          }}>
+          <Image
+            source={{uri: thumbnail}}
+            style={styles.postImage}
+            resizeMode="cover"
+          />
+          {/* Video icon in top right */}
+          <View style={styles.cameraIconContainer}>
+            <Ionicons name="videocam" size={14} color="#FFFFFF" />
+          </View>
+
+          {/* Three-dot menu in top left */}
+          <TouchableOpacity
+            style={styles.menuButton}
+            onPress={() =>
+              setVisibleMenuReelId(
+                isMenuVisible ? null : item.id || item.reel_id,
+              )
+            }
+            disabled={isDeleting}>
+            <MaterialCommunityIcons
+              name="dots-vertical"
+              size={18}
+              color="#FFFFFF"
+            />
+          </TouchableOpacity>
+
+          {/* Menu options */}
+          {isMenuVisible && !isDeleting && (
+            <View
+              style={[
+                styles.menuOptions,
+                {backgroundColor: theme === 'dark' ? '#2A2A2A' : '#FFFFFF'},
+              ]}>
+              <TouchableOpacity
+                style={styles.menuOption}
+                onPress={() => handleEditReel(item)}>
+                <MaterialCommunityIcons
+                  name="pencil"
+                  size={16}
+                  color={theme === 'dark' ? '#FFFFFF' : '#000000'}
+                />
+                <Text
+                  style={[
+                    styles.menuOptionText,
+                    {color: theme === 'dark' ? '#FFFFFF' : '#000000'},
+                  ]}>
+                  Edit
+                </Text>
+              </TouchableOpacity>
+              <View
+                style={[styles.menuDivider, {backgroundColor: borderColor}]}
+              />
+              <TouchableOpacity
+                style={styles.menuOption}
+                onPress={() => handleDeleteReel(item)}>
+                <MaterialCommunityIcons
+                  name="delete"
+                  size={16}
+                  color="#FF3040"
+                />
+                <Text style={[styles.menuOptionText, {color: '#FF3040'}]}>
+                  Delete
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Loading indicator while deleting */}
+          {isDeleting && (
+            <View style={styles.deleteLoadingOverlay}>
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            </View>
+          )}
+
+          {/* View count in bottom left */}
+          <View style={styles.viewCountContainer}>
+            <Text style={styles.viewCountText}>{views}</Text>
+          </View>
+          <View
+            style={[styles.postOverlay, isPressed && styles.postOverlayVisible]}
+            pointerEvents="none">
+            <View style={styles.postStats}>
+              <Ionicons name="heart" size={16} color="#FFFFFF" />
+              <Text style={styles.postStatText}>
+                {formatViews(item.likes || 0)}
+              </Text>
+            </View>
+          </View>
         </TouchableOpacity>
-
-        {/* Menu options */}
-        {isMenuVisible && !isDeleting && (
-          <View style={[styles.menuOptions, { backgroundColor: theme === 'dark' ? '#2A2A2A' : '#FFFFFF' }]}>
-            <TouchableOpacity
-              style={styles.menuOption}
-              onPress={() => handleEditReel(item)}>
-              <MaterialCommunityIcons name="pencil" size={16} color={theme === 'dark' ? '#FFFFFF' : '#000000'} />
-              <Text style={[styles.menuOptionText, { color: theme === 'dark' ? '#FFFFFF' : '#000000' }]}>Edit</Text>
-            </TouchableOpacity>
-            <View style={[styles.menuDivider, { backgroundColor: borderColor }]} />
-            <TouchableOpacity
-              style={styles.menuOption}
-              onPress={() => handleDeleteReel(item)}>
-              <MaterialCommunityIcons name="delete" size={16} color="#FF3040" />
-              <Text style={[styles.menuOptionText, { color: '#FF3040' }]}>Delete</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Loading indicator while deleting */}
-        {isDeleting && (
-          <View style={styles.deleteLoadingOverlay}>
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          </View>
-        )}
-
-        {/* View count in bottom left */}
-        <View style={styles.viewCountContainer}>
-          <Text style={styles.viewCountText}>{views}</Text>
-        </View>
-        <View
-          style={[styles.postOverlay, isPressed && styles.postOverlayVisible]}
-          pointerEvents="none">
-          <View style={styles.postStats}>
-            <Ionicons name="heart" size={16} color="#FFFFFF" />
-            <Text style={styles.postStatText}>{formatViews(item.likes || 0)}</Text>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
+      );
+    },
+    [
+      borderColor,
+      pressedReels,
+      visibleMenuReelId,
+      deletingReelId,
+      reels,
+      navigation,
+      theme,
+      formatViews,
+    ],
+  );
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
-      {/* <StatusBar
-        barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundColor}
-        translucent={false}
-      /> */}
-      {/* Header */}
-      <View style={[
-        styles.header,
-        { borderBottomColor: borderColor },
-        Platform.OS === 'ios' && { paddingTop: insets.top + verticalScale(10) }
-      ]}>
+    <View style={[styles.container, {backgroundColor}]}>
+      <View
+        style={[
+          styles.header,
+          {borderBottomColor: borderColor},
+          Platform.OS === 'ios' && {paddingTop: insets.top + verticalScale(10)},
+        ]}>
         <View style={styles.headerLeft}>
-          <Text style={[styles.headerTitle, { color: textColor }]}>
-            Profile
-          </Text>
+          <Text style={[styles.headerTitle, {color: textColor}]}>Profile</Text>
           <TouchableOpacity style={styles.headerButton}>
             <Ionicons name="chevron-down" size={20} color={textColor} />
           </TouchableOpacity>
@@ -371,43 +412,39 @@ const Profile = ({ routeParams }) => {
         <View style={styles.profileSection}>
           {/* Avatar */}
           <View style={styles.avatarContainer}>
-            <Image source={{ uri: profileData.avatar }} style={styles.avatar} />
+            <Image source={{uri: profileData.avatar}} style={styles.avatar} />
           </View>
 
           {/* Merchant Name */}
-          <Text style={[styles.username, { color: textColor }]}>
+          <Text style={[styles.username, {color: textColor}]}>
             {profileData.fullName}
           </Text>
           {/* Username below name */}
-          <Text style={[styles.userHandle, { color: textColor }]}>
+          <Text style={[styles.userHandle, {color: textColor}]}>
             {profileData.username}
           </Text>
 
           {/* Stats */}
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: textColor }]}>
+              <Text style={[styles.statNumber, {color: textColor}]}>
                 {profileData.posts}
               </Text>
-              <Text style={[styles.statLabel, { color: textColor }]}>
-                Reels
-              </Text>
+              <Text style={[styles.statLabel, {color: textColor}]}>Reels</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: textColor }]}>
+              <Text style={[styles.statNumber, {color: textColor}]}>
                 {profileData.followers}
               </Text>
-              <Text style={[styles.statLabel, { color: textColor }]}>
+              <Text style={[styles.statLabel, {color: textColor}]}>
                 Followers
               </Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: textColor }]}>
+              <Text style={[styles.statNumber, {color: textColor}]}>
                 {profileData.likes}
               </Text>
-              <Text style={[styles.statLabel, { color: textColor }]}>
-                Likes
-              </Text>
+              <Text style={[styles.statLabel, {color: textColor}]}>Likes</Text>
             </View>
           </View>
 
@@ -418,12 +455,12 @@ const Profile = ({ routeParams }) => {
                 styles.editButton,
                 {
                   borderColor: borderColor,
-                  backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
-                }
+                  backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF',
+                },
               ]}
               activeOpacity={0.7}
               onPress={() => navigation.navigate('EditProfile')}>
-              <Text style={[styles.editButtonText, { color: Colors.PRIMARY }]}>
+              <Text style={[styles.editButtonText, {color: Colors.PRIMARY}]}>
                 Edit profile
               </Text>
             </TouchableOpacity>
@@ -432,27 +469,30 @@ const Profile = ({ routeParams }) => {
                 styles.bookmarkButton,
                 {
                   borderColor: borderColor,
-                  backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
-                }
+                  backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF',
+                },
               ]}
               activeOpacity={0.7}>
-              <Ionicons name="bookmark-outline" size={18} color={Colors.PRIMARY} />
+              <Ionicons
+                name="bookmark-outline"
+                size={18}
+                color={Colors.PRIMARY}
+              />
             </TouchableOpacity>
           </View>
 
           {/* Bio Section */}
           {profileData.bio ? (
-            <Text style={[styles.bio, { color: textColor }]}>
+            <Text style={[styles.bio, {color: textColor}]}>
               {profileData.bio}
             </Text>
           ) : (
             <TouchableOpacity activeOpacity={0.7}>
-              <Text style={[styles.addBioText, { color: textColor }]}>
+              <Text style={[styles.addBioText, {color: textColor}]}>
                 Tap to add bio
               </Text>
             </TouchableOpacity>
           )}
-
         </View>
 
         {/* Content Display Option */}
@@ -472,27 +512,30 @@ const Profile = ({ routeParams }) => {
               numColumns={3}
               scrollEnabled={false}
               contentContainerStyle={styles.postsGrid}
+              removeClippedSubviews={true}
+              maxToRenderPerBatch={10}
+              windowSize={5}
             />
           ) : loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={Colors.PRIMARY} />
-              <Text style={[styles.loadingText, { color: textColor }]}>
+              <Text style={[styles.loadingText, {color: textColor}]}>
                 Loading reels...
               </Text>
             </View>
           ) : error ? (
             <View style={styles.errorContainer}>
-              <Text style={[styles.errorText, { color: Colors.PRIMARY }]}>
+              <Text style={[styles.errorText, {color: Colors.PRIMARY}]}>
                 {error}
               </Text>
             </View>
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="videocam-outline" size={48} color={textColor} />
-              <Text style={[styles.emptyText, { color: textColor }]}>
+              <Text style={[styles.emptyText, {color: textColor}]}>
                 No reels yet
               </Text>
-              <Text style={[styles.emptySubText, { color: textColor }]}>
+              <Text style={[styles.emptySubText, {color: textColor}]}>
                 Upload your first reel to get started
               </Text>
             </View>
@@ -507,27 +550,36 @@ const Profile = ({ routeParams }) => {
         animationType="slide"
         onRequestClose={handleCloseEditModal}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: backgroundColor }]}>
+          <View
+            style={[styles.modalContent, {backgroundColor: backgroundColor}]}>
             {/* Modal Header */}
-            <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
+            <View
+              style={[styles.modalHeader, {borderBottomColor: borderColor}]}>
               <TouchableOpacity
                 onPress={handleCloseEditModal}
                 disabled={updatingReel}
                 style={styles.modalCancelButton}>
-                <Text style={[styles.modalCancelText, { color: textColor }]}>Cancel</Text>
+                <Text style={[styles.modalCancelText, {color: textColor}]}>
+                  Cancel
+                </Text>
               </TouchableOpacity>
-              <Text style={[styles.modalTitle, { color: textColor }]}>Edit Description</Text>
+              <Text style={[styles.modalTitle, {color: textColor}]}>
+                Edit Description
+              </Text>
               <TouchableOpacity
                 onPress={handleSaveDescription}
                 disabled={updatingReel || !editDescription.trim()}
                 style={[
                   styles.modalSaveButton,
-                  (!editDescription.trim() || updatingReel) && styles.modalSaveButtonDisabled
+                  (!editDescription.trim() || updatingReel) &&
+                    styles.modalSaveButtonDisabled,
                 ]}>
                 {updatingReel ? (
                   <ActivityIndicator size="small" color={Colors.PRIMARY} />
                 ) : (
-                  <Text style={[styles.modalSaveText, { color: Colors.PRIMARY }]}>Save</Text>
+                  <Text style={[styles.modalSaveText, {color: Colors.PRIMARY}]}>
+                    Save
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -540,8 +592,8 @@ const Profile = ({ routeParams }) => {
                   {
                     color: textColor,
                     borderColor: borderColor,
-                    backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
-                  }
+                    backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF',
+                  },
                 ]}
                 placeholder="Add description..."
                 placeholderTextColor={textColor + '80'}
@@ -765,7 +817,7 @@ const styles = StyleSheet.create({
     left: scale(6),
     borderRadius: moderateScale(8),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
@@ -948,6 +1000,3 @@ const styles = StyleSheet.create({
 });
 
 export default Profile;
-
-
-

@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect, useCallback, useMemo, memo} from 'react';
 import {
   View,
   Text,
@@ -20,7 +20,7 @@ import useAppTheme from '../../theme/useAppTheme';
 import {getThemeColors} from '../../theme/themeColors';
 import {Colors} from '../../utils/Colors';
 import Header from '../../components/Header/Header';
-import { ProductSkeleton } from '../../components/Skeleton/Skeleton';
+import {ProductSkeleton} from '../../components/Skeleton/Skeleton';
 import {getData} from '../../utils/APiCall';
 import {ROUTES} from '../../utils/Routes';
 
@@ -35,20 +35,42 @@ const Products = () => {
   const [loading, setLoading] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
 
-  // Format price to Indian currency format
-  const formatPrice = price => {
+  const searchContainerStyle = useMemo(
+    () => [
+      styles.searchContainer,
+      {backgroundColor: theme === 'dark' ? '#1E1E1E' : '#F5F5F5'},
+    ],
+    [theme],
+  );
+
+  const emptyComponent = useMemo(
+    () => (
+      <View style={styles.emptyContainer}>
+        <Ionicons
+          name="search-outline"
+          size={moderateScale(48)}
+          color={Colors.GRAY}
+        />
+        <Text style={[styles.emptyText, {color: Colors.GRAY}]}>
+          {searchQuery.trim() ? 'No products found' : 'No products available'}
+        </Text>
+      </View>
+    ),
+    [searchQuery],
+  );
+
+  const formatPrice = useCallback(price => {
     return `₹${parseFloat(price).toLocaleString('en-IN', {
       maximumFractionDigits: 2,
     })}`;
-  };
+  }, []);
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
       const response = await getData(ROUTES.PRODUCTS_AVAILABLE);
-      
+
       if (response && response.status === 'success' && response.data) {
-        // Map API response to UI format
         const mappedProducts = response.data.map(item => ({
           id: item.product_id.toString(),
           product_id: item.product_id,
@@ -58,10 +80,9 @@ const Products = () => {
           selling_price: item.selling_price,
           stock_qty: item.stock_qty,
           category_id: item.category_id,
-          // Use placeholder image if no image URL in API response
           image: `https://picsum.photos/200/200?random=${item.product_id}`,
         }));
-        
+
         setAllProducts(mappedProducts);
         setProducts(mappedProducts);
         setHasFetched(true);
@@ -79,66 +100,69 @@ const Products = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // Fetch products only when screen comes into focus (not on mount)
   useFocusEffect(
     useCallback(() => {
-      // Only fetch if we haven't fetched yet
       if (!hasFetched) {
         fetchProducts();
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [hasFetched])
+    }, [hasFetched, fetchProducts]),
   );
 
-  const handleSearch = text => {
-    setSearchQuery(text);
-    if (text.trim() === '') {
-      setProducts(allProducts);
-    } else {
-      const filtered = allProducts.filter(
-        product =>
-          product.name.toLowerCase().includes(text.toLowerCase()) ||
-          product.category.toLowerCase().includes(text.toLowerCase()),
-      );
-      setProducts(filtered);
-    }
-  };
+  const handleSearch = useCallback(
+    text => {
+      setSearchQuery(text);
+      if (text.trim() === '') {
+        setProducts(allProducts);
+      } else {
+        const filtered = allProducts.filter(
+          product =>
+            product.name.toLowerCase().includes(text.toLowerCase()) ||
+            product.category.toLowerCase().includes(text.toLowerCase()),
+        );
+        setProducts(filtered);
+      }
+    },
+    [allProducts],
+  );
 
-  const handleFilter = () => {
+  const handleFilter = useCallback(() => {
     console.log('Filter pressed');
-  };
+  }, []);
 
-  const handleSort = () => {
+  const handleSort = useCallback(() => {
     console.log('Sort pressed');
-  };
+  }, []);
 
-  const renderProductItem = ({item}) => (
-    <TouchableOpacity
-      style={[styles.productItem, {borderBottomColor: borderColor}]}
-      activeOpacity={0.7}>
-      <Image
-        source={{uri: item.image}}
-        style={styles.productImage}
-        resizeMode="cover"
-      />
-      <View style={styles.productDetails}>
-        <Text
-          style={[styles.productName, {color: textColor}]}
-          numberOfLines={2}>
-          {item.name}
+  const renderProductItem = useCallback(
+    ({item}) => (
+      <TouchableOpacity
+        style={[styles.productItem, {borderBottomColor: borderColor}]}
+        activeOpacity={0.7}>
+        <Image
+          source={{uri: item.image}}
+          style={styles.productImage}
+          resizeMode="cover"
+        />
+        <View style={styles.productDetails}>
+          <Text
+            style={[styles.productName, {color: textColor}]}
+            numberOfLines={2}>
+            {item.name}
+          </Text>
+          <Text
+            style={[styles.productCategory, {color: Colors.GRAY}]}
+            numberOfLines={1}>
+            {item.category}
+          </Text>
+        </View>
+        <Text style={[styles.productPrice, {color: Colors.PRIMARY}]}>
+          {item.price}
         </Text>
-        <Text
-          style={[styles.productCategory, {color: Colors.GRAY}]}
-          numberOfLines={1}>
-          {item.category}
-        </Text>
-      </View>
-      <Text style={[styles.productPrice, {color: Colors.PRIMARY}]}>
-        {item.price}
-      </Text>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    ),
+    [borderColor, textColor],
   );
 
   return (
@@ -147,15 +171,10 @@ const Products = () => {
         title="My Products"
         leftType={false}
         onLeftPress={() => navigation.goBack()}
-        
       />
 
       {/* Search Bar */}
-      <View
-        style={[
-          styles.searchContainer,
-          {backgroundColor: theme === 'dark' ? '#1E1E1E' : '#F5F5F5'},
-        ]}>
+      <View style={searchContainerStyle}>
         <Ionicons
           name="search"
           size={moderateScale(20)}
@@ -220,25 +239,14 @@ const Products = () => {
           keyExtractor={item => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons
-                name="search-outline"
-                size={moderateScale(48)}
-                color={Colors.GRAY}
-              />
-              <Text style={[styles.emptyText, {color: Colors.GRAY}]}>
-                {searchQuery.trim() ? 'No products found' : 'No products available'}
-              </Text>
-            </View>
-          }
+          ListEmptyComponent={emptyComponent}
         />
       )}
     </SafeAreaView>
   );
 };
 
-const { width } = Dimensions.get('window');
+const {width} = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   container: {
@@ -349,8 +357,3 @@ const styles = StyleSheet.create({
 });
 
 export default Products;
-
-
-
-
-

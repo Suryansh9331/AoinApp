@@ -63,6 +63,7 @@ const MerchantBottomTab = () => {
   const route = useRoute();
   const swiperRef = useRef(null);
   const isManualChangeRef = useRef(false);
+  const swiperUpdatingRef = useRef(false);
   const theme = useAppTheme();
   const { backgroundColor, textColor, borderColor } = getThemeColors(theme);
   const dispatch = useDispatch();
@@ -98,32 +99,45 @@ const MerchantBottomTab = () => {
     if (params.navigateToTab) {
       const tabIndex = TAB_ITEMS.findIndex(tab => tab.key === params.navigateToTab);
       if (tabIndex !== -1 && tabIndex !== activeIndex) {
+        isManualChangeRef.current = true;
         setActiveIndex(tabIndex);
         // Use setTimeout to ensure swiper is ready
         setTimeout(() => {
-          if (swiperRef.current) {
+          if (swiperRef.current && !swiperUpdatingRef.current) {
+            swiperUpdatingRef.current = true;
             swiperRef.current.scrollTo(tabIndex, true);
+            setTimeout(() => {
+              swiperUpdatingRef.current = false;
+              isManualChangeRef.current = false;
+            }, 300);
           }
-        }, 0);
+        }, 50);
       }
     }
-  }, [route.params, activeIndex]);
+  }, [route.params]);
 
   const handleTabPress = index => {
-    // Prevent action if already on this tab
-    if (index === activeIndex) {
+    // Prevent action if already on this tab or if swiper is updating
+    if (index === activeIndex || swiperUpdatingRef.current) {
       return;
     }
     
+    console.log('Tab pressed:', TAB_ITEMS[index].key, 'Index:', index, 'Current activeIndex:', activeIndex);
+    
     // Mark as manual change to prevent onIndexChanged from interfering
     isManualChangeRef.current = true;
+    swiperUpdatingRef.current = true;
     
     // Update state immediately for instant visual feedback
     setActiveIndex(index);
     
-    // Scroll swiper to the new index
+    // Scroll swiper to the new index immediately (no animation for tab clicks)
     if (swiperRef.current) {
-      swiperRef.current.scrollTo(index, true);
+      try {
+        swiperRef.current.scrollTo(index, false);
+      } catch (error) {
+        console.log('Error scrolling swiper:', error);
+      }
     }
     
     // Clear any navigation params that might be causing issues
@@ -136,10 +150,12 @@ const MerchantBottomTab = () => {
       editingReelId: null
     });
     
-    // Reset manual change flag after a short delay
+    // Reset flags after a delay to allow swiper to update
     setTimeout(() => {
       isManualChangeRef.current = false;
-    }, 100);
+      swiperUpdatingRef.current = false;
+      console.log('Tab navigation complete. New activeIndex:', index);
+    }, 200);
   };
 
   return (
@@ -151,17 +167,23 @@ const MerchantBottomTab = () => {
         showsPagination={false}
         onIndexChanged={(index) => {
           // Only update if this is a swipe gesture (not manual tab press)
-          if (!isManualChangeRef.current && index !== activeIndex) {
-            setActiveIndex(index);
-            // Clear navigation params when swiping between tabs
-            navigation.setParams({
-              navigateToTab: null,
-              reelId: null,
-              preloadedReels: null,
-              userId: null,
-              editingReel: null,
-              editingReelId: null
-            });
+          // Also check if swiper is not currently being updated programmatically
+          if (!isManualChangeRef.current && !swiperUpdatingRef.current) {
+            if (index !== activeIndex) {
+              console.log('Swiper index changed via swipe:', index, 'Previous activeIndex:', activeIndex);
+              setActiveIndex(index);
+              // Clear navigation params when swiping between tabs
+              navigation.setParams({
+                navigateToTab: null,
+                reelId: null,
+                preloadedReels: null,
+                userId: null,
+                editingReel: null,
+                editingReelId: null
+              });
+            }
+          } else {
+            console.log('onIndexChanged ignored (manual change or updating):', index);
           }
         }}
         loadMinimal
