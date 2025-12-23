@@ -11,10 +11,11 @@ import { Colors } from '../utils/Colors';
 import useAppTheme from '../theme/useAppTheme';
 import { getThemeColors } from '../theme/themeColors';
 import Home from '../screens/merchant/Home';
-import Search from '../screens/merchant/Search';
+
 import Post from '../screens/merchant/Post';
 import Products from '../screens/merchant/Products';
 import Profile from '../screens/merchant/Profile';
+import Notifications from '../screens/merchant/Notifications';
 
 const TAB_ITEMS = [
   {
@@ -24,10 +25,10 @@ const TAB_ITEMS = [
     icon: { Component: Ionicons, active: 'home', inactive: 'home-outline' },
   },
   {
-    key: 'Search',
-    label: 'Search',
-    component: Search,
-    icon: { Component: Ionicons, active: 'search', inactive: 'search-outline' },
+    key: 'Notifications',
+    label: 'Notifications',
+    component: Notifications,
+    icon: { Component: Ionicons, active: 'notifications', inactive: 'notifications-outline' },
   },
   {
     key: 'Post',

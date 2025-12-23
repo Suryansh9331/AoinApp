@@ -1,4 +1,4 @@
-export const BASE_URL = "http://10.30.79.132:5110";
+export const BASE_URL = "http://192.168.31.44:5110";
 
 
 
@@ -27,6 +27,15 @@ export const ROUTES = Object.freeze({
   MERCHANT_FOLLOW_LIST: '/api/merchants/following',
 
   GET_TRENDING_LIST:'/api/reels/feed/trending',
+
+  // Notifications
+  NOTIFICATIONS_UNREAD_COUNT: '/api/merchants/notifications/unread-count',
+  NOTIFICATIONS: 'api/merchants/notifications',
+  NOTIFICATION_MARK_READ: '/api/merchants/notifications',
+  NOTIFICATION_MARK_ALL_READ: '/api/merchants/notifications/mark-all-read',
+  NOTIFICATION_DELETE: '/api/merchants/notifications',
+  NOTIFICATIONS_BULK_DELETE: '/api/merchants/notifications/bulk-delete',
+  NOTIFICATIONS_CLEANUP: '/api/merchants/notifications/cleanup',
 
 
 
