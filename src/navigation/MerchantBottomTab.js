@@ -25,8 +25,8 @@ const TAB_ITEMS = [
     icon: { Component: Ionicons, active: 'home', inactive: 'home-outline' },
   },
   {
-    key: 'Notifications',
-    label: 'Notifications',
+    key: 'Massages',
+    label: 'Massages',
     component: Notifications,
     icon: { Component: Ionicons, active: 'notifications', inactive: 'notifications-outline' },
   },
