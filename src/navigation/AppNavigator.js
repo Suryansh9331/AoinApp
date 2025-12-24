@@ -28,6 +28,7 @@ import MyProfile from '../screens/user/MyProfile';
 import EditProfile from '../screens/merchant/EditProfile';
 import PerticularReelProfile from '../screens/user/PerticularReelProfile';
 import Post from '../screens/merchant/Post';
+import Massages from '../screens/merchant/Massages';
 const Stack = createNativeStackNavigator();
 
 const INTRO_COMPLETED_KEY = 'intro_completed';
@@ -214,6 +215,7 @@ const AppNavigator = () => {
             },
           }}
         />
+        <Stack.Screen name="Massages" component={Massages} />
         <Stack.Screen name="MerchantBottomTab" component={MerchantBottomTab} />
         <Stack.Screen name="UserBottomTab" component={UserBottomTab} />
       </Stack.Navigator>

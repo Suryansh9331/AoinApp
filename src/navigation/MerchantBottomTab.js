@@ -15,7 +15,8 @@ import Home from '../screens/merchant/Home';
 import Post from '../screens/merchant/Post';
 import Products from '../screens/merchant/Products';
 import Profile from '../screens/merchant/Profile';
-import Notifications from '../screens/merchant/Notifications';
+import Notifications from '../screens/merchant/Search';
+import Search from '../screens/merchant/Search';
 
 const TAB_ITEMS = [
   {
@@ -25,10 +26,10 @@ const TAB_ITEMS = [
     icon: { Component: Ionicons, active: 'home', inactive: 'home-outline' },
   },
   {
-    key: 'Massages',
-    label: 'Massages',
-    component: Notifications,
-    icon: { Component: Ionicons, active: 'notifications', inactive: 'notifications-outline' },
+    key: 'Search',
+    label: 'Search',
+    component: Search,
+    icon: { Component: Ionicons, active: 'search', inactive: 'search-outline' },
   },
   {
     key: 'Post',

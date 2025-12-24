@@ -6,22 +6,29 @@ import {
   Text,
   ActivityIndicator,
   SafeAreaView,
+  TouchableOpacity,
 } from 'react-native';
 import {useDispatch, useSelector} from 'react-redux';
-import {useRoute} from '@react-navigation/native';
+import {useRoute, useNavigation, useFocusEffect} from '@react-navigation/native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import VideoReel from '../../components/VideoReel/VideoReel';
 import useAppTheme from '../../theme/useAppTheme';
 import {getThemeColors} from '../../theme/themeColors';
 import {moderateScale} from 'react-native-size-matters';
 import {fetchPublicReels_Request} from '../../redux/slices/reelSlice';
 import Header from '../../components/Header/Header';
+import {getData} from '../../utils/APiCall';
+import {ROUTES} from '../../utils/Routes';
+import {Colors} from '../../utils/Colors';
 
 const Home = ({routeParams, initialReels}) => {
   const theme = useAppTheme();
   const {backgroundColor} = getThemeColors(theme);
   const dispatch = useDispatch();
   const route = useRoute();
+  const navigation = useNavigation();
   const [hasFetched, setHasFetched] = React.useState(false);
+  const [unreadCount, setUnreadCount] = React.useState(0);
 
   const {publicReels, publicReelsLoading, publicReelsError} = useSelector(
     state => state.reels,
@@ -97,6 +104,39 @@ const Home = ({routeParams, initialReels}) => {
     fetchReels();
   }, [fetchReels]);
 
+  // Fetch unread notification count
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const response = await getData(ROUTES.NOTIFICATIONS_UNREAD_COUNT);
+      if (response && response.status === 'success' && response.data) {
+        const count = typeof response.data === 'number' 
+          ? response.data 
+          : response.data.count || response.data.unread_count || 0;
+        setUnreadCount(count);
+      } else if (response && typeof response === 'number') {
+        setUnreadCount(response);
+      } else if (response && response.count !== undefined) {
+        setUnreadCount(response.count);
+      } else if (response && response.unread_count !== undefined) {
+        setUnreadCount(response.unread_count);
+      }
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+      setUnreadCount(0);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUnreadCount();
+  }, [fetchUnreadCount]);
+
+  // Refresh count when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchUnreadCount();
+    }, [fetchUnreadCount]),
+  );
+
   const showLoading = useMemo(
     () => displayData.length === 0 && (publicReelsLoading || !hasFetched),
     [displayData.length, publicReelsLoading, hasFetched],
@@ -114,6 +154,27 @@ const Home = ({routeParams, initialReels}) => {
           title="Reels"
           leftType="none"
           rightType="none"
+          rightContent={
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Massages')}
+              style={styles.notificationButton}
+              activeOpacity={0.7}>
+              <View style={styles.notificationIconContainer}>
+                <Ionicons
+                  name="notifications-outline"
+                  size={moderateScale(20)}
+                  color="#FFFFFF"
+                />
+                {unreadCount > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
+          }
           containerStyle={{
             backgroundColor: '#000000',
             borderBottomWidth: 0,
@@ -204,6 +265,37 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14),
     color: '#FF3040',
     textAlign: 'center',
+  },
+  notificationButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notificationIconContainer: {
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -6,
+    backgroundColor: Colors.PRIMARY || '#F2631F',
+    borderRadius: moderateScale(10),
+    minWidth: moderateScale(18),
+    height: moderateScale(18),
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: moderateScale(4),
+    borderWidth: 2,
+    borderColor: '#000000',
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: moderateScale(10),
+    fontWeight: '700',
+    lineHeight: moderateScale(12),
   },
 });
 
