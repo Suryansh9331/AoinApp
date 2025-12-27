@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useRef, useCallback} from 'react';
+import React, { useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -7,34 +7,34 @@ import {
   ActivityIndicator,
   SafeAreaView,
 } from 'react-native';
-import {useDispatch, useSelector} from 'react-redux';
-import {useRoute} from '@react-navigation/native';
+import { useDispatch, useSelector } from 'react-redux';
+import { useRoute } from '@react-navigation/native';
 import VideoReel from '../../components/VideoReel/VideoReel';
 import useAppTheme from '../../theme/useAppTheme';
-import {getThemeColors} from '../../theme/themeColors';
-import {moderateScale, verticalScale} from 'react-native-size-matters';
-import {fetchPublicReels_Request} from '../../redux/slices/reelSlice';
+import { getThemeColors } from '../../theme/themeColors';
+import { moderateScale, verticalScale } from 'react-native-size-matters';
+import { fetchPublicReels_Request } from '../../redux/slices/reelSlice';
 import Header from '../../components/Header/Header';
 
-const Home = ({routeParams, initialReels}) => {
+const Home = ({ routeParams, initialReels }) => {
   const theme = useAppTheme();
-  const {backgroundColor} = getThemeColors(theme);
+  const { backgroundColor } = getThemeColors(theme);
   const dispatch = useDispatch();
   const route = useRoute();
   const [hasFetched, setHasFetched] = React.useState(false);
 
-  const {publicReels, publicReelsLoading, publicReelsError} = useSelector(
+  const { publicReels, publicReelsLoading, publicReelsError } = useSelector(
     state => state.reels,
   );
-
+  //  console.log('publicReels', publicReels);
   const [currentReelId, setCurrentReelId] = React.useState(
     routeParams?.reelId || route.params?.reelId,
   );
   const [preloadedReels, setPreloadedReels] = React.useState(
     initialReels ||
-      routeParams?.preloadedReels ||
-      route.params?.preloadedReels ||
-      [],
+    routeParams?.preloadedReels ||
+    route.params?.preloadedReels ||
+    [],
   );
 
   const previousReelsRef = useRef([]);
@@ -89,7 +89,7 @@ const Home = ({routeParams, initialReels}) => {
   const fetchReels = useCallback(() => {
     if (!publicReelsLoading && !hasFetched) {
       setHasFetched(true);
-      dispatch(fetchPublicReels_Request({page: 1, per_page: 20}));
+      dispatch(fetchPublicReels_Request({ page: 1, per_page: 20 }));
     }
   }, [dispatch, publicReelsLoading, hasFetched]);
 
@@ -103,13 +103,13 @@ const Home = ({routeParams, initialReels}) => {
   );
 
   return (
-    <View style={[styles.container, {backgroundColor}]}>
+    <View style={[styles.container, { backgroundColor }]}>
       <StatusBar
         barStyle="light-content"
         backgroundColor="#000000"
         translucent={false}
       />
-      <SafeAreaView style={{backgroundColor: '#000000'}}>
+      <SafeAreaView style={{ backgroundColor: '#000000' }}>
         <Header
           title="Reels"
           leftType="none"
@@ -118,7 +118,7 @@ const Home = ({routeParams, initialReels}) => {
             backgroundColor: '#000000',
             borderBottomWidth: 0,
           }}
-          titleStyle={{color: '#FFFFFF'}}
+          titleStyle={{ color: '#FFFFFF' }}
         />
       </SafeAreaView>
       {showLoading && displayData.length === 0 ? (

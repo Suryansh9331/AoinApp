@@ -33,7 +33,8 @@ const Home = ({routeParams, initialReels}) => {
   const {publicReels, publicReelsLoading, publicReelsError} = useSelector(
     state => state.reels,
   );
-
+  const authData = useSelector(state => state.auth);
+ console.log('publicReels', publicReels);
   const [currentReelId, setCurrentReelId] = React.useState(
     routeParams?.reelId || route.params?.reelId,
   );
@@ -106,6 +107,12 @@ const Home = ({routeParams, initialReels}) => {
 
   // Fetch unread notification count
   const fetchUnreadCount = useCallback(async () => {
+    // Check if user is logged in before making API call
+    if (!authData?.token || !authData?.data) {
+      setUnreadCount(0);
+      return;
+    }
+
     try {
       const response = await getData(ROUTES.NOTIFICATIONS_UNREAD_COUNT);
       if (response && response.status === 'success' && response.data) {
@@ -121,10 +128,18 @@ const Home = ({routeParams, initialReels}) => {
         setUnreadCount(response.unread_count);
       }
     } catch (error) {
-      console.error('Error fetching unread count:', error);
+      // Silently handle 401 errors (user logged out)
+      if (error?.status === 401 || (error?.type === 'response' && error?.status === 401)) {
+        setUnreadCount(0);
+        return;
+      }
+      // Only log non-401 errors
+      if (error?.status !== 401) {
+        console.error('Error fetching unread count:', error);
+      }
       setUnreadCount(0);
     }
-  }, []);
+  }, [authData]);
 
   useEffect(() => {
     fetchUnreadCount();

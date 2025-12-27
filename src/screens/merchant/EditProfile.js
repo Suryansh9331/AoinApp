@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect, useCallback, useMemo} from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   TextInput,
   Alert,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {SafeAreaView} from 'react-native';
@@ -21,36 +22,93 @@ import {getThemeColors} from '../../theme/themeColors';
 import {Colors} from '../../utils/Colors';
 import {launchImageLibrary} from 'react-native-image-picker';
 import {StatusBar} from 'react-native';
+import {getData} from '../../utils/APiCall';
+import {ROUTES} from '../../utils/Routes';
 
 const EditProfile = () => {
   const theme = useAppTheme();
   const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
   const navigation = useNavigation();
   const userData = useSelector(state => state.auth.data);
-  const userInfo = userData?.data || userData || {};
+  
+  // Get merchant_id from logged-in user data
+  const merchantId = useMemo(() => {
+    const userInfo = userData?.data || userData || {};
+    return userInfo.merchant_id || userInfo.id || userInfo.user_id || null;
+  }, [userData]);
 
-  // Form state
-  const [name, setName] = useState(
-    userInfo.first_name && userInfo.last_name
-      ? `${userInfo.first_name} ${userInfo.last_name}`
-      : userInfo.name || 'Jacob West',
-  );
+  // State for merchant profile data
+  const [merchantProfile, setMerchantProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState(null);
+
+  // Fetch merchant profile
+  const fetchMerchantProfile = useCallback(async () => {
+    if (!merchantId) {
+      setProfileError('Merchant ID not found');
+      return;
+    }
+
+    setProfileLoading(true);
+    setProfileError(null);
+    try {
+      const endpoint = `${ROUTES.MERCHANT_PUBLIC_PROFILE}${merchantId}/public-profile`;
+      const response = await getData(endpoint);
+      
+      if (response && typeof response === 'object' && response.business_name) {
+        setMerchantProfile(response);
+      } else if (response && response.data && response.data.business_name) {
+        setMerchantProfile(response.data);
+      } else {
+        setProfileError('Invalid profile data received');
+      }
+    } catch (error) {
+      console.log('Error fetching merchant profile:', error);
+      setProfileError(error?.message || 'Failed to load profile');
+    } finally {
+      setProfileLoading(false);
+    }
+  }, [merchantId]);
+
+  useEffect(() => {
+    if (merchantId) {
+      fetchMerchantProfile();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [merchantId]);
+
+  // Form state - initialized from API data
+  const [name, setName] = useState(merchantProfile?.business_name || '');
   const [username, setUsername] = useState(
-    userInfo.username || userInfo.user_name || 'jacob_w',
+    merchantProfile?.business_name 
+      ? `@${merchantProfile.business_name.toLowerCase().replace(/\s+/g, '_')}`
+      : '',
   );
-  const [bio, setBio] = useState(userInfo.bio || userInfo.description || '');
+  const [bio, setBio] = useState(merchantProfile?.business_description || '');
   const [businessCategories, setBusinessCategories] = useState('');
-  const [email, setEmail] = useState(userInfo.email || '');
-  const [phoneNumber, setPhoneNumber] = useState(userInfo.phone || '');
-  const [storeAddress, setStoreAddress] = useState('');
+  const [email, setEmail] = useState(merchantProfile?.business_email || '');
+  const [phoneNumber, setPhoneNumber] = useState(merchantProfile?.business_phone || '');
+  const [storeAddress, setStoreAddress] = useState(merchantProfile?.business_address || '');
   const [languages, setLanguages] = useState('');
   const [profileImage, setProfileImage] = useState(
-    userInfo.avatar ||
-      userInfo.avatar_url ||
-      userInfo.profile_picture ||
-      userInfo.profile_image ||
-      'https://i.pravatar.cc/150?img=1',
+    'https://i.pravatar.cc/150?img=1',
   );
+
+  // Update form fields when merchantProfile loads
+  useEffect(() => {
+    if (merchantProfile) {
+      setName(merchantProfile.business_name || '');
+      setUsername(
+        merchantProfile.business_name 
+          ? `@${merchantProfile.business_name.toLowerCase().replace(/\s+/g, '_')}`
+          : '',
+      );
+      setBio(merchantProfile.business_description || '');
+      setEmail(merchantProfile.business_email || '');
+      setPhoneNumber(merchantProfile.business_phone || '');
+      setStoreAddress(merchantProfile.business_address || '');
+    }
+  }, [merchantProfile]);
 
   const handleChangePhoto = () => {
     const options = {
@@ -154,106 +212,130 @@ const EditProfile = () => {
         />
       </SafeAreaView>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}>
-        <View style={styles.profilePictureSection}>
-          <View style={styles.profilePictureContainer}>
-            <Image source={{uri: profileImage}} style={styles.profilePicture} />
-            <TouchableOpacity
-              style={styles.cameraIconContainer}
-              onPress={handleChangePhoto}
-              activeOpacity={0.8}>
-              <Ionicons name="camera" size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
+      {profileLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.PRIMARY} />
+          <Text style={[styles.loadingText, {color: textColor}]}>
+            Loading profile...
+          </Text>
+        </View>
+      ) : profileError ? (
+        <View style={styles.errorContainer}>
+          <Text style={[styles.errorText, {color: Colors.PRIMARY}]}>
+            {profileError}
+          </Text>
           <TouchableOpacity
-            onPress={handleChangePhoto}
-            activeOpacity={0.7}
-            style={styles.changePhotoButton}>
-            <Text style={[styles.changePhotoText, {color: textColor}]}>
-              Change photo
+            style={[styles.retryButton, {borderColor: borderColor}]}
+            onPress={fetchMerchantProfile}>
+            <Text style={[styles.retryButtonText, {color: Colors.PRIMARY}]}>
+              Retry
             </Text>
           </TouchableOpacity>
         </View>
+      ) : merchantProfile ? (
+        <>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}>
+            <View style={styles.profilePictureSection}>
+              <View style={styles.profilePictureContainer}>
+                <Image source={{uri: profileImage}} style={styles.profilePicture} />
+                <TouchableOpacity
+                  style={styles.cameraIconContainer}
+                  onPress={handleChangePhoto}
+                  activeOpacity={0.8}>
+                  <Ionicons name="camera" size={20} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity
+                onPress={handleChangePhoto}
+                activeOpacity={0.7}
+                style={styles.changePhotoButton}>
+                <Text style={[styles.changePhotoText, {color: textColor}]}>
+                  Change photo
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-        <View style={styles.fieldsContainer}>
-          {renderField('Name', name, 'Enter name', setName)}
-          {renderField('Username', username, 'Enter username', setUsername)}
-          {renderField('Bio', bio, 'Add a bio to your profile', setBio)}
-          {renderField(
-            'Business Categories',
-            businessCategories,
-            'Select Categories',
-            null,
-            () => {
-              Alert.alert(
+            <View style={styles.fieldsContainer}>
+              {renderField('Name', name, 'Enter name', setName)}
+              {renderField('Username', username, 'Enter username', setUsername)}
+              {renderField('Bio', bio, 'Add a bio to your profile', setBio)}
+              {renderField(
                 'Business Categories',
-                'Select categories feature coming soon',
-              );
-            },
-          )}
-          {renderField('Email', email, 'Enter the email Address', setEmail)}
-          {renderField(
-            'Phone Number',
-            phoneNumber,
-            'Enter the Phone Number',
-            setPhoneNumber,
-          )}
-          {renderField(
-            'Store Address',
-            storeAddress,
-            'Select the Address',
-            null,
-            () => {
-              // TODO: Open address selection
-              Alert.alert(
+                businessCategories,
+                'Select Categories',
+                null,
+                () => {
+                  Alert.alert(
+                    'Business Categories',
+                    'Select categories feature coming soon',
+                  );
+                },
+              )}
+              {renderField('Email', email, 'Enter the email Address', setEmail)}
+              {renderField(
+                'Phone Number',
+                phoneNumber,
+                'Enter the Phone Number',
+                setPhoneNumber,
+              )}
+              {renderField(
                 'Store Address',
-                'Address selection feature coming soon',
-              );
-            },
-          )}
-          {renderField(
-            'Languages',
-            languages,
-            'Select the Languages',
-            null,
-            () => {
-              // TODO: Open languages selection
-              Alert.alert(
+                storeAddress,
+                'Select the Address',
+                null,
+                () => {
+                  // TODO: Open address selection
+                  Alert.alert(
+                    'Store Address',
+                    'Address selection feature coming soon',
+                  );
+                },
+              )}
+              {renderField(
                 'Languages',
-                'Language selection feature coming soon',
-              );
-            },
-          )}
-        </View>
-      </ScrollView>
+                languages,
+                'Select the Languages',
+                null,
+                () => {
+                  // TODO: Open languages selection
+                  Alert.alert(
+                    'Languages',
+                    'Language selection feature coming soon',
+                  );
+                },
+              )}
+            </View>
+          </ScrollView>
 
-      {/* Action Buttons */}
-      <View
-        style={[styles.actionButtonsContainer, {borderTopColor: borderColor}]}>
-        <TouchableOpacity
-          style={[
-            styles.cancelButton,
-            {
-              borderColor: borderColor,
-              backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF',
-            },
-          ]}
-          onPress={handleCancel}
-          activeOpacity={0.7}>
-          <Text style={[styles.cancelButtonText, {color: textColor}]}>
-            Cancel
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.saveButton}
-          onPress={handleSave}
-          activeOpacity={0.8}>
-          <Text style={styles.saveButtonText}>Save Changes</Text>
-        </TouchableOpacity>
-      </View>
+          {/* Action Buttons */}
+          <View
+            style={[styles.actionButtonsContainer, {borderTopColor: borderColor}]}>
+            <TouchableOpacity
+              style={[
+                styles.cancelButton,
+                {
+                  borderColor: borderColor,
+                  backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF',
+                },
+              ]}
+              onPress={handleCancel}
+              activeOpacity={0.7}>
+              <Text style={[styles.cancelButtonText, {color: textColor}]}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.saveButton}
+              onPress={handleSave}
+              activeOpacity={0.8}>
+              <Text style={styles.saveButtonText}>Save Changes</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      ) : null}
     </View>
   );
 };
@@ -383,6 +465,38 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14),
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: verticalScale(60),
+  },
+  loadingText: {
+    marginTop: verticalScale(12),
+    fontSize: moderateScale(14),
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: verticalScale(40),
+    paddingHorizontal: scale(20),
+  },
+  errorText: {
+    fontSize: moderateScale(14),
+    textAlign: 'center',
+    marginBottom: verticalScale(16),
+  },
+  retryButton: {
+    paddingVertical: verticalScale(10),
+    paddingHorizontal: scale(20),
+    borderRadius: moderateScale(8),
+    borderWidth: 1,
+  },
+  retryButtonText: {
+    fontSize: moderateScale(14),
+    fontWeight: '600',
   },
 });
 

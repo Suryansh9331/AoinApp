@@ -1,4 +1,4 @@
-export const BASE_URL = "http://192.168.31.44:5110";
+export const BASE_URL = "http://10.183.143.132:5110";
 
 
 
@@ -20,8 +20,8 @@ export const ROUTES = Object.freeze({
   UNFOLLOW_MERCHANT: '/api/merchants',
   REELBATCHDELET: '/api/reels/batch/delete',
   // Follow a merchant to see their reels in following feed
-  // /api/merchants/{merchant_id}/follow
-  // /api/merchants/{merchant_id}/unfollow
+  MERCHANT_FOLLOW: '/api/merchants/{merchant_id}/follow',
+  MERCHANT_UNFOLLOW: '/api/merchants/{merchant_id}/unfollow',
 
   // Get list of merchants the user follows.
   MERCHANT_FOLLOW_LIST: '/api/merchants/following',
@@ -36,8 +36,10 @@ export const ROUTES = Object.freeze({
   NOTIFICATION_DELETE: '/api/merchants/notifications',
   NOTIFICATIONS_BULK_DELETE: '/api/merchants/notifications/bulk-delete',
   NOTIFICATIONS_CLEANUP: '/api/merchants/notifications/cleanup',
-
-
+  
+  MERCHANT_FOLLOWERS_COUNT: '/api/merchants/',
+  MERCHANT_PUBLIC_PROFILE: '/api/merchants/',
+  MERCHANT_STATS: '/api/reels/merchant/',
 
 
   GOOGLE_LOGIN: 'https://api.aoinstore.com/api/auth/google',

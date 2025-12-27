@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback, useMemo, memo} from 'react';
+import React, {useState, useEffect, useCallback, useMemo} from 'react';
 import {
   View,
   Text,
@@ -10,14 +10,12 @@ import {
   FlatList,
   ActivityIndicator,
   Platform,
-  StatusBar,
   Alert,
   Modal,
   TextInput,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {
-  useRoute,
   useNavigation,
   CommonActions,
   useFocusEffect,
@@ -29,25 +27,120 @@ import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
 import useAppTheme from '../../theme/useAppTheme';
 import {getThemeColors} from '../../theme/themeColors';
 import {Colors} from '../../utils/Colors';
+import Skeleton from '../../components/Skeleton/Skeleton';
 import {fetchMerchantReels_Request} from '../../redux/slices/reelSlice';
 import {clearCredentials} from '../../redux/slices/authSlice';
-import {clearAuthToken} from '../../utils/APiCall';
+import {clearAuthToken, getData} from '../../utils/APiCall';
 import {deleteReel, updateReel} from '../../utils/APiCall';
 import {removeItem, AUTH_STORAGE_KEY} from '../../utils/MMKVStorage';
+import {ROUTES} from '../../utils/Routes';
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
 const POST_ITEM_SIZE = (SCREEN_WIDTH - 4) / 3;
 
-const Profile = ({routeParams}) => {
+const Profile = () => {
   const theme = useAppTheme();
   const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
-  const route = useRoute();
   const navigation = useNavigation();
   const dispatch = useDispatch();
-  const userId = routeParams?.userId || route.params?.userId;
   const insets = useSafeAreaInsets();
 
   const {reels, loading, error} = useSelector(state => state.reels);
+  const userData = useSelector(state => state.auth.data);
+
+ 
+  const merchantId = useMemo(() => {
+    const userInfo = userData?.data || userData || {};
+    return userInfo.merchant_id || userInfo.id || userInfo.user_id || null;
+  }, [userData]);
+
+  // State for merchant profile data
+  const [merchantProfile, setMerchantProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState(null);
+
+  // State for merchant stats
+  const [merchantStats, setMerchantStats] = useState(null);
+
+  // State for followers count
+  const [followersCount, setFollowersCount] = useState(0);
+
+  // Fetch merchant profile
+  const fetchMerchantProfile = useCallback(async () => {
+    if (!merchantId) {
+      setProfileError('Merchant ID not found');
+      return;
+    }
+
+    setProfileLoading(true);
+    setProfileError(null);
+    try {
+      const endpoint = `${ROUTES.MERCHANT_PUBLIC_PROFILE}${merchantId}/public-profile`;
+      const response = await getData(endpoint);
+
+      if (response && typeof response === 'object' && response.business_name) {
+        setMerchantProfile(response);
+      } else if (response?.data?.business_name) {
+        setMerchantProfile(response.data);
+      } else {
+        setProfileError('Invalid profile data received');
+      }
+    } catch (error) {
+      setProfileError(error?.message || 'Failed to load profile');
+    } finally {
+      setProfileLoading(false);
+    }
+  }, [merchantId]);
+
+  // Fetch merchant stats
+  const fetchMerchantStats = useCallback(async () => {
+    if (!merchantId) {
+      return;
+    }
+
+    try {
+      const endpoint = `${ROUTES.MERCHANT_STATS}${merchantId}/stats`;
+      const response = await getData(endpoint);
+
+      if (response && response.status === 'success' && response.data) {
+        setMerchantStats(response.data);
+      } else if (response && response.data) {
+        setMerchantStats(response.data);
+      }
+    } catch (error) {
+      // Silently handle errors for stats
+    }
+  }, [merchantId]);
+
+  // Fetch followers count
+  const fetchFollowersCount = useCallback(async () => {
+    if (!merchantId) {
+      return;
+    }
+
+    try {
+      const endpoint = `${ROUTES.MERCHANT_FOLLOWERS_COUNT}${merchantId}/followers/count`;
+      const response = await getData(endpoint);
+
+      if (
+        response &&
+        response.status === 'success' &&
+        response.follower_count !== undefined
+      ) {
+        setFollowersCount(response.follower_count);
+      } else if (response && response.follower_count !== undefined) {
+        setFollowersCount(response.follower_count);
+      } else if (
+        response &&
+        response.data &&
+        response.data.follower_count !== undefined
+      ) {
+        setFollowersCount(response.data.follower_count);
+      }
+    } catch (error) {
+      // Silently handle errors for followers count
+    }
+  }, [merchantId]);
 
   useEffect(() => {
     if (reels.length === 0 && !loading) {
@@ -55,40 +148,32 @@ const Profile = ({routeParams}) => {
     }
   }, [dispatch, reels.length, loading]);
 
+  // Fetch profile, stats and followers count only once when merchantId is available
+  useEffect(() => {
+    if (merchantId && !merchantProfile) {
+      fetchMerchantProfile();
+    }
+    if (merchantId) {
+      fetchMerchantStats();
+      fetchFollowersCount();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [merchantId]);
+
   useFocusEffect(
     useCallback(() => {
       dispatch(fetchMerchantReels_Request({page: 1, per_page: 20}));
-    }, [dispatch]),
-  );
-
-  const userData = useSelector(state => state.auth.data);
-  const userInfo = useMemo(() => userData?.data || userData || {}, [userData]);
-
-  const profileData = useMemo(
-    () => ({
-      username: userId
-        ? `merchant_${userId}`
-        : userInfo.username || userInfo.user_name || '@merchant',
-      fullName: userId
-        ? 'Merchant Store'
-        : userInfo.first_name && userInfo.last_name
-        ? `${userInfo.first_name} ${userInfo.last_name}`
-        : userInfo.name || 'Merchant Store',
-      bio: userInfo.bio || userInfo.description || '', // Empty bio - will show "Tap to add bio"
-      avatar:
-        userInfo.avatar ||
-        userInfo.avatar_url ||
-        userInfo.profile_picture ||
-        userInfo.profile_image ||
-        'https://i.pravatar.cc/150?img=1',
-      posts: reels?.length || 0,
-      followers: 38,
-      following: 14,
-      likes: reels?.reduce((sum, reel) => sum + (reel.likes || 0), 0) || 0,
-      isFollowing: false,
-      isOwnProfile: !userId,
-    }),
-    [userId, userInfo, reels],
+      // Only fetch profile if not already loaded
+      if (merchantId && !merchantProfile) {
+        fetchMerchantProfile();
+      }
+      // Refresh stats and followers count on focus
+      if (merchantId) {
+        fetchMerchantStats();
+        fetchFollowersCount();
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dispatch, merchantId]),
   );
 
   const formatViews = useCallback(views => {
@@ -150,8 +235,7 @@ const Profile = ({routeParams}) => {
             setDeletingReelId(item.id || item.reel_id);
             try {
               const reelId = item.id || item.reel_id;
-              const result = await deleteReel(reelId);
-              console.log('Reel deleted:', result);
+              await deleteReel(reelId);
 
               // Refresh reels after deletion
               dispatch(fetchMerchantReels_Request({page: 1, per_page: 20}));
@@ -159,7 +243,6 @@ const Profile = ({routeParams}) => {
               setVisibleMenuReelId(null);
               Alert.alert('Success', 'Reel deleted successfully');
             } catch (error) {
-              console.log('Delete error:', error);
               Alert.alert('Error', error?.message || 'Failed to delete reel');
             } finally {
               setDeletingReelId(null);
@@ -193,10 +276,9 @@ const Profile = ({routeParams}) => {
     setUpdatingReel(true);
     try {
       const reelId = editingReelData.id || editingReelData.reel_id;
-      const result = await updateReel(reelId, {
+      await updateReel(reelId, {
         description: editDescription.trim(),
       });
-      console.log('Reel updated:', result);
 
       dispatch(fetchMerchantReels_Request({page: 1, per_page: 20}));
 
@@ -205,7 +287,6 @@ const Profile = ({routeParams}) => {
       setEditDescription('');
       Alert.alert('Success', 'Description updated successfully');
     } catch (error) {
-      console.log('Update error:', error);
       Alert.alert('Error', error?.message || 'Failed to update description');
     } finally {
       setUpdatingReel(false);
@@ -409,138 +490,288 @@ const Profile = ({routeParams}) => {
         showsVerticalScrollIndicator={false}
         style={styles.scrollView}>
         {/* Profile Section */}
-        <View style={styles.profileSection}>
-          {/* Avatar */}
-          <View style={styles.avatarContainer}>
-            <Image source={{uri: profileData.avatar}} style={styles.avatar} />
-          </View>
-
-          {/* Merchant Name */}
-          <Text style={[styles.username, {color: textColor}]}>
-            {profileData.fullName}
-          </Text>
-          {/* Username below name */}
-          <Text style={[styles.userHandle, {color: textColor}]}>
-            {profileData.username}
-          </Text>
-
-          {/* Stats */}
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, {color: textColor}]}>
-                {profileData.posts}
-              </Text>
-              <Text style={[styles.statLabel, {color: textColor}]}>Reels</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, {color: textColor}]}>
-                {profileData.followers}
-              </Text>
-              <Text style={[styles.statLabel, {color: textColor}]}>
-                Followers
-              </Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, {color: textColor}]}>
-                {profileData.likes}
-              </Text>
-              <Text style={[styles.statLabel, {color: textColor}]}>Likes</Text>
-            </View>
-          </View>
-
-          {/* Action Buttons */}
-          <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={[
-                styles.editButton,
-                {
-                  borderColor: borderColor,
-                  backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF',
-                },
-              ]}
-              activeOpacity={0.7}
-              onPress={() => navigation.navigate('EditProfile')}>
-              <Text style={[styles.editButtonText, {color: Colors.PRIMARY}]}>
-                Edit profile
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.bookmarkButton,
-                {
-                  borderColor: borderColor,
-                  backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF',
-                },
-              ]}
-              activeOpacity={0.7}>
-              <Ionicons
-                name="bookmark-outline"
-                size={18}
-                color={Colors.PRIMARY}
+        {profileLoading && !merchantProfile ? (
+          <View style={styles.profileSection}>
+            {/* Avatar Skeleton */}
+            <View style={styles.avatarContainer}>
+              <Skeleton
+                width={moderateScale(100)}
+                height={moderateScale(100)}
+                radius={moderateScale(50)}
               />
+            </View>
+
+            {/* Name Skeleton */}
+            <Skeleton
+              width={moderateScale(150)}
+              height={moderateScale(20)}
+              radius={4}
+              style={styles.skeletonName}
+            />
+            {/* Username Skeleton */}
+            <Skeleton
+              width={moderateScale(120)}
+              height={moderateScale(16)}
+              radius={4}
+              style={styles.skeletonUsername}
+            />
+
+            {/* Stats Skeleton */}
+            <View style={styles.statsContainer}>
+              <View style={styles.statItem}>
+                <Skeleton
+                  width={moderateScale(30)}
+                  height={moderateScale(18)}
+                  radius={4}
+                />
+                <Skeleton
+                  width={moderateScale(40)}
+                  height={moderateScale(12)}
+                  radius={4}
+                  style={{marginTop: verticalScale(4)}}
+                />
+              </View>
+              <View style={styles.statItem}>
+                <Skeleton
+                  width={moderateScale(30)}
+                  height={moderateScale(18)}
+                  radius={4}
+                />
+                <Skeleton
+                  width={moderateScale(50)}
+                  height={moderateScale(12)}
+                  radius={4}
+                  style={{marginTop: verticalScale(4)}}
+                />
+              </View>
+              <View style={styles.statItem}>
+                <Skeleton
+                  width={moderateScale(30)}
+                  height={moderateScale(18)}
+                  radius={4}
+                />
+                <Skeleton
+                  width={moderateScale(40)}
+                  height={moderateScale(12)}
+                  radius={4}
+                  style={{marginTop: verticalScale(4)}}
+                />
+              </View>
+            </View>
+
+            {/* Action Buttons Skeleton */}
+            <View style={styles.actionButtons}>
+              <Skeleton
+                width="70%"
+                height={moderateScale(44)}
+                radius={moderateScale(8)}
+              />
+              <Skeleton
+                width={moderateScale(44)}
+                height={moderateScale(44)}
+                radius={moderateScale(8)}
+              />
+            </View>
+
+            {/* Bio Skeleton */}
+            <View style={styles.skeletonBioContainer}>
+              <Skeleton width="90%" height={moderateScale(14)} radius={4} />
+              <Skeleton
+                width="80%"
+                height={moderateScale(14)}
+                radius={4}
+                style={{marginTop: verticalScale(6)}}
+              />
+              <Skeleton
+                width="60%"
+                height={moderateScale(14)}
+                radius={4}
+                style={{marginTop: verticalScale(6)}}
+              />
+            </View>
+
+            {/* Reels Grid Skeleton */}
+            <View style={styles.postsGridContainer}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.skeletonReelsRow}>
+                {[1, 2, 3, 4, 5, 6].map((_, index) => (
+                  <Skeleton
+                    key={`skeleton-reel-${index}`}
+                    width={POST_ITEM_SIZE}
+                    height={POST_ITEM_SIZE}
+                    radius={0}
+                    style={styles.skeletonReelItem}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        ) : profileError && !merchantProfile ? (
+          <View style={styles.profileErrorContainer}>
+            <Text style={[styles.errorText, {color: Colors.PRIMARY}]}>
+              {profileError}
+            </Text>
+            <TouchableOpacity
+              style={[styles.retryButton, {borderColor: borderColor}]}
+              onPress={fetchMerchantProfile}>
+              <Text style={[styles.retryButtonText, {color: Colors.PRIMARY}]}>
+                Retry
+              </Text>
             </TouchableOpacity>
           </View>
+        ) : merchantProfile ? (
+          <View style={styles.profileSection}>
+            {/* Avatar */}
+            <View style={styles.avatarContainer}>
+              <Image
+                source={{uri: 'https://i.pravatar.cc/150?img=1'}}
+                style={styles.avatar}
+              />
+            </View>
 
-          {/* Bio Section */}
-          {profileData.bio ? (
-            <Text style={[styles.bio, {color: textColor}]}>
-              {profileData.bio}
+            {/* Merchant Name */}
+            <Text style={[styles.username, {color: textColor}]}>
+              {merchantProfile?.business_name || 'Merchant Store'}
             </Text>
-          ) : (
-            <TouchableOpacity activeOpacity={0.7}>
-              <Text style={[styles.addBioText, {color: textColor}]}>
-                Tap to add bio
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
+            {/* Username below name */}
+            <Text style={[styles.userHandle, {color: textColor}]}>
+              {merchantProfile?.business_name
+                ? `@${merchantProfile.business_name
+                    .toLowerCase()
+                    .replace(/\s+/g, '_')}`
+                : '@merchant'}
+            </Text>
 
-        {/* Content Display Option */}
-        <View style={styles.contentOptionContainer}>
-          <TouchableOpacity style={styles.contentOptionButton}>
-            <Ionicons name="videocam-outline" size={20} color={textColor} />
-          </TouchableOpacity>
-        </View>
+            {/* Stats */}
+            <View style={styles.statsContainer}>
+              <View style={styles.statItem}>
+                <Text style={[styles.statNumber, {color: textColor}]}>
+                  {merchantStats?.total_reels || reels?.length || 0}
+                </Text>
+                <Text style={[styles.statLabel, {color: textColor}]}>
+                  Reels
+                </Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={[styles.statNumber, {color: textColor}]}>
+                  {followersCount}
+                </Text>
+                <Text style={[styles.statLabel, {color: textColor}]}>
+                  Followers
+                </Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={[styles.statNumber, {color: textColor}]}>
+                  {merchantStats?.total_likes ||
+                    reels?.reduce((sum, reel) => sum + (reel.likes || 0), 0) ||
+                    0}
+                </Text>
+                <Text style={[styles.statLabel, {color: textColor}]}>
+                  Likes
+                </Text>
+              </View>
+            </View>
 
-        {/* Reels Grid */}
-        <View style={styles.postsGridContainer}>
-          {reels.length > 0 ? (
-            <FlatList
-              data={reels}
-              renderItem={renderReelItem}
-              keyExtractor={item => item.id || item.reel_id?.toString()}
-              numColumns={3}
-              scrollEnabled={false}
-              contentContainerStyle={styles.postsGrid}
-              removeClippedSubviews={true}
-              maxToRenderPerBatch={10}
-              windowSize={5}
-            />
-          ) : loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={Colors.PRIMARY} />
-              <Text style={[styles.loadingText, {color: textColor}]}>
-                Loading reels...
-              </Text>
+            {/* Action Buttons */}
+            <View style={styles.actionButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.editButton,
+                  {
+                    borderColor: borderColor,
+                    backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF',
+                  },
+                ]}
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('EditProfile')}>
+                <Text style={[styles.editButtonText, {color: Colors.PRIMARY}]}>
+                  Edit profile
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.bookmarkButton,
+                  {
+                    borderColor: borderColor,
+                    backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF',
+                  },
+                ]}
+                activeOpacity={0.7}>
+                <Ionicons
+                  name="bookmark-outline"
+                  size={18}
+                  color={Colors.PRIMARY}
+                />
+              </TouchableOpacity>
             </View>
-          ) : error ? (
-            <View style={styles.errorContainer}>
-              <Text style={[styles.errorText, {color: Colors.PRIMARY}]}>
-                {error}
+
+            {/* Bio Section */}
+            {merchantProfile?.business_description ? (
+              <Text style={[styles.bio, {color: textColor}]}>
+                {merchantProfile.business_description}
               </Text>
+            ) : (
+              <TouchableOpacity activeOpacity={0.7}>
+                <Text style={[styles.addBioText, {color: textColor}]}>
+                  Tap to add bio
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Content Display Option */}
+            <View style={styles.contentOptionContainer}>
+              <TouchableOpacity style={styles.contentOptionButton}>
+                <Ionicons name="videocam-outline" size={20} color={textColor} />
+              </TouchableOpacity>
             </View>
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="videocam-outline" size={48} color={textColor} />
-              <Text style={[styles.emptyText, {color: textColor}]}>
-                No reels yet
-              </Text>
-              <Text style={[styles.emptySubText, {color: textColor}]}>
-                Upload your first reel to get started
-              </Text>
+
+            {/* Reels Grid */}
+            <View style={styles.postsGridContainer}>
+              {reels.length > 0 ? (
+                <FlatList
+                  data={reels}
+                  renderItem={renderReelItem}
+                  keyExtractor={item => item.id || item.reel_id?.toString()}
+                  numColumns={3}
+                  scrollEnabled={false}
+                  contentContainerStyle={styles.postsGrid}
+                  removeClippedSubviews={true}
+                  maxToRenderPerBatch={10}
+                  windowSize={5}
+                />
+              ) : loading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color={Colors.PRIMARY} />
+                  <Text style={[styles.loadingText, {color: textColor}]}>
+                    Loading reels...
+                  </Text>
+                </View>
+              ) : error ? (
+                <View style={styles.errorContainer}>
+                  <Text style={[styles.errorText, {color: Colors.PRIMARY}]}>
+                    {error}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.emptyContainer}>
+                  <Ionicons
+                    name="videocam-outline"
+                    size={48}
+                    color={textColor}
+                  />
+                  <Text style={[styles.emptyText, {color: textColor}]}>
+                    No reels yet
+                  </Text>
+                  <Text style={[styles.emptySubText, {color: textColor}]}>
+                    Upload your first reel to get started
+                  </Text>
+                </View>
+              )}
             </View>
-          )}
-        </View>
+          </View>
+        ) : null}
       </ScrollView>
 
       {/* Edit Description Modal */}
@@ -996,6 +1227,50 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(8),
     borderWidth: 1,
     fontSize: moderateScale(14),
+  },
+  profileLoadingContainer: {
+    paddingVertical: verticalScale(60),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileErrorContainer: {
+    paddingVertical: verticalScale(40),
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: scale(20),
+  },
+  retryButton: {
+    marginTop: verticalScale(16),
+    paddingVertical: verticalScale(10),
+    paddingHorizontal: scale(20),
+    borderRadius: moderateScale(8),
+    borderWidth: 1,
+  },
+  retryButtonText: {
+    fontSize: moderateScale(14),
+    fontWeight: '600',
+  },
+  skeletonName: {
+    alignSelf: 'center',
+    marginTop: verticalScale(12),
+    marginBottom: verticalScale(4),
+  },
+  skeletonUsername: {
+    alignSelf: 'center',
+    marginBottom: verticalScale(16),
+  },
+  skeletonBioContainer: {
+    alignItems: 'center',
+    marginTop: verticalScale(8),
+    marginBottom: verticalScale(12),
+    paddingHorizontal: scale(20),
+  },
+  skeletonReelItem: {
+    marginRight: scale(4),
+  },
+  skeletonReelsRow: {
+    paddingHorizontal: scale(16),
+    paddingVertical: verticalScale(8),
   },
 });
 

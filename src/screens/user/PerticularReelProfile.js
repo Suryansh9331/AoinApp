@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback, useMemo} from 'react';
 import {
   View,
   Text,
@@ -9,88 +9,203 @@ import {
   Dimensions,
   FlatList,
   ActivityIndicator,
+  Platform,
   Alert,
 } from 'react-native';
-import {useRoute, useNavigation} from '@react-navigation/native';
-import {useSelector} from 'react-redux';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {
+  useNavigation,
+  useRoute,
+  useFocusEffect,
+} from '@react-navigation/native';
+import {useDispatch, useSelector} from 'react-redux';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
 import useAppTheme from '../../theme/useAppTheme';
 import {getThemeColors} from '../../theme/themeColors';
 import {Colors} from '../../utils/Colors';
-import {postData, setAuthToken, getAuthToken} from '../../utils/APiCall';
+import Skeleton from '../../components/Skeleton/Skeleton';
+import {fetchPublicReels_Request} from '../../redux/slices/reelSlice';
+import {getData, postData, deleteData} from '../../utils/APiCall';
 import {ROUTES} from '../../utils/Routes';
-import {getValidAuthData, AUTH_STORAGE_KEY} from '../../utils/MMKVStorage';
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
 const POST_ITEM_SIZE = (SCREEN_WIDTH - 4) / 3;
 
-const PerticularReelProfile = ({routeParams}) => {
+const PerticularReelProfile = () => {
   const theme = useAppTheme();
   const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
   const route = useRoute();
   const navigation = useNavigation();
-  const userId = routeParams?.userId || route.params?.userId;
-  const merchantId = routeParams?.merchantId || route.params?.merchantId || userId;
-  
+  const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
 
-  // PUBLIC_REELS is only available for MERCHANT role, so empty for user
-  const filteredReels = [];
-  
-  // Get auth token from Redux store - check multiple possible locations
-  // Also check APiCall module and MMKV storage in case Redux state is not synced
-  // Only use valid (non-expired) tokens from MMKV
-  const authState = useSelector(state => state.auth);
-  const reduxToken = authState?.token || authState?.data?.token || null;
-  const apiCallToken = getAuthToken();
-  // Check MMKV storage as fallback (only valid/not expired tokens)
-  const storedAuthData = getValidAuthData();
-  const mmkvToken = storedAuthData?.token || null;
-  const authToken = reduxToken || apiCallToken || mmkvToken;
+  const merchantId = route.params?.merchantId || route.params?.userId;
+  const {publicReels, publicReelsLoading, publicReelsError} = useSelector(
+    state => state.reels,
+  );
 
+  // Filter reels for this merchant
+  const merchantReels = useMemo(() => {
+    if (!merchantId) return [];
+    return publicReels.filter(
+      reel =>
+        (reel.merchant_id || reel.merchantId)?.toString() ===
+        merchantId?.toString(),
+    );
+  }, [publicReels, merchantId]);
 
-  // Set auth token in APiCall module when component mounts or token changes
-  // This ensures API calls have the token even if Redux state is not synced
-  useEffect(() => {
-    if (authToken && !apiCallToken) {
-      // If we have token from Redux or MMKV but not in APiCall, set it
-      setAuthToken(authToken);
-      console.log('PerticularReelProfile - Auth token synced to APiCall module');
-    } else if (apiCallToken && !reduxToken) {
-      // If token exists in APiCall but not Redux, log for debugging
-      console.log('PerticularReelProfile - Token exists in APiCall but not in Redux');
-    }
-    
-    // If token found in MMKV but not in Redux or APiCall, restore it
-    if (mmkvToken && !reduxToken && !apiCallToken) {
-      setAuthToken(mmkvToken);
-      console.log('PerticularReelProfile - Token restored from MMKV storage');
-    }
-  }, [authToken, reduxToken, apiCallToken, mmkvToken]);
+  // State for merchant profile data
+  const [merchantProfile, setMerchantProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState(null);
 
+  // State for merchant stats
+  const [merchantStats, setMerchantStats] = useState(null);
 
+  // State for followers count
+  const [followersCount, setFollowersCount] = useState(0);
 
-  const [pressedReels, setPressedReels] = useState({});
+  // State for follow status
   const [isFollowing, setIsFollowing] = useState(false);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
 
- 
-  const profileData = {
-    username: merchantId ? `merchant_${merchantId}` : '@merchant',
-    fullName: 'Merchant Store',
-    bio: '',
-    avatar: 'https://i.pravatar.cc/150?img=1',
-    posts: filteredReels?.length || 0,
-    followers: 38,
-    following: 14,
-    likes: filteredReels?.reduce((sum, reel) => sum + (reel.likes || 0), 0) || 0,
-    isFollowing: isFollowing,
-    isOwnProfile: false,
-    merchantId: merchantId,
-  };
+  // Fetch merchant profile
+  const fetchMerchantProfile = useCallback(async () => {
+    if (!merchantId) {
+      setProfileError('Merchant ID not found');
+      return;
+    }
 
-  // Format views count
-  const formatViews = (views) => {
+    setProfileLoading(true);
+    setProfileError(null);
+    try {
+      const endpoint = `${ROUTES.MERCHANT_PUBLIC_PROFILE}${merchantId}/public-profile`;
+      const response = await getData(endpoint);
+
+      if (response && typeof response === 'object' && response.business_name) {
+        setMerchantProfile(response);
+      } else if (response?.data?.business_name) {
+        setMerchantProfile(response.data);
+      } else {
+        setProfileError('Invalid profile data received');
+      }
+    } catch (error) {
+      setProfileError(error?.message || 'Failed to load profile');
+    } finally {
+      setProfileLoading(false);
+    }
+  }, [merchantId]);
+
+  // Fetch merchant stats
+  const fetchMerchantStats = useCallback(async () => {
+    if (!merchantId) {
+      return;
+    }
+
+    try {
+      const endpoint = `${ROUTES.MERCHANT_STATS}${merchantId}/stats`;
+      const response = await getData(endpoint);
+
+      if (response && response.status === 'success' && response.data) {
+        setMerchantStats(response.data);
+      } else if (response?.data) {
+        setMerchantStats(response.data);
+      }
+    } catch (error) {
+      // Silently handle errors for stats
+    }
+  }, [merchantId]);
+
+  // Fetch followers count
+  const fetchFollowersCount = useCallback(async () => {
+    if (!merchantId) {
+      return;
+    }
+
+    try {
+      const endpoint = `${ROUTES.MERCHANT_FOLLOWERS_COUNT}${merchantId}/followers/count`;
+      const response = await getData(endpoint);
+
+      if (response?.follower_count !== undefined) {
+        setFollowersCount(response.follower_count);
+      } else if (response?.data?.follower_count !== undefined) {
+        setFollowersCount(response.data.follower_count);
+      }
+    } catch (error) {
+      // Silently handle errors for followers count
+    }
+  }, [merchantId]);
+
+  // Check if user is following this merchant
+  const checkFollowStatus = useCallback(async () => {
+    if (!merchantId) {
+      return;
+    }
+
+    try {
+      // Check if merchant is in following list
+      const followingList = await getData(ROUTES.MERCHANT_FOLLOW_LIST);
+      if (followingList && Array.isArray(followingList)) {
+        const isFollowingMerchant = followingList.some(
+          merchant =>
+            (merchant.merchant_id || merchant.id)?.toString() ===
+            merchantId?.toString(),
+        );
+        setIsFollowing(isFollowingMerchant);
+      } else if (followingList?.data && Array.isArray(followingList.data)) {
+        const isFollowingMerchant = followingList.data.some(
+          merchant =>
+            (merchant.merchant_id || merchant.id)?.toString() ===
+            merchantId?.toString(),
+        );
+        setIsFollowing(isFollowingMerchant);
+      }
+    } catch (error) {
+      // Silently handle errors for follow status check
+    }
+  }, [merchantId]);
+
+  // Fetch merchant reels
+  const fetchMerchantReels = useCallback(() => {
+    if (merchantId) {
+      dispatch(
+        fetchPublicReels_Request({
+          page: 1,
+          per_page: 20,
+          merchant_id: merchantId,
+        }),
+      );
+    }
+  }, [merchantId, dispatch]);
+
+  useEffect(() => {
+    if (merchantId) {
+      fetchMerchantProfile();
+      fetchMerchantStats();
+      fetchFollowersCount();
+      fetchMerchantReels();
+      checkFollowStatus();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [merchantId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (merchantId) {
+        if (!merchantProfile) {
+          fetchMerchantProfile();
+        }
+        fetchMerchantStats();
+        fetchFollowersCount();
+        fetchMerchantReels();
+        checkFollowStatus();
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [merchantId]),
+  );
+
+  const formatViews = useCallback(views => {
     if (!views) return '0';
     if (views >= 1000000) {
       return (views / 1000000).toFixed(1) + 'M';
@@ -98,157 +213,100 @@ const PerticularReelProfile = ({routeParams}) => {
       return (views / 1000).toFixed(1) + 'K';
     }
     return views.toString();
-  };
+  }, []);
 
-  // Handle follow/unfollow merchant
-  const handleFollow = async () => {
-    if (!merchantId || isFollowLoading) return;
+  const handleFollow = useCallback(async () => {
+    if (!merchantId) return;
 
-    // Check for token in Redux, APiCall module, and MMKV storage (get fresh values)
-    // Only use valid (non-expired) tokens from MMKV
-    const apiCallTokenValue = getAuthToken();
-    const storedAuthData = getValidAuthData();
-    const mmkvTokenValue = storedAuthData?.token || null;
-    const currentToken = apiCallTokenValue || reduxToken || mmkvTokenValue;
-    
-    // If no token found, show alert and navigate to login
-    if (!currentToken) {
-      console.error('No auth token available. Auth state:', {
-        hasReduxToken: !!reduxToken,
-        hasApiCallToken: !!apiCallTokenValue,
-        hasMmkvToken: !!mmkvTokenValue,
-        hasToken: !!authState?.token,
-        hasDataToken: !!authState?.data?.token,
-        authState: authState,
-      });
-      
-      // Show user-friendly error with option to login
-      Alert.alert(
-        'Authentication Required',
-        'Please log in to follow merchants.',
-        [
-          {text: 'Cancel', style: 'cancel'},
-          {
-            text: 'Login',
-            onPress: () => {
-              navigation.navigate('Login');
-            },
-          },
-        ]
-      );
-      return;
-    }
-    
-    // Ensure token is set in APiCall module for API calls
-    // Use token from any source (Redux, APiCall, or MMKV)
-    if (!apiCallTokenValue && currentToken) {
-      setAuthToken(currentToken);
-      console.log('PerticularReelProfile - Token set in APiCall module for follow action');
-    }
-
-    const currentFollowState = isFollowing;
-    const action = currentFollowState ? 'Unfollow' : 'Follow';
-
+    setIsFollowLoading(true);
     try {
-      setIsFollowLoading(true);
-      const endpoint = currentFollowState 
-        ? `${ROUTES.UNFOLLOW_MERCHANT}/${merchantId}/unfollow`
-        : `${ROUTES.FOLLOW_MERCHANT}/${merchantId}/follow`;
-      const response = await postData(endpoint, {});
-      
-      // Toggle follow state based on response or current state
-      setIsFollowing(prev => !prev);
-      console.log(`${action} action successful:`, response);
-    } catch (error) {
-      console.error(`${action} action failed:`, error);
-      
-      // Handle 401 Unauthorized - token might be invalid
-      if (error?.status === 401) {
-        Alert.alert(
-          'Authentication Failed',
-          'Your session has expired. Please log in again.',
-          [
-            {text: 'OK', onPress: () => navigation.navigate('Login')},
-          ]
+      if (isFollowing) {
+        // Unfollow merchant
+        const endpoint = ROUTES.MERCHANT_UNFOLLOW.replace(
+          '{merchant_id}',
+          merchantId.toString(),
         );
+        await postData(endpoint);
+        setIsFollowing(false);
+        // Update followers count
+        if (followersCount > 0) {
+          setFollowersCount(followersCount - 1);
+        }
+        Alert.alert('Success', 'Unfollowed successfully');
       } else {
-        // Show error message for other failures
-        Alert.alert(
-          'Error',
-          error?.message || `Failed to ${action.toLowerCase()} merchant. Please try again.`,
-          [{text: 'OK'}]
+        // Follow merchant
+        const endpoint = ROUTES.MERCHANT_FOLLOW.replace(
+          '{merchant_id}',
+          merchantId.toString(),
         );
+        await postData(endpoint);
+        setIsFollowing(true);
+        // Update followers count
+        setFollowersCount(followersCount + 1);
+        Alert.alert('Success', 'Followed successfully');
       }
+    } catch (error) {
+      Alert.alert('Error', error?.message || 'Failed to follow/unfollow');
     } finally {
       setIsFollowLoading(false);
     }
-  };
+  }, [merchantId, isFollowing, followersCount]);
 
-  const renderReelItem = ({item}) => {
-    const isPressed = pressedReels[item.id] || false;
-    const thumbnail = item.thumbnail || item.videoUrl;
-    const views = formatViews(item.views || item.views_count || 0);
+  const renderReelItem = useCallback(
+    ({item}) => {
+      const thumbnail = item.thumbnail || item.videoUrl;
+      const views = formatViews(item.views || item.views_count || 0);
 
-    return (
-      <TouchableOpacity
-        style={[styles.postItem, {borderColor: borderColor}]}
-        activeOpacity={1}
-        onPressIn={() => setPressedReels(prev => ({...prev, [item.id]: true}))}
-        onPressOut={() =>
-          setPressedReels(prev => ({...prev, [item.id]: false}))
-        }
-        onPress={() => {
-          // Navigate to reels view or play video
-          navigation.navigate('UserBottomTab', {
-            navigateToTab: 'Home',
-            reelId: item.id || item.reel_id,
-          });
-        }}>
-        <Image
-          source={{uri: thumbnail}}
-          style={styles.postImage}
-          resizeMode="cover"
-        />
-        {/* Video icon in top right */}
-        <View style={styles.cameraIconContainer}>
-          <Ionicons name="videocam" size={14} color="#FFFFFF" />
-        </View>
-        {/* View count in bottom left */}
-        <View style={styles.viewCountContainer}>
-          <Text style={styles.viewCountText}>{views}</Text>
-        </View>
-        <View
-          style={[styles.postOverlay, isPressed && styles.postOverlayVisible]}
-          pointerEvents="none">
-          <View style={styles.postStats}>
-            <Ionicons name="heart" size={16} color="#FFFFFF" />
-            <Text style={styles.postStatText}>{formatViews(item.likes || 0)}</Text>
+      return (
+        <TouchableOpacity
+          style={[styles.postItem, {borderColor: borderColor}]}
+          activeOpacity={0.8}
+          onPress={() => {
+            navigation.navigate('UserBottomTab', {
+              navigateToTab: 'Home',
+              reelId: item.id || item.reel_id,
+            });
+          }}>
+          <Image
+            source={{uri: thumbnail}}
+            style={styles.postImage}
+            resizeMode="cover"
+          />
+          <View style={styles.cameraIconContainer}>
+            <Ionicons name="videocam" size={14} color="#FFFFFF" />
           </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
+          <View style={styles.viewCountContainer}>
+            <Text style={styles.viewCountText}>{views}</Text>
+          </View>
+          <View style={styles.postOverlay} pointerEvents="none">
+            <View style={styles.postStats}>
+              <Ionicons name="heart" size={16} color="#FFFFFF" />
+              <Text style={styles.postStatText}>
+                {formatViews(item.likes || 0)}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      );
+    },
+    [borderColor, navigation, formatViews],
+  );
 
   return (
     <View style={[styles.container, {backgroundColor}]}>
-      {/* Header */}
-      <View style={[styles.header, {borderBottomColor: borderColor}]}>
+      <View
+        style={[
+          styles.header,
+          {borderBottomColor: borderColor},
+          Platform.OS === 'ios' && {paddingTop: insets.top + verticalScale(10)},
+        ]}>
         <View style={styles.headerLeft}>
-          {navigation.canGoBack() && (
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={styles.headerButton}>
-              <Ionicons name="arrow-back" size={24} color={textColor} />
-            </TouchableOpacity>
-          )}
-          <Text style={[styles.headerTitle, {color: textColor}]}>
-            Profile
-          </Text>
-        </View>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.headerButton}>
-            <Ionicons name="ellipsis-horizontal" size={24} color={textColor} />
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color={textColor} />
           </TouchableOpacity>
+          <Text style={[styles.headerTitle, {color: textColor}]}>Profile</Text>
         </View>
       </View>
 
@@ -256,102 +314,286 @@ const PerticularReelProfile = ({routeParams}) => {
         showsVerticalScrollIndicator={false}
         style={styles.scrollView}>
         {/* Profile Section */}
-        <View style={styles.profileSection}>
-          {/* Avatar */}
-          <View style={styles.avatarContainer}>
-            <Image source={{uri: profileData.avatar}} style={styles.avatar} />
+        {profileLoading && !merchantProfile ? (
+          <View style={styles.profileSection}>
+            {/* Avatar Skeleton */}
+            <View style={styles.avatarContainer}>
+              <Skeleton
+                width={moderateScale(100)}
+                height={moderateScale(100)}
+                radius={moderateScale(50)}
+              />
+            </View>
+
+            {/* Name Skeleton */}
+            <Skeleton
+              width={moderateScale(150)}
+              height={moderateScale(20)}
+              radius={4}
+              style={styles.skeletonName}
+            />
+            {/* Username Skeleton */}
+            <Skeleton
+              width={moderateScale(120)}
+              height={moderateScale(16)}
+              radius={4}
+              style={styles.skeletonUsername}
+            />
+
+            {/* Stats Skeleton */}
+            <View style={styles.statsContainer}>
+              <View style={styles.statItem}>
+                <Skeleton
+                  width={moderateScale(30)}
+                  height={moderateScale(18)}
+                  radius={4}
+                />
+                <Skeleton
+                  width={moderateScale(40)}
+                  height={moderateScale(12)}
+                  radius={4}
+                  style={{marginTop: verticalScale(4)}}
+                />
+              </View>
+              <View style={styles.statItem}>
+                <Skeleton
+                  width={moderateScale(30)}
+                  height={moderateScale(18)}
+                  radius={4}
+                />
+                <Skeleton
+                  width={moderateScale(50)}
+                  height={moderateScale(12)}
+                  radius={4}
+                  style={{marginTop: verticalScale(4)}}
+                />
+              </View>
+              <View style={styles.statItem}>
+                <Skeleton
+                  width={moderateScale(30)}
+                  height={moderateScale(18)}
+                  radius={4}
+                />
+                <Skeleton
+                  width={moderateScale(40)}
+                  height={moderateScale(12)}
+                  radius={4}
+                  style={{marginTop: verticalScale(4)}}
+                />
+              </View>
+            </View>
+
+            {/* Action Buttons Skeleton */}
+            <View style={styles.actionButtons}>
+              <Skeleton
+                width="70%"
+                height={moderateScale(44)}
+                radius={moderateScale(8)}
+              />
+              <Skeleton
+                width={moderateScale(44)}
+                height={moderateScale(44)}
+                radius={moderateScale(8)}
+              />
+            </View>
+
+            {/* Bio Skeleton */}
+            <View style={styles.skeletonBioContainer}>
+              <Skeleton width="90%" height={moderateScale(14)} radius={4} />
+              <Skeleton
+                width="80%"
+                height={moderateScale(14)}
+                radius={4}
+                style={{marginTop: verticalScale(6)}}
+              />
+              <Skeleton
+                width="60%"
+                height={moderateScale(14)}
+                radius={4}
+                style={{marginTop: verticalScale(6)}}
+              />
+            </View>
+
+            {/* Reels Grid Skeleton */}
+            <View style={styles.postsGridContainer}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.skeletonReelsRow}>
+                {[1, 2, 3, 4, 5, 6].map((_, index) => (
+                  <Skeleton
+                    key={`skeleton-reel-${index}`}
+                    width={POST_ITEM_SIZE}
+                    height={POST_ITEM_SIZE}
+                    radius={0}
+                    style={styles.skeletonReelItem}
+                  />
+                ))}
+              </ScrollView>
+            </View>
           </View>
-
-          {/* Merchant Name */}
-          <Text style={[styles.username, {color: textColor}]}>
-            {profileData.fullName}
-          </Text>
-          {/* Username below name */}
-          <Text style={[styles.userHandle, {color: textColor}]}>
-            {profileData.username}
-          </Text>
-
-          {/* Stats */}
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, {color: textColor}]}>
-                {profileData.posts}
-              </Text>
-              <Text style={[styles.statLabel, {color: textColor}]}>
-                Reels
-              </Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, {color: textColor}]}>
-                {profileData.followers}
-              </Text>
-              <Text style={[styles.statLabel, {color: textColor}]}>
-                Followers
-              </Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, {color: textColor}]}>
-                {profileData.likes}
-              </Text>
-              <Text style={[styles.statLabel, {color: textColor}]}>
-                Likes
-              </Text>
-            </View>
-          </View>
-
-          {/* Action Buttons */}
-          <View style={styles.actionButtons}>
+        ) : profileError && !merchantProfile ? (
+          <View style={styles.profileErrorContainer}>
+            <Text style={[styles.errorText, {color: Colors.PRIMARY}]}>
+              {profileError}
+            </Text>
             <TouchableOpacity
-              style={[styles.followButton, {borderColor: borderColor}]}
-              activeOpacity={0.7}
-              onPress={handleFollow}
-              disabled={isFollowLoading}>
-              {isFollowLoading ? (
-                <ActivityIndicator size="small" color={Colors.PRIMARY} />
-              ) : (
-                <Text style={[styles.followButtonText, {color: Colors.PRIMARY}]}>
-                  {profileData.isFollowing ? 'Following' : 'Follow'}
+              style={[styles.retryButton, {borderColor: borderColor}]}
+              onPress={fetchMerchantProfile}>
+              <Text style={[styles.retryButtonText, {color: Colors.PRIMARY}]}>
+                Retry
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : merchantProfile ? (
+          <View style={styles.profileSection}>
+            {/* Avatar */}
+            <View style={styles.avatarContainer}>
+              <Image
+                source={{uri: 'https://i.pravatar.cc/150?img=1'}}
+                style={styles.avatar}
+              />
+            </View>
+
+            {/* Merchant Name */}
+            <Text style={[styles.username, {color: textColor}]}>
+              {merchantProfile?.business_name || 'Merchant Store'}
+            </Text>
+            {/* Username below name */}
+            <Text style={[styles.userHandle, {color: textColor}]}>
+              {merchantProfile?.business_name
+                ? `@${merchantProfile.business_name
+                    .toLowerCase()
+                    .replace(/\s+/g, '_')}`
+                : '@merchant'}
+            </Text>
+
+            {/* Stats */}
+            <View style={styles.statsContainer}>
+              <View style={styles.statItem}>
+                <Text style={[styles.statNumber, {color: textColor}]}>
+                  {merchantStats?.total_reels || merchantReels?.length || 0}
                 </Text>
+                <Text style={[styles.statLabel, {color: textColor}]}>
+                  Reels
+                </Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={[styles.statNumber, {color: textColor}]}>
+                  {followersCount}
+                </Text>
+                <Text style={[styles.statLabel, {color: textColor}]}>
+                  Followers
+                </Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={[styles.statNumber, {color: textColor}]}>
+                  {merchantStats?.total_likes ||
+                    merchantReels?.reduce(
+                      (sum, reel) => sum + (reel.likes || 0),
+                      0,
+                    ) ||
+                    0}
+                </Text>
+                <Text style={[styles.statLabel, {color: textColor}]}>
+                  Likes
+                </Text>
+              </View>
+            </View>
+
+            {/* Action Buttons */}
+            <View style={styles.actionButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.followButton,
+                  {
+                    borderColor: borderColor,
+                    backgroundColor:
+                      isFollowing || theme === 'dark' ? '#1E1E1E' : '#FFFFFF',
+                  },
+                  isFollowing && styles.followingButton,
+                ]}
+                activeOpacity={0.7}
+                onPress={handleFollow}
+                disabled={isFollowLoading}>
+                {isFollowLoading ? (
+                  <ActivityIndicator size="small" color={Colors.PRIMARY} />
+                ) : (
+                  <Text
+                    style={[
+                      styles.followButtonText,
+                      {color: isFollowing ? textColor : Colors.PRIMARY},
+                    ]}>
+                    {isFollowing ? 'Following' : 'Follow'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+              
+            </View>
+
+            {/* Bio Section */}
+            {merchantProfile?.business_description ? (
+              <Text style={[styles.bio, {color: textColor}]}>
+                {merchantProfile.business_description}
+              </Text>
+            ) : (
+              <Text style={[styles.addBioText, {color: textColor}]}>
+                No bio available
+              </Text>
+            )}
+
+            {/* Content Display Option */}
+            <View style={styles.contentOptionContainer}>
+              <TouchableOpacity style={styles.contentOptionButton}>
+                <Ionicons name="videocam-outline" size={20} color={textColor} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Reels Grid */}
+            <View style={styles.postsGridContainer}>
+              {merchantReels.length > 0 ? (
+                <FlatList
+                  data={merchantReels}
+                  renderItem={renderReelItem}
+                  keyExtractor={item => item.id || item.reel_id?.toString()}
+                  numColumns={3}
+                  scrollEnabled={false}
+                  contentContainerStyle={styles.postsGrid}
+                  removeClippedSubviews={true}
+                  maxToRenderPerBatch={10}
+                  windowSize={5}
+                />
+              ) : publicReelsLoading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color={Colors.PRIMARY} />
+                  <Text style={[styles.loadingText, {color: textColor}]}>
+                    Loading reels...
+                  </Text>
+                </View>
+              ) : publicReelsError ? (
+                <View style={styles.errorContainer}>
+                  <Text style={[styles.errorText, {color: Colors.PRIMARY}]}>
+                    {publicReelsError}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.emptyContainer}>
+                  <Ionicons
+                    name="videocam-outline"
+                    size={48}
+                    color={textColor}
+                  />
+                  <Text style={[styles.emptyText, {color: textColor}]}>
+                    No reels yet
+                  </Text>
+                  <Text style={[styles.emptySubText, {color: textColor}]}>
+                    This merchant hasn't uploaded any reels
+                  </Text>
+                </View>
               )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.messageButton, {borderColor: borderColor}]}
-              activeOpacity={0.7}>
-              <Ionicons name="chatbubble-outline" size={18} color={Colors.PRIMARY} />
-            </TouchableOpacity>
+            </View>
           </View>
-
-          {/* Bio Section */}
-          {profileData.bio ? (
-            <Text style={[styles.bio, {color: textColor}]}>
-              {profileData.bio}
-            </Text>
-          ) : (
-            <Text style={[styles.addBioText, {color: textColor}]}>
-              No bio available
-            </Text>
-          )}
-        </View>
-
-        {/* Content Display Option */}
-        <View style={styles.contentOptionContainer}>
-          <TouchableOpacity style={styles.contentOptionButton}>
-            <Ionicons name="videocam-outline" size={20} color={textColor} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Reels Grid */}
-        <View style={styles.postsGridContainer}>
-          <View style={styles.emptyContainer}>
-            <Ionicons name="videocam-outline" size={48} color={textColor} />
-            <Text style={[styles.emptyText, {color: textColor}]}>
-              Reels feature not available
-            </Text>
-            <Text style={[styles.emptySubText, {color: textColor}]}>
-              This feature is only available for merchants
-            </Text>
-          </View>
-        </View>
+        ) : null}
       </ScrollView>
     </View>
   );
@@ -376,30 +618,11 @@ const styles = StyleSheet.create({
   },
   headerButton: {
     padding: scale(8),
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: scale(4),
+    marginRight: scale(8),
   },
   headerTitle: {
     fontSize: moderateScale(18),
     fontWeight: '700',
-    marginLeft: scale(8),
-  },
-  username: {
-    fontSize: moderateScale(18),
-    fontWeight: '700',
-    textAlign: 'center',
-    marginTop: verticalScale(12),
-    marginBottom: verticalScale(4),
-  },
-  userHandle: {
-    fontSize: moderateScale(14),
-    fontWeight: '400',
-    textAlign: 'center',
-    marginBottom: verticalScale(16),
-    opacity: 0.7,
   },
   scrollView: {
     flex: 1,
@@ -417,6 +640,20 @@ const styles = StyleSheet.create({
     width: moderateScale(100),
     height: moderateScale(100),
     borderRadius: moderateScale(50),
+  },
+  username: {
+    fontSize: moderateScale(18),
+    fontWeight: '700',
+    textAlign: 'center',
+    marginTop: verticalScale(12),
+    marginBottom: verticalScale(4),
+  },
+  userHandle: {
+    fontSize: moderateScale(14),
+    fontWeight: '400',
+    textAlign: 'center',
+    marginBottom: verticalScale(16),
+    opacity: 0.7,
   },
   statsContainer: {
     flexDirection: 'row',
@@ -464,7 +701,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+  },
+  followingButton: {
+    backgroundColor: '#E1E1E1',
   },
   followButtonText: {
     fontSize: moderateScale(14),
@@ -477,7 +716,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
   },
   contentOptionContainer: {
     paddingHorizontal: scale(16),
@@ -538,9 +776,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: scale(20),
   },
-  postOverlayVisible: {
-    opacity: 1,
-  },
   postStats: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -585,7 +820,45 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(13),
     opacity: 0.6,
   },
+  profileErrorContainer: {
+    paddingVertical: verticalScale(40),
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: scale(20),
+  },
+  retryButton: {
+    marginTop: verticalScale(16),
+    paddingVertical: verticalScale(10),
+    paddingHorizontal: scale(20),
+    borderRadius: moderateScale(8),
+    borderWidth: 1,
+  },
+  retryButtonText: {
+    fontSize: moderateScale(14),
+    fontWeight: '600',
+  },
+  skeletonName: {
+    alignSelf: 'center',
+    marginTop: verticalScale(12),
+    marginBottom: verticalScale(4),
+  },
+  skeletonUsername: {
+    alignSelf: 'center',
+    marginBottom: verticalScale(16),
+  },
+  skeletonBioContainer: {
+    alignItems: 'center',
+    marginTop: verticalScale(8),
+    marginBottom: verticalScale(12),
+    paddingHorizontal: scale(20),
+  },
+  skeletonReelItem: {
+    marginRight: scale(4),
+  },
+  skeletonReelsRow: {
+    paddingHorizontal: scale(16),
+    paddingVertical: verticalScale(8),
+  },
 });
 
 export default PerticularReelProfile;
-
