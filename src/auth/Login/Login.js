@@ -22,28 +22,21 @@ const Login = () => {
   const { backgroundColor, textColor, borderColor, iconColor } = getThemeColors(theme);
   const navigation = useNavigation();
   const route = useRoute();
-  
   const [phoneNumber, setPhoneNumber] = useState('');
   const [businessEmail, setBusinessEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   
-  // Get role from route params, with listener to update when params change
   const [role, setRole] = useState(route?.params?.role || 'user');
   const isMerchant = role === 'merchant';
   
-  // Update role when route params change
   useEffect(() => {
     const currentRole = route?.params?.role || 'user';
-    console.log('Login screen - Route params changed. Role:', currentRole);
-    console.log('Full route params:', route?.params);
+   
     setRole(currentRole);
   }, [route?.params?.role]);
   
-  // Debug log to check role
-  useEffect(() => {
-    console.log('Login screen - Current Role:', role, 'isMerchant:', isMerchant);
-  }, [role, isMerchant]);
+ 
 
   const handleMerchantLogin = async () => {
     if (!businessEmail) {
@@ -56,7 +49,6 @@ const Login = () => {
       return;
     }
 
-    // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(businessEmail)) {
       Alert.alert('Error', 'Please enter a valid email address');
@@ -75,17 +67,13 @@ const Login = () => {
       setLoading(false);
       
       if (response) {
-        // Extract tokens and user data from response
         const accessToken = response?.access_token || response?.data?.access_token;
         const refreshToken = response?.refresh_token || response?.data?.refresh_token;
         const userData = response?.user || response?.data?.user || response?.data;
         
         if (accessToken) {
-          // Set auth token for API calls
-          setAuthToken(accessToken);
-
-          // Store auth data in MMKV for persistence with expiration
-          const expiresIn = response?.expires_in || response?.data?.expires_in; // in seconds
+              setAuthToken(accessToken);
+          const expiresIn = response?.expires_in || response?.data?.expires_in; 
           const expiresAt = calculateTokenExpiry(expiresIn);
           const authData = {
             token: accessToken,
@@ -93,12 +81,11 @@ const Login = () => {
             userData: userData,
             timestamp: Date.now(),
             expiresAt: expiresAt,
-            expiresIn: expiresIn || (DEFAULT_TOKEN_EXPIRY_DAYS * 24 * 60 * 60), // Store in seconds
+            expiresIn: expiresIn || (DEFAULT_TOKEN_EXPIRY_DAYS * 24 * 60 * 60), 
           };
           setObject(AUTH_STORAGE_KEY, authData);
           console.log('Auth data stored in MMKV with expiration:', new Date(expiresAt).toLocaleString());
 
-          // Store in Redux
           dispatch(
             login_Success({
               data: userData,
@@ -107,7 +94,6 @@ const Login = () => {
             })
           );
 
-          // Immediately reset navigation to the correct home tab
           const targetRoute = 'MerchantBottomTab';
           navigation.dispatch(
             CommonActions.reset({
@@ -153,7 +139,6 @@ const Login = () => {
       return;
     }
 
-    // Clean phone number (remove spaces, dashes, etc.)
     const cleanPhone = phoneNumber.replace(/[\s\-\(\)]/g, '');
     
     if (cleanPhone.length < 10) {
@@ -161,7 +146,6 @@ const Login = () => {
       return;
     }
 
-    // Format phone number with country code if not present
     const formattedPhone = cleanPhone.startsWith('+') 
       ? cleanPhone 
       : `+91${cleanPhone}`;
@@ -178,8 +162,7 @@ const Login = () => {
       setLoading(false);
       
       if (response) {
-        // Navigate to OTP verification screen for login with expiry time
-        const expiresIn = response?.expires_in || 600; // Default to 600 seconds if not provided
+        const expiresIn = response?.expires_in || 600; 
         navigation.navigate('VerifyOTPLogin', { phone: formattedPhone, expiresIn });
       } else {
         Alert.alert('Error', 'Failed to send OTP. Please try again.');

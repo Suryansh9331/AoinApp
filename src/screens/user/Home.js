@@ -26,7 +26,7 @@ const Home = ({ routeParams, initialReels }) => {
   const { publicReels, publicReelsLoading, publicReelsError } = useSelector(
     state => state.reels,
   );
-  //  console.log('publicReels', publicReels);
+
   const [currentReelId, setCurrentReelId] = React.useState(
     routeParams?.reelId || route.params?.reelId,
   );

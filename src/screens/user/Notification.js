@@ -1,37 +1,26 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { moderateScale, verticalScale } from 'react-native-size-matters';
-import useAppTheme from '../../theme/useAppTheme';
-import { getThemeColors } from '../../theme/themeColors';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Header from '../../components/Header/Header';
 
 const Notification = () => {
-  const theme = useAppTheme();
-  const { backgroundColor, textColor } = getThemeColors(theme);
-
   return (
-    <View style={[styles.container, { backgroundColor }]}>
-      <Text style={[styles.title, { color: textColor }]}>Notifications</Text>
-    </View>
+    <SafeAreaView edges={['top']} style={styles.container}>
+      <Header
+        title="Notifications"
+        leftType="back"
+        onLeftPress={() => {
+          navigation.goBack();
+        }}
+      />
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: moderateScale(24),
-    fontWeight: '600',
+    backgroundColor: 'white',
   },
 });
-
 export default Notification;
-
-
-
-
-
-
-
