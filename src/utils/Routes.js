@@ -23,6 +23,7 @@ export const ROUTES = Object.freeze({
   MERCHANT_FOLLOW_LIST: '/api/merchants/following',
   MERCHANT_FOLLOWERS: '/api/merchants/followers',
   GET_TRENDING_LIST:'/api/reels/feed/trending',
+  RECENTLY_VIEWED: '/api/reels/recently-viewed',
   NOTIFICATIONS_UNREAD_COUNT: '/api/merchants/notifications/unread-count',
   NOTIFICATIONS: 'api/merchants/notifications',
   NOTIFICATION_MARK_READ: '/api/merchants/notifications',

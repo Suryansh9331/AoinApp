@@ -30,6 +30,7 @@ import MyProfileEdit from '../screens/user/MyProfileEdit';
 import PerticularReelProfile from '../screens/user/PerticularReelProfile';
 import Post from '../screens/merchant/Post';
 import Massages from '../screens/merchant/Massages';
+import UserReelsView from '../screens/merchant/UserReelsView.js';
 const Stack = createNativeStackNavigator();
 
 const INTRO_COMPLETED_KEY = 'intro_completed';
@@ -205,6 +206,15 @@ const AppNavigator = () => {
         <Stack.Screen name="EditProfile" component={EditProfile} />
         <Stack.Screen name="MerchantSettings" component={MerchantSettings} />
         <Stack.Screen name="PerticularReelProfile" component={PerticularReelProfile} />
+        <Stack.Screen 
+          name="UserReelsView" 
+          component={UserReelsView}
+          options={{
+            headerShown: false,
+            tabBarStyle: { display: 'none' },
+            presentation: 'fullScreenModal',
+          }}
+        />
         <Stack.Screen name="MyProfileEdit" component={MyProfileEdit} />
         <Stack.Screen 
           name="Post" 

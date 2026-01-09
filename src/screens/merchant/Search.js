@@ -28,7 +28,9 @@ const Search = () => {
   const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
 
   const [trendingData, setTrendingData] = useState([]);
+  const [recentlyViewedData, setRecentlyViewedData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [recentlyViewedLoading, setRecentlyViewedLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -100,8 +102,26 @@ const Search = () => {
     }
   }, []);
 
+  // Fetch recently viewed data
+  const fetchRecentlyViewedData = useCallback(async () => {
+    try {
+      setRecentlyViewedLoading(true);
+      const response = await getData(ROUTES.RECENTLY_VIEWED);
+      if (response && response.status === 'success' && response.data && response.data.reels) {
+        setRecentlyViewedData(response.data.reels);
+      } else if (Array.isArray(response)) {
+        setRecentlyViewedData(response);
+      }
+    } catch (error) {
+      console.error('Error fetching recently viewed data:', error);
+    } finally {
+      setRecentlyViewedLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchTrendingData();
+    fetchRecentlyViewedData();
   }, []);
 
   const renderHeaderRight = () => {
@@ -141,6 +161,7 @@ const Search = () => {
 
   // Render product card with play button
   const renderProductCard = (item, index) => {
+    // Use thumbnail_url if available, otherwise fallback to video_url or thumbnail
     const thumbnail = item.thumbnail_url || item.video_url || item.thumbnail;
     return (
       <TouchableOpacity
@@ -149,6 +170,7 @@ const Search = () => {
         activeOpacity={0.8}
         onPress={() => {
           // Navigate to reel detail or play video
+          // Disabled for now - no navigation needed
         }}>
         <Image
           source={{uri: thumbnail || 'https://via.placeholder.com/200x300'}}
@@ -164,6 +186,17 @@ const Search = () => {
             />
           </View>
         </View>
+        {/* Show product info if available */}
+        {item.product && (
+          <View style={styles.productInfoOverlay}>
+            <Text style={styles.productName} numberOfLines={1}>
+              {item.product.product_name}
+            </Text>
+            <Text style={styles.productPrice}>
+              ₹{item.product.selling_price}
+            </Text>
+          </View>
+        )}
       </TouchableOpacity>
     );
   };
@@ -171,7 +204,7 @@ const Search = () => {
   return (
     <SafeAreaView edges={['top']} style={[styles.container, {backgroundColor}]}>
       <Header
-        title=""
+        title="Trending"
         leftType="back"
         onLeftPress={() => {
           navigation.goBack();
@@ -330,15 +363,28 @@ const Search = () => {
         {/* Recents Products Section */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, {color: textColor}]}>
-            Recents Products
+            Recently Viewed
           </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalScrollContent}
-            nestedScrollEnabled={true}>
-            {recentProducts.map((item, index) => renderProductCard(item, index))}
-          </ScrollView>
+          {recentlyViewedLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={Colors.PRIMARY} />
+              <Text style={[styles.loadingText, {color: textColor}]}>Loading recently viewed...</Text>
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalScrollContent}
+              nestedScrollEnabled={true}>
+              {recentlyViewedData.length > 0 ? (
+                recentlyViewedData.map((item, index) => renderProductCard(item, index))
+              ) : (
+                <Text style={[styles.emptyText, {color: textColor}]}>
+                  No recently viewed products
+                </Text>
+              )}
+            </ScrollView>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -490,10 +536,34 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(40),
     alignItems: 'center',
   },
+  loadingText: {
+    fontSize: moderateScale(14),
+    marginTop: verticalScale(8),
+    textAlign: 'center',
+  },
   emptyText: {
     fontSize: moderateScale(14),
     textAlign: 'center',
     paddingVertical: verticalScale(20),
+  },
+  productInfoOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    padding: moderateScale(8),
+  },
+  productName: {
+    color: '#FFFFFF',
+    fontSize: moderateScale(12),
+    fontWeight: '600',
+    marginBottom: verticalScale(2),
+  },
+  productPrice: {
+    color: Colors.PRIMARY,
+    fontSize: moderateScale(11),
+    fontWeight: '700',
   },
 });
 

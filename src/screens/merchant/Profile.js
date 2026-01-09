@@ -28,15 +28,26 @@ import useAppTheme from '../../theme/useAppTheme';
 import {getThemeColors} from '../../theme/themeColors';
 import {Colors} from '../../utils/Colors';
 import Skeleton from '../../components/Skeleton/Skeleton';
-import {fetchMerchantReels_Request} from '../../redux/slices/reelSlice';
 import {clearCredentials} from '../../redux/slices/authSlice';
 import {clearAuthToken, getData} from '../../utils/APiCall';
 import {deleteReel, updateReel} from '../../utils/APiCall';
 import {removeItem, AUTH_STORAGE_KEY} from '../../utils/MMKVStorage';
 import {ROUTES} from '../../utils/Routes';
 
+
+const fetchMerchantReelsDirect = async (page = 1, perPage = 20) => {
+  try {
+    const response = await getData(`${ROUTES.MERCHANT_MY_REELS}?page=${page}&per_page=${perPage}`);
+    
+    return response;
+  } catch (error) {
+    console.error('Error fetching merchant reels:', error);
+    throw error;
+  }
+};
+
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
-const POST_ITEM_SIZE = (SCREEN_WIDTH - 4) / 3;
+const POST_ITEM_SIZE = Math.floor(SCREEN_WIDTH / 3);
 
 const Profile = () => {
   const theme = useAppTheme();
@@ -44,24 +55,24 @@ const Profile = () => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
-
-  const {reels, loading, error} = useSelector(state => state.reels);
   const userData = useSelector(state => state.auth.data);
-
- 
+  
+  // Local state for reels instead of Redux
+  const [reels, setReels] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  
   const merchantId = useMemo(() => {
     const userInfo = userData?.data || userData || {};
     return userInfo.merchant_id || userInfo.id || userInfo.user_id || null;
   }, [userData]);
 
-  // State for merchant profile data
   const [merchantProfile, setMerchantProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState(null);
   const [followersCount, setFollowersCount] = useState(0);
   const [followersData, setFollowersData] = useState([]);
 
-  // Fetch merchant profile
   const fetchMerchantProfile = useCallback(async () => {
     setProfileLoading(true);
     setProfileError(null);
@@ -81,7 +92,6 @@ const Profile = () => {
     }
   }, []);
 
-  // Fetch followers count
   const fetchFollowersCount = useCallback(async () => {
     if (!merchantId) {
       return;
@@ -111,29 +121,78 @@ const Profile = () => {
     if (merchantId) {
       fetchFollowersCount();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [merchantId]);
+
+  // Fetch reels using direct API
+  const fetchReels = useCallback(async (page = 1, perPage = 20) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetchMerchantReelsDirect(page, perPage);
+      
+      if (response && response.data) {
+        if (page === 1) {
+          setReels(response.data);
+        } else {
+          setReels(prev => [...prev, ...response.data]);
+        }
+        setHasMoreReels(response.data.length === perPage);
+      } else {
+        setReels([]);
+        setHasMoreReels(false);
+      }
+    } catch (error) {
+      setError('Failed to fetch reels. Please try again.');
+      console.error('Error fetching reels:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      // Only fetch profile if not already loaded
+     
+      setCurrentPage(1);
+      setHasMoreReels(true);
+      setLoadingMore(false);
+      
+      
       if (!merchantProfile) {
         fetchMerchantProfile();
       }
-      // Refresh followers count on focus
+     
       if (merchantId) {
         fetchFollowersCount();
       }
       
-      // Add a small delay to prevent rapid successive calls for reels
+      
       const timer = setTimeout(() => {
-        dispatch(fetchMerchantReels_Request({page: 1, per_page: 20}));
+        fetchReels(1, 20);
       }, 300);
 
       return () => clearTimeout(timer);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dispatch, merchantId, fetchFollowersCount]),
+      
+    }, [merchantId, fetchFollowersCount, setCurrentPage, setHasMoreReels, setLoadingMore, fetchReels]),
   );
+
+  
+  const loadMoreReels = useCallback(async () => {
+    if (!hasMoreReels || loadingMore || loading) return;
+    
+    setLoadingMore(true);
+    try {
+      const nextPage = currentPage + 1;
+      await fetchReels(nextPage, 20);
+      setCurrentPage(nextPage);
+      
+      
+    } catch (error) {
+      console.log('Error loading more reels:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [currentPage, hasMoreReels, loadingMore, loading, fetchReels, setCurrentPage]);
 
   const formatViews = useCallback(views => {
     if (!views) return '0';
@@ -147,6 +206,9 @@ const Profile = () => {
 
     const [visibleMenuReelId, setVisibleMenuReelId] = useState(null);
   const [deletingReelId, setDeletingReelId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreReels, setHasMoreReels] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingReelData, setEditingReelData] = useState(null);
   const [editDescription, setEditDescription] = useState('');
@@ -196,12 +258,13 @@ const Profile = () => {
               await deleteReel(reelId);
 
               // Refresh reels after deletion
-              dispatch(fetchMerchantReels_Request({page: 1, per_page: 20}));
+              await fetchReels(1, 20);
 
               setVisibleMenuReelId(null);
               Alert.alert('Success', 'Reel deleted successfully');
             } catch (error) {
-              Alert.alert('Error', error?.message || 'Failed to delete reel');
+              console.error('Error deleting reel:', error);
+              Alert.alert('Error', 'Failed to delete reel. Please try again.');
             } finally {
               setDeletingReelId(null);
             }
@@ -209,7 +272,7 @@ const Profile = () => {
         },
       ]);
     },
-    [dispatch],
+    [fetchReels],
   );
 
   const handleEditReel = useCallback(item => {
@@ -238,7 +301,7 @@ const Profile = () => {
         description: editDescription.trim(),
       });
 
-      dispatch(fetchMerchantReels_Request({page: 1, per_page: 20}));
+      await fetchReels(1, 20);
 
       setEditModalVisible(false);
       setEditingReelData(null);
@@ -259,20 +322,29 @@ const Profile = () => {
 
   const renderReelItem = useCallback(
     ({item}) => {
-      const thumbnail = item.thumbnail || item.videoUrl;
+      // Handle API response structure properly
+      const thumbnailUrl = item.thumbnail_url || item.thumbnail;
       const views = formatViews(item.views || item.views_count || 0);
       const isMenuVisible = visibleMenuReelId === (item.id || item.reel_id);
       const isDeleting = deletingReelId === (item.id || item.reel_id);
+      
+      // Use fallback image if thumbnail is null, undefined, or invalid
+      const imageSource = thumbnailUrl && thumbnailUrl !== 'null' && thumbnailUrl !== null && thumbnailUrl !== undefined
+        ? {uri: thumbnailUrl} 
+        : {uri: 'https://i.pravatar.cc/150?img=1'};
 
       return (
         <TouchableOpacity
           style={[styles.postItem, {borderColor: borderColor}]}
           activeOpacity={0.7}
           onPress={() => {
-            // Reel click navigation removed - reels now stay on profile page
+            const reelIndex = reels.findIndex(reel => reel.id === item.id || reel.reel_id === item.reel_id);
+            navigation.navigate('UserReelsView', {
+              initialReelIndex: reelIndex >= 0 ? reelIndex : 0,
+            });
           }}>
           <Image
-            source={{uri: thumbnail}}
+            source={imageSource}
             style={styles.postImage}
             resizeMode="cover"
           />
@@ -618,8 +690,7 @@ const Profile = () => {
 
           
 
-         
-
+  
             {/* Reels Grid */}
             <View style={styles.postsGridContainer}>
               {reels.length > 0 ? (
@@ -628,8 +699,17 @@ const Profile = () => {
                   renderItem={renderReelItem}
                   keyExtractor={item => item.id || item.reel_id?.toString()}
                   numColumns={3}
-                  scrollEnabled={false}
-                  contentContainerStyle={styles.postsGrid}
+                  scrollEnabled={true}
+                  onEndReached={loadMoreReels}
+                  ListFooterComponent={loadingMore ? (
+                    <View style={styles.loadingMoreContainer}>
+                      <ActivityIndicator size="small" color={Colors.PRIMARY} />
+                      <Text style={[styles.loadingMoreText, {color: textColor}]}>
+                        Loading more...
+                      </Text>
+                    </View>
+                  ) : null}
+                  
                   removeClippedSubviews={true}
                   maxToRenderPerBatch={10}
                   windowSize={5}
@@ -870,8 +950,8 @@ const styles = StyleSheet.create({
   postItem: {
     width: POST_ITEM_SIZE,
     height: POST_ITEM_SIZE,
-    margin: 0.5,
     position: 'relative',
+    marginHorizontal: 0.1,
   },
   postImage: {
     width: '100%',
@@ -1070,12 +1150,12 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(40),
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: scale(20),
+    paddingHorizontal: scale(5),
   },
   retryButton: {
     marginTop: verticalScale(16),
     paddingVertical: verticalScale(10),
-    paddingHorizontal: scale(20),
+    paddingHorizontal: scale(5),
     borderRadius: moderateScale(8),
     borderWidth: 1,
   },
@@ -1096,14 +1176,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: verticalScale(8),
     marginBottom: verticalScale(12),
-    paddingHorizontal: scale(20),
+    paddingHorizontal: scale(5),
   },
   skeletonReelItem: {
     marginRight: scale(4),
   },
   skeletonReelsRow: {
-    paddingHorizontal: scale(16),
+    paddingHorizontal: scale(5),
     paddingVertical: verticalScale(8),
+  },
+  loadingMoreContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: verticalScale(10),
+  },
+  loadingMoreText: {
+    marginLeft: scale(8),
+    fontSize: moderateScale(12),
   },
 });
 

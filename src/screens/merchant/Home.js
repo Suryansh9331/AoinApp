@@ -34,7 +34,6 @@ const Home = ({routeParams, initialReels}) => {
     state => state.reels,
   );
   const authData = useSelector(state => state.auth);
- console.log('publicReels', publicReels);
   const [currentReelId, setCurrentReelId] = React.useState(
     routeParams?.reelId || route.params?.reelId,
   );

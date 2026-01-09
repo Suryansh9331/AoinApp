@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -42,19 +42,44 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
   const [isLiked, setIsLiked] = useState(() => getIsLiked(item.isLiked));
   const [likes, setLikes] = useState(item.likes || 0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
+  const [isPaused, setIsPaused] = useState(false); // Start playing so users can see pause icon
   const [showPauseIcon, setShowPauseIcon] = useState(false);
+  const [showControls, setShowControls] = useState(true); // Controls visibility state
+  const controlsTimeoutRef = useRef(null);
   
   const likeScale = useRef(new Animated.Value(1)).current;
   const likeOpacity = useRef(new Animated.Value(0)).current;
   const doubleTapOpacity = useRef(new Animated.Value(0)).current;
   const lastTap = useRef(null);
 
+  // Function to show controls and hide after 3-4 seconds
+  const showControlsTemporarily = useCallback(() => {
+    setShowControls(true);
+    
+    // Clear any existing timeout
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+    }
+    
+    // Hide controls after 3.5 seconds
+    controlsTimeoutRef.current = setTimeout(() => {
+      setShowControls(false);
+    }, 3500);
+  }, []);
+
   useEffect(() => {
     if (isActive && !isPaused) {
       setIsPlaying(true);
+    
+      showControlsTemporarily();
     } else {
       setIsPlaying(false);
+    
+      setShowControls(true);
+      // Clear timeout when paused
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
     }
   }, [isActive, isPaused]);
 
@@ -65,6 +90,15 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
     setIsLiked(itemIsLiked);
     setLikes(item.likes || 0);
   }, [item.id, item.reel_id, item.isLiked, item.likes]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleLike = () => {
     const newLikedState = !isLiked;
@@ -171,27 +205,41 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
     const now = Date.now();
     const DOUBLE_PRESS_DELAY = 300;
 
+    
+    showControlsTemporarily();
+
     if (lastTap.current && (now - lastTap.current) < DOUBLE_PRESS_DELAY) {
-      // Double tap detected
+     
       handleDoubleTap();
       lastTap.current = null;
     } else {
-      // Single tap - pause/play
-      lastTap.current = now;
-      setTimeout(() => {
-        if (lastTap.current === now) {
-          const newPausedState = !isPaused;
-          setIsPaused(newPausedState);
-          
-          // Show pause icon briefly when video starts playing
-          if (!newPausedState) {
-            setShowPauseIcon(true);
-            setTimeout(() => setShowPauseIcon(false), 1000);
+     
+      if (!showControls) {
+        
+        lastTap.current = now;
+        setTimeout(() => {
+          if (lastTap.current === now) {
+            lastTap.current = null;
           }
-          
-          lastTap.current = null;
-        }
-      }, DOUBLE_PRESS_DELAY);
+        }, DOUBLE_PRESS_DELAY);
+      } else {
+       
+        lastTap.current = now;
+        setTimeout(() => {
+          if (lastTap.current === now) {
+            const newPausedState = !isPaused;
+            setIsPaused(newPausedState);
+            
+            // Show pause icon briefly when video starts playing
+            if (!newPausedState) {
+              setShowPauseIcon(true);
+              setTimeout(() => setShowPauseIcon(false), 1000);
+            }
+            
+            lastTap.current = null;
+          }
+        }, DOUBLE_PRESS_DELAY);
+      }
     }
   };
 
@@ -235,10 +283,13 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
         </Animated.View>
 
         {/* Pause overlay with play button */}
-        {isPaused && (
+        {isPaused && showControls && (
           <TouchableOpacity
             style={styles.pauseOverlay}
-            onPress={() => setIsPaused(false)}
+            onPress={() => {
+              setIsPaused(false);
+              showControlsTemporarily(); // Show controls when play is pressed
+            }}
             activeOpacity={1}
           >
             <View style={styles.pauseIconContainer}>
@@ -248,12 +299,44 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
         )}
 
         {/* Pause icon overlay when video is playing */}
+        {!isPaused && isPlaying && showControls && (
+          <TouchableOpacity
+            style={styles.pauseOverlay}
+            onPress={() => {
+              setIsPaused(true);
+              showControlsTemporarily(); // Show controls when pause is pressed
+            }}
+            activeOpacity={1}
+          >
+            <View style={styles.pauseIconContainer}>
+              <Ionicons name="pause" size={moderateScale(32)} color="#FFFFFF" />
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* Brief pause icon when video starts playing */}
         {showPauseIcon && !isPaused && isPlaying && (
           <View style={styles.pauseIconOverlay}>
             <View style={styles.pauseIconContainer}>
               <Ionicons name="pause" size={moderateScale(32)} color="#FFFFFF" />
             </View>
           </View>
+        )}
+
+        {/* Stop icon when controls are hidden and video is playing */}
+        {!showControls && !isPaused && isPlaying && (
+          <TouchableOpacity
+            style={styles.stopButton}
+            onPress={() => {
+              setIsPaused(true);
+              setShowControls(true); // Show controls when stopped
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={styles.stopIconContainer}>
+              <Ionicons name="stop" size={moderateScale(16)} color="#FFFFFF" />
+            </View>
+          </TouchableOpacity>
         )}
 
       </TouchableOpacity>
@@ -394,6 +477,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     pointerEvents: 'none',
+  },
+  stopButton: {
+    position: 'absolute',
+    bottom: verticalScale(20),
+    right: scale(20),
+    width: moderateScale(32),
+    height: moderateScale(32),
+    borderRadius: moderateScale(16),
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 5,
+  },
+  stopIconContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   doubleTapHeart: {
     position: 'absolute',
