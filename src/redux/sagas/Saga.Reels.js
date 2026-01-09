@@ -75,15 +75,31 @@ function* fetchMerchantReelsWorker(action) {
     const page = payload.page || 1;
     const perPage = payload.per_page || 20;
 
- 
     const currentUser = yield select(state => state.auth.data);
 
-    const response = yield call(getData, ROUTES.MERCHANT_MY_REELS, {
-      page,
-      per_page: perPage,
-    });
+    let retryCount = 0;
+    const maxRetries = 3;
+    let response = null;
 
-    
+    while (retryCount < maxRetries) {
+      try {
+        response = yield call(getData, ROUTES.MERCHANT_MY_REELS, {
+          page,
+          per_page: perPage,
+        });
+        break; // Success, exit retry loop
+      } catch (error) {
+        retryCount++;
+        console.log(`Fetch merchant reels retry ${retryCount}/${maxRetries}:`, error);
+        
+        if (retryCount >= maxRetries) {
+          throw error; // Re-throw the last error
+        }
+        
+        // Wait before retry (exponential backoff: 1s, 2s, 4s)
+        yield call(delay, 1000 * Math.pow(2, retryCount - 1));
+      }
+    }
 
     if (response && response.status === 'success' && response.data) {
       
@@ -120,8 +136,8 @@ function* fetchMerchantReelsWorker(action) {
       errorMessage = 'Unauthorized. Please login again.';
     } else if (error?.status === 404) {
       errorMessage = 'Reels not found.';
-    } else if (error?.type === 'network') {
-      errorMessage = 'Network error. Please check your internet connection.';
+    } else if (error?.type === 'network' || error?.code === 'ERR_NETWORK') {
+      errorMessage = 'Network error. Please check your internet connection and try again.';
     } else if (error?.message) {
       errorMessage = error.message;
     }
@@ -129,6 +145,9 @@ function* fetchMerchantReelsWorker(action) {
     yield put(fetchMerchantReels_Failed(errorMessage));
   }
 }
+
+// Helper function for delays
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 export function* fetchMerchantReelsWatcher() {
   yield takeLatest(fetchMerchantReels_Request.type, fetchMerchantReelsWorker);

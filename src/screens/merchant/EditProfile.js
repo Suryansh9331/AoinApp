@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  TextInput,
   Alert,
   Platform,
   ActivityIndicator,
@@ -22,8 +21,9 @@ import {getThemeColors} from '../../theme/themeColors';
 import {Colors} from '../../utils/Colors';
 import {launchImageLibrary} from 'react-native-image-picker';
 import {StatusBar} from 'react-native';
-import {getData} from '../../utils/APiCall';
+import {getData, putData} from '../../utils/APiCall';
 import {ROUTES} from '../../utils/Routes';
+import Input from '../../components/reuseable/Input';
 
 const EditProfile = () => {
   const theme = useAppTheme();
@@ -44,21 +44,15 @@ const EditProfile = () => {
 
   // Fetch merchant profile
   const fetchMerchantProfile = useCallback(async () => {
-    if (!merchantId) {
-      setProfileError('Merchant ID not found');
-      return;
-    }
-
     setProfileLoading(true);
     setProfileError(null);
+    
     try {
-      const endpoint = `${ROUTES.MERCHANT_PUBLIC_PROFILE}${merchantId}/public-profile`;
-      const response = await getData(endpoint);
+      const response = await getData(ROUTES.MERCHANT_PROFILE);
+      console.log("Edit Profile Response:", response);
       
-      if (response && typeof response === 'object' && response.business_name) {
-        setMerchantProfile(response);
-      } else if (response && response.data && response.data.business_name) {
-        setMerchantProfile(response.data);
+      if (response && response.profile) {
+        setMerchantProfile(response.profile);
       } else {
         setProfileError('Invalid profile data received');
       }
@@ -68,21 +62,17 @@ const EditProfile = () => {
     } finally {
       setProfileLoading(false);
     }
-  }, [merchantId]);
+  }, []);
 
   useEffect(() => {
-    if (merchantId) {
-      fetchMerchantProfile();
-    }
+    fetchMerchantProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [merchantId]);
+  }, []);
 
   // Form state - initialized from API data
   const [name, setName] = useState(merchantProfile?.business_name || '');
   const [username, setUsername] = useState(
-    merchantProfile?.business_name 
-      ? `@${merchantProfile.business_name.toLowerCase().replace(/\s+/g, '_')}`
-      : '',
+    merchantProfile?.username || '',
   );
   const [bio, setBio] = useState(merchantProfile?.business_description || '');
   const [businessCategories, setBusinessCategories] = useState('');
@@ -91,22 +81,41 @@ const EditProfile = () => {
   const [storeAddress, setStoreAddress] = useState(merchantProfile?.business_address || '');
   const [languages, setLanguages] = useState('');
   const [profileImage, setProfileImage] = useState(
-    'https://i.pravatar.cc/150?img=1',
+    merchantProfile?.profile_img || 'https://i.pravatar.cc/150?img=1',
   );
+  
+  // Additional fields for PUT request
+  const [countryCode, setCountryCode] = useState(merchantProfile?.country_code || 'IN');
+  const [stateProvince, setStateProvince] = useState(merchantProfile?.state_province || '');
+  const [city, setCity] = useState(merchantProfile?.city || '');
+  const [postalCode, setPostalCode] = useState(merchantProfile?.postal_code || '');
+  const [gstin, setGstin] = useState(merchantProfile?.gstin || '');
+  const [panNumber, setPanNumber] = useState(merchantProfile?.pan_number || '');
+  const [bankAccountNumber, setBankAccountNumber] = useState(merchantProfile?.bank_account_number || '');
+  const [bankName, setBankName] = useState(merchantProfile?.bank_name || '');
+  const [bankBranch, setBankBranch] = useState(merchantProfile?.bank_branch || '');
+  const [bankIfscCode, setBankIfscCode] = useState(merchantProfile?.bank_ifsc_code || '');
 
   // Update form fields when merchantProfile loads
   useEffect(() => {
     if (merchantProfile) {
       setName(merchantProfile.business_name || '');
-      setUsername(
-        merchantProfile.business_name 
-          ? `@${merchantProfile.business_name.toLowerCase().replace(/\s+/g, '_')}`
-          : '',
-      );
+      setUsername(merchantProfile.username || '');
       setBio(merchantProfile.business_description || '');
       setEmail(merchantProfile.business_email || '');
       setPhoneNumber(merchantProfile.business_phone || '');
       setStoreAddress(merchantProfile.business_address || '');
+      setProfileImage(merchantProfile.profile_img || 'https://i.pravatar.cc/150?img=1');
+      setCountryCode(merchantProfile.country_code || 'IN');
+      setStateProvince(merchantProfile.state_province || '');
+      setCity(merchantProfile.city || '');
+      setPostalCode(merchantProfile.postal_code || '');
+      setGstin(merchantProfile.gstin || '');
+      setPanNumber(merchantProfile.pan_number || '');
+      setBankAccountNumber(merchantProfile.bank_account_number || '');
+      setBankName(merchantProfile.bank_name || '');
+      setBankBranch(merchantProfile.bank_branch || '');
+      setBankIfscCode(merchantProfile.bank_ifsc_code || '');
     }
   }, [merchantProfile]);
 
@@ -133,68 +142,118 @@ const EditProfile = () => {
     });
   };
 
-  const handleSave = () => {
-    console.log('Saving profile:', {
-      name,
-      username,
-      bio,
-      businessCategories,
-      email,
-      phoneNumber,
-      storeAddress,
-      languages,
-    });
-    Alert.alert('Success', 'Profile updated successfully!', [
-      {
-        text: 'OK',
-        onPress: () => navigation.goBack(),
-      },
-    ]);
+  const handleSave = async () => {
+    try {
+      // Check if username has changed
+      const originalUsername = merchantProfile?.username || '';
+      const currentUsername = username.replace('@', '');
+      
+      // Build request body conditionally
+      const requestBody = {
+        business_name: name,
+        business_description: bio,
+        business_address: storeAddress,
+        profile_img: profileImage,
+        country_code: countryCode,
+        state_province: stateProvince,
+        city: city,
+        postal_code: postalCode,
+        gstin: gstin,
+        pan_number: panNumber,
+        bank_account_number: bankAccountNumber,
+        bank_name: bankName,
+        bank_branch: bankBranch,
+        bank_ifsc_code: bankIfscCode,
+      };
+
+      // Only include username if it has changed
+      if (currentUsername !== originalUsername) {
+        requestBody.username = currentUsername;
+      }
+
+      console.log('Updating profile with:', requestBody);
+      
+      const response = await putData(ROUTES.MERCHANT_PROFILE, requestBody);
+      
+      if (response && response.status === 'success') {
+        Alert.alert('Success', 'Profile updated successfully!', [
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack(),
+          },
+        ]);
+      } else {
+        Alert.alert('Error', response?.message || 'Failed to update profile. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      
+      // Handle specific username restriction error
+      if (error?.message?.includes('Username can only be updated once per year')) {
+        Alert.alert(
+          'Username Update Restricted', 
+          'Username can only be updated once per year. Other profile information will still be updated.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Retry without username
+                handleSaveWithoutUsername();
+              },
+            },
+            {
+              text: 'Cancel',
+              style: 'cancel',
+            },
+          ]
+        );
+      } else {
+        Alert.alert('Error', error?.message || 'Failed to update profile. Please try again.');
+      }
+    }
+  };
+
+  const handleSaveWithoutUsername = async () => {
+    try {
+      const requestBody = {
+        business_name: name,
+        business_description: bio,
+        business_address: storeAddress,
+        profile_img: profileImage,
+        country_code: countryCode,
+        state_province: stateProvince,
+        city: city,
+        postal_code: postalCode,
+        gstin: gstin,
+        pan_number: panNumber,
+        bank_account_number: bankAccountNumber,
+        bank_name: bankName,
+        bank_branch: bankBranch,
+        bank_ifsc_code: bankIfscCode,
+      };
+
+      console.log('Updating profile without username:', requestBody);
+      
+      const response = await putData(ROUTES.MERCHANT_PROFILE, requestBody);
+      
+      if (response && response.status === 'success') {
+        Alert.alert('Success', 'Profile updated successfully! (Username unchanged)', [
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack(),
+          },
+        ]);
+      } else {
+        Alert.alert('Error', response?.message || 'Failed to update profile. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error updating profile without username:', error);
+      Alert.alert('Error', error?.message || 'Failed to update profile. Please try again.');
+    }
   };
 
   const handleCancel = () => {
     navigation.goBack();
-  };
-
-  const renderField = (
-    label,
-    value,
-    placeholder,
-    onChangeText,
-    onPress = null,
-  ) => {
-    return (
-      <TouchableOpacity
-        style={[styles.fieldContainer, {borderBottomColor: borderColor}]}
-        onPress={onPress}
-        activeOpacity={onPress ? 0.7 : 1}>
-        <Text style={[styles.fieldLabel, {color: textColor}]}>{label}</Text>
-        {onPress ? (
-          <View style={styles.fieldValueContainer}>
-            <Text
-              style={[
-                styles.fieldValue,
-                {color: value ? textColor : textColor + '80'},
-              ]}>
-              {value || placeholder}
-            </Text>
-            <Ionicons
-              name="chevron-forward"
-              size={16}
-              color={textColor + '80'}
-            />
-          </View>
-        ) : (
-          <TextInput
-            style={[styles.fieldInput, {color: textColor}]}
-            value={value}
-            onChangeText={onChangeText}
-            placeholder={placeholder}
-            placeholderTextColor={textColor + '80'}
-          />
-        )}
-      </TouchableOpacity>
-    );
   };
 
   return (
@@ -259,54 +318,111 @@ const EditProfile = () => {
             </View>
 
             <View style={styles.fieldsContainer}>
-              {renderField('Name', name, 'Enter name', setName)}
-              {renderField('Username', username, 'Enter username', setUsername)}
-              {renderField('Bio', bio, 'Add a bio to your profile', setBio)}
-              {renderField(
-                'Business Categories',
-                businessCategories,
-                'Select Categories',
-                null,
-                () => {
-                  Alert.alert(
-                    'Business Categories',
-                    'Select categories feature coming soon',
-                  );
-                },
-              )}
-              {renderField('Email', email, 'Enter the email Address', setEmail)}
-              {renderField(
-                'Phone Number',
-                phoneNumber,
-                'Enter the Phone Number',
-                setPhoneNumber,
-              )}
-              {renderField(
-                'Store Address',
-                storeAddress,
-                'Select the Address',
-                null,
-                () => {
-                  // TODO: Open address selection
-                  Alert.alert(
-                    'Store Address',
-                    'Address selection feature coming soon',
-                  );
-                },
-              )}
-              {renderField(
-                'Languages',
-                languages,
-                'Select the Languages',
-                null,
-                () => {
-                  // TODO: Open languages selection
-                  Alert.alert(
-                    'Languages',
-                    'Language selection feature coming soon',
-                  );
-                },
-              )}
+              <Input
+                label="Name"
+                placeholder="Enter name"
+                value={name}
+                onChangeText={setName}
+              />
+              <Input
+                label="Username"
+                placeholder="Enter username"
+                value={username}
+                onChangeText={setUsername}
+              />
+              <Input
+                label="Bio"
+                placeholder="Add a bio to your profile"
+                value={bio}
+                onChangeText={setBio}
+                multiline
+              />
+              <Input
+                label="Email"
+                placeholder="Enter the email address"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+              />
+              <Input
+                label="Phone Number"
+                placeholder="Enter the phone number"
+                value={phoneNumber}
+                onChangeText={setPhoneNumber}
+                keyboardType="phone-pad"
+                type="phone"
+              />
+              <Input
+                label="Store Address"
+                placeholder="Enter the store address"
+                value={storeAddress}
+                onChangeText={setStoreAddress}
+              />
+              <Input
+                label="City"
+                placeholder="Enter city"
+                value={city}
+                onChangeText={setCity}
+              />
+              <Input
+                label="State"
+                placeholder="Enter state/province"
+                value={stateProvince}
+                onChangeText={setStateProvince}
+              />
+              <Input
+                label="Postal Code"
+                placeholder="Enter postal code"
+                value={postalCode}
+                onChangeText={setPostalCode}
+                keyboardType="numeric"
+              />
+              <Input
+                label="Country Code"
+                placeholder="Enter country code"
+                value={countryCode}
+                onChangeText={setCountryCode}
+              />
+              <Input
+                label="GSTIN"
+                placeholder="Enter GSTIN"
+                value={gstin}
+                onChangeText={setGstin}
+                autoCapitalize="characters"
+              />
+              <Input
+                label="PAN Number"
+                placeholder="Enter PAN number"
+                value={panNumber}
+                onChangeText={setPanNumber}
+                autoCapitalize="characters"
+              />
+              <Input
+                label="Bank Account Number"
+                placeholder="Enter bank account number"
+                value={bankAccountNumber}
+                onChangeText={setBankAccountNumber}
+                keyboardType="numeric"
+              />
+              <Input
+                label="Bank Name"
+                placeholder="Enter bank name"
+                value={bankName}
+                onChangeText={setBankName}
+              />
+              <Input
+                label="Bank Branch"
+                placeholder="Enter bank branch"
+                value={bankBranch}
+                onChangeText={setBankBranch}
+              />
+              <Input
+                label="Bank IFSC Code"
+                placeholder="Enter bank IFSC code"
+                value={bankIfscCode}
+                onChangeText={setBankIfscCode}
+                autoCapitalize="characters"
+              />
             </View>
           </ScrollView>
 
@@ -405,34 +521,6 @@ const styles = StyleSheet.create({
   },
   fieldsContainer: {
     paddingHorizontal: scale(16),
-  },
-  fieldContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: verticalScale(16),
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  fieldLabel: {
-    fontSize: moderateScale(14),
-    fontWeight: '500',
-    flex: 1,
-  },
-  fieldValueContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  fieldValue: {
-    fontSize: moderateScale(14),
-    marginRight: scale(8),
-  },
-  fieldInput: {
-    fontSize: moderateScale(14),
-    flex: 1,
-    textAlign: 'right',
-    padding: 0,
   },
   actionButtonsContainer: {
     flexDirection: 'row',

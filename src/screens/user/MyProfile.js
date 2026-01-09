@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   Modal,
   Platform,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import { useSelector } from 'react-redux';
@@ -20,6 +20,10 @@ import { Colors } from '../../utils/Colors';
 import FONTS from '../../utils/Font';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Header from '../../components/Header/Header';
+import { getData } from '../../utils/APiCall';
+
+import { BASE_URL, ROUTES } from '../../utils/Routes';
+import MyProfileSkeleton from '../../components/Skeleton/MyProfileSkeleton.js';
 
 const MyProfile = () => {
   const theme = useAppTheme();
@@ -27,147 +31,201 @@ const MyProfile = () => {
   const navigation = useNavigation();
   const userData = useSelector(state => state.auth.data);
 
-  const [fullName, setFullName] = useState(
-    userData?.first_name && userData?.last_name
-      ? `${userData.first_name} ${userData.last_name}`
-      : 'Cody Fisher',
-  );
-  const [email, setEmail] = useState(
-    userData?.email || 'cody.fisher45@example',
-  );
-  const [dateOfBirth, setDateOfBirth] = useState(new Date('1990-07-12'));
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
   const [gender, setGender] = useState('Male');
-  const [phoneNumber, setPhoneNumber] = useState('99 453 231 50');
-  const [countryCode, setCountryCode] = useState('+91');
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showGenderPicker, setShowGenderPicker] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [profileData, setProfileData] = useState(null);
 
-  const formatDate = date => {
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  };
+  // Memoized profile data fetching function
+  const fetchProfileData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await getData(`${BASE_URL}${ROUTES.USER_PROFILE}`);
 
-  const handleDateChange = (event, selectedDate) => {
-    setShowDatePicker(Platform.OS === 'ios');
-    if (selectedDate) {
-      setDateOfBirth(selectedDate);
+      if (response && response.profile) {
+        const profile = response.profile;
+        setProfileData(profile);
+
+        // Update state with API data
+        setFullName(profile.first_name && profile.last_name
+          ? `${profile.first_name} ${profile.last_name}`
+          : '');
+        setEmail(profile.email || '');
+        setGender(profile.gender || 'Male');
+
+        // Parse phone number
+        if (profile.phone) {
+          setPhoneNumber(profile.phone);
+        }
+
+        // Parse date of birth
+        if (profile.date_of_birth) {
+          setDateOfBirth(profile.date_of_birth);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
 
+  // Fetch profile data from API when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchProfileData();
+    }, [fetchProfileData])
+  );
+
+  // Memoized profile display data
+  const profileDisplayData = useMemo(() => {
+    if (!profileData) return null;
+    
+    return {
+      fullName: profileData.first_name && profileData.last_name
+        ? `${profileData.first_name} ${profileData.last_name}`
+        : '',
+      email: profileData.email || '',
+      gender: profileData.gender || 'Male',
+      phoneNumber: profileData.phone || '',
+      dateOfBirth: profileData.date_of_birth || '',
+      isEmailVerified: profileData.is_email_verified || false,
+      isPhoneVerified: profileData.is_phone_verified || false,
+    };
+  }, [profileData]);
+
+  
   const handleSave = () => {
     // TODO: Implement save profile API call
     console.log('Saving profile:', {
       fullName,
       email,
-      dateOfBirth: formatDate(dateOfBirth),
+      dateOfBirth,
       gender,
-      phoneNumber: `${countryCode} ${phoneNumber}`,
+      phoneNumber,
     });
     // Show success message or navigate back
     navigation.goBack();
   };
 
-  const genders = ['Male', 'Female', 'Other'];
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
-      {/* Header */}
-        <Header
-       title="Account Settings"
-       
-       onLeftPress={() => navigation.goBack()}
+      {/* Header - Always visible */}
+      <Header
+        title="Account Settings"
+        onLeftPress={() => navigation.goBack()}
+        rightContent={
+          profileData && (
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => navigation.navigate('MyProfileEdit', { profileData })}
+            >
+              <Ionicons name="create-outline" size={20} color={textColor} />
+            </TouchableOpacity>
+          )
+        }
       />
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}>
-        {/* Full Name */}
-        <View style={styles.fieldContainer}>
-          <Text style={[styles.label, { color: textColor }]}>Full Name</Text>
+      {/* Show skeleton for form content while loading */}
+      {loading ? (
+        <MyProfileSkeleton />
+      ) : (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}>
+          {/* Full Name */}
           <Input
+            label="Full Name"
             placeholder="Full Name"
             value={fullName}
             onChangeText={setFullName}
             autoCapitalize="words"
+            type="text"
+            disabled={true}
           />
-        </View>
 
-        {/* Email Address */}
-        <View style={styles.fieldContainer}>
-          <Text style={[styles.label, { color: textColor }]}>
-            Email Address
-          </Text>
-          <Input
-            placeholder="Email Address"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-        </View>
+          {/* Email Address */}
+          <View style={styles.fieldContainer}>
+            <View style={styles.labelContainer}>
+             
+              {profileData?.is_email_verified && (
+                <View style={styles.verifiedContainer}>
+                  <Ionicons name="checkmark-circle" size={16} color={Colors.PRIMARY} />
+                  <Text style={[styles.verifiedText, { color: Colors.PRIMARY }]}>
+                    Verified
+                  </Text>
+                </View>
+              )}
+            </View>
+            <Input
+              label="Email Address"
+              placeholder="Email Address"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              type="text"
+              disabled={true}
+            />
+          </View>
 
-        {/* Date of Birth */}
-        <View style={styles.fieldContainer}>
-          <Text style={[styles.label, { color: textColor }]}>Date of Birth</Text>
-          <TouchableOpacity
-            style={[
-              styles.datePickerButton,
-              { borderColor: borderColor, backgroundColor: backgroundColor },
-            ]}
-            onPress={() => setShowDatePicker(true)}>
-            <Text style={[styles.dateText, { color: textColor }]}>
-              {formatDate(dateOfBirth)}
-            </Text>
-            <Ionicons name="calendar-outline" size={20} color={textColor} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Gender */}
-        <View style={styles.fieldContainer}>
-          <Text style={[styles.label, { color: textColor }]}>Gender</Text>
-          <TouchableOpacity
-            style={[
-              styles.dropdownButton,
-              { borderColor: borderColor, backgroundColor: backgroundColor },
-            ]}
-            onPress={() => setShowGenderPicker(true)}>
-            <Text style={[styles.dropdownText, { color: textColor }]}>
-              {gender}
-            </Text>
-            <Ionicons name="chevron-down" size={20} color={textColor} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Phone Number */}
-        <View style={styles.fieldContainer}>
-          <Text style={[styles.label, { color: textColor }]}>Phone Number</Text>
-          <View style={styles.phoneContainer}>
-            <TouchableOpacity
+          {/* Date of Birth */}
+          <View style={styles.fieldContainer}>
+            <Text style={[styles.label, { color: textColor }]}>Date of Birth</Text>
+            <View
               style={[
-                styles.countryCodeButton,
+                styles.dateDisplay,
                 { borderColor: borderColor, backgroundColor: backgroundColor },
               ]}>
-              <Text style={styles.flagEmoji}>🇮🇳</Text>
-              <Ionicons name="chevron-down" size={16} color={textColor} />
-              <Text style={[styles.countryCode, { color: textColor }]}>
-                {countryCode}
+              <Text style={[styles.dateText, { color: textColor }]}>
+                {dateOfBirth || 'Not specified'}
               </Text>
-            </TouchableOpacity>
-            <View style={styles.phoneInputContainer}>
-              <Input
-                placeholder="Phone Number"
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-                keyboardType="phone-pad"
-                style={styles.phoneInput}
-              />
             </View>
           </View>
-        </View>
-      </ScrollView>
+
+          {/* Gender */}
+          <View style={styles.fieldContainer}>
+            <Text style={[styles.label, { color: textColor }]}>Gender</Text>
+            <View
+              style={[
+                styles.genderDisplay,
+                { borderColor: borderColor, backgroundColor: backgroundColor },
+              ]}>
+              <Text style={[styles.genderText, { color: textColor }]}>
+                {gender}
+              </Text>
+            </View>
+          </View>
+
+          {/* Phone Number */}
+          <View style={styles.fieldContainer}>
+            <View style={styles.labelContainer}>
+              <Text style={[styles.label, { color: textColor }]}>Phone Number</Text>
+              {profileData?.is_phone_verified && (
+                <View style={styles.verifiedContainer}>
+                  <Ionicons name="checkmark-circle" size={16} color={Colors.PRIMARY} />
+                  <Text style={[styles.verifiedText, { color: Colors.PRIMARY }]}>
+                    Verified
+                  </Text>
+                </View>
+              )}
+            </View>
+            <Input
+              placeholder="Phone Number"
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
+              keyboardType="phone-pad"
+              type="text"
+              disabled={true}
+            />
+          </View>
+        </ScrollView>
+      )}
 
       {/* Save Button */}
       <View style={styles.buttonContainer}>
@@ -176,60 +234,14 @@ const MyProfile = () => {
           onPress={handleSave}
           bgColor={Colors.PRIMARY}
           color={Colors.WHITE}
-          fontSize={moderateScale(16)}
+          fontSize={moderateScale(14)}
           fontWeight="700"
           fontFamily={FONTS.WINDSONG.REGULAR}
           style={styles.saveButton}
         />
       </View>
 
-      {/* Date Picker Modal */}
-      {showDatePicker && (
-        <DateTimePicker
-          value={dateOfBirth}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleDateChange}
-          maximumDate={new Date()}
-        />
-      )}
-
-      {/* Gender Picker Modal */}
-      <Modal
-        visible={showGenderPicker}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowGenderPicker(false)}>
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowGenderPicker(false)}>
-          <View style={[styles.modalContent, { backgroundColor }]}>
-            {genders.map(item => (
-              <TouchableOpacity
-                key={item}
-                style={[
-                  styles.genderOption,
-                  { borderBottomColor: borderColor },
-                  gender === item && {
-                    backgroundColor: `${Colors.PRIMARY}20`,
-                  },
-                ]}
-                onPress={() => {
-                  setGender(item);
-                  setShowGenderPicker(false);
-                }}>
-                <Text style={[styles.genderText, { color: textColor }]}>
-                  {item}
-                </Text>
-                {gender === item && (
-                  <Ionicons name="checkmark" size={20} color={Colors.PRIMARY} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      
     </View>
   );
 };
@@ -262,6 +274,11 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  label: {
+    fontSize: moderateScale(12),
+    fontWeight: '700',
+    marginBottom: verticalScale(5),
+  },
   scrollContent: {
     paddingHorizontal: scale(16),
     paddingTop: verticalScale(20),
@@ -270,95 +287,55 @@ const styles = StyleSheet.create({
   fieldContainer: {
     marginBottom: verticalScale(20),
   },
-  label: {
-    fontSize: moderateScale(14),
-    fontWeight: '600',
-    marginBottom: verticalScale(8),
-  },
-  datePickerButton: {
+  labelContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: verticalScale(8),
+  },
+  verifiedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(4),
+  },
+  verifiedText: {
+    fontSize: moderateScale(12),
+    fontWeight: '500',
+  },
+  dateDisplay: {
     paddingHorizontal: scale(16),
     paddingVertical: verticalScale(14),
     borderRadius: moderateScale(12),
     borderWidth: 1,
   },
   dateText: {
-    fontSize: moderateScale(16),
-    flex: 1,
+    fontSize: moderateScale(12),
   },
-  dropdownButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  genderDisplay: {
     paddingHorizontal: scale(16),
     paddingVertical: verticalScale(14),
     borderRadius: moderateScale(12),
     borderWidth: 1,
   },
-  dropdownText: {
-    fontSize: moderateScale(16),
-    flex: 1,
-  },
-  phoneContainer: {
-    flexDirection: 'row',
-    gap: scale(8),
-  },
-  countryCodeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: scale(12),
-    paddingVertical: verticalScale(14),
-    borderRadius: moderateScale(12),
-    borderWidth: 1,
-    gap: scale(6),
-  },
-  flagEmoji: {
-    fontSize: moderateScale(20),
-  },
-  countryCode: {
-    fontSize: moderateScale(16),
-    fontWeight: '500',
-  },
-  phoneInputContainer: {
-    flex: 1,
-  },
-  phoneInput: {
-    marginTop: 0,
+  genderText: {
+    fontSize: moderateScale(12),
   },
   buttonContainer: {
     paddingHorizontal: scale(16),
     paddingBottom: verticalScale(20),
     paddingTop: verticalScale(10),
   },
+ editButton: {
+  padding: scale(8),
+  backgroundColor: 'transparent',  // Changed from Colors.PRIMARY
+  borderRadius: moderateScale(12),
+  alignItems: 'center',
+  justifyContent: 'center',
+},
   saveButton: {
-    height: verticalScale(50),
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    borderTopLeftRadius: moderateScale(20),
-    borderTopRightRadius: moderateScale(20),
-    paddingTop: verticalScale(20),
-    paddingBottom: verticalScale(40),
-    maxHeight: '50%',
-  },
-  genderOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: scale(20),
-    paddingVertical: verticalScale(16),
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  genderText: {
-    fontSize: moderateScale(16),
+    height: verticalScale(40),
+    
   },
 });
 
 export default MyProfile;
-

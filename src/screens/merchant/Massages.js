@@ -359,7 +359,7 @@ const Notifications = () => {
 
   useEffect(() => {
     fetchNotifications();
-  }, [fetchNotifications]);
+  }, []);
 
   // Mark notification as read
   const markAsRead = async id => {

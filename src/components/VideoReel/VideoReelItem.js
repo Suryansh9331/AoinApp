@@ -43,6 +43,7 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
   const [likes, setLikes] = useState(item.likes || 0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [showPauseIcon, setShowPauseIcon] = useState(false);
   
   const likeScale = useRef(new Animated.Value(1)).current;
   const likeOpacity = useRef(new Animated.Value(0)).current;
@@ -179,7 +180,15 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
       lastTap.current = now;
       setTimeout(() => {
         if (lastTap.current === now) {
-          setIsPaused(!isPaused);
+          const newPausedState = !isPaused;
+          setIsPaused(newPausedState);
+          
+          // Show pause icon briefly when video starts playing
+          if (!newPausedState) {
+            setShowPauseIcon(true);
+            setTimeout(() => setShowPauseIcon(false), 1000);
+          }
+          
           lastTap.current = null;
         }
       }, DOUBLE_PRESS_DELAY);
@@ -236,6 +245,15 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
               <Ionicons name="play" size={moderateScale(32)} color="#FFFFFF" />
             </View>
           </TouchableOpacity>
+        )}
+
+        {/* Pause icon overlay when video is playing */}
+        {showPauseIcon && !isPaused && isPlaying && (
+          <View style={styles.pauseIconOverlay}>
+            <View style={styles.pauseIconContainer}>
+              <Ionicons name="pause" size={moderateScale(32)} color="#FFFFFF" />
+            </View>
+          </View>
         )}
 
       </TouchableOpacity>
@@ -366,6 +384,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  pauseIconOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    pointerEvents: 'none',
   },
   doubleTapHeart: {
     position: 'absolute',

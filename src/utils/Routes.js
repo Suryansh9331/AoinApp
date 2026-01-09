@@ -1,4 +1,4 @@
-export const BASE_URL = "http://10.14.92.132:5110";
+export const BASE_URL = "https://api.aoinstore.com";
 
 export const ROUTES = Object.freeze({
   SEND_OTP: '/api/auth/phone/send-otp',
@@ -17,6 +17,7 @@ export const ROUTES = Object.freeze({
   FOLLOW_MERCHANT: '/api/merchants',
   UNFOLLOW_MERCHANT: '/api/merchants',
   REELBATCHDELET: '/api/reels/batch/delete',
+  MERCHANT_PROFILE: '/api/merchants/profile',
   MERCHANT_FOLLOW: '/api/merchants/{merchant_id}/follow',
   MERCHANT_UNFOLLOW: '/api/merchants/{merchant_id}/unfollow',
   MERCHANT_FOLLOW_LIST: '/api/merchants/following',
@@ -31,6 +32,7 @@ export const ROUTES = Object.freeze({
   MERCHANT_FOLLOWERS_COUNT: '/api/merchants/',
   MERCHANT_PUBLIC_PROFILE: '/api/merchants/',
   MERCHANT_STATS: '/api/reels/merchant/',
+  USER_PROFILE: '/api/users/profile',
   GOOGLE_LOGIN: 'https://api.aoinstore.com/api/auth/google',
 });
 

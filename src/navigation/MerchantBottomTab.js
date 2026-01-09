@@ -1,22 +1,19 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Platform, Text } from 'react-native';
-import Swiper from 'react-native-swiper';
+import { View, StyleSheet, TouchableOpacity, Platform, Text, FlatList, Dimensions } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useDispatch } from 'react-redux';
-import { fetchPublicReels_Success } from '../redux/slices/reelSlice';
 import { Colors } from '../utils/Colors';
 import useAppTheme from '../theme/useAppTheme';
 import { getThemeColors } from '../theme/themeColors';
 import Home from '../screens/merchant/Home';
-
 import Post from '../screens/merchant/Post';
 import Products from '../screens/merchant/Products';
 import Profile from '../screens/merchant/Profile';
-import Notifications from '../screens/merchant/Search';
 import Search from '../screens/merchant/Search';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const TAB_ITEMS = [
   {
@@ -40,7 +37,7 @@ const TAB_ITEMS = [
       active: 'add-circle',
       inactive: 'add-circle-outline',
     },
-    isCenter: true, // Mark Post as center tab
+    isCenter: true,
   },
   {
     key: 'Products',
@@ -63,169 +60,79 @@ const TAB_ITEMS = [
 const MerchantBottomTab = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const swiperRef = useRef(null);
-  const isManualChangeRef = useRef(false);
-  const swiperUpdatingRef = useRef(false);
+  const flatListRef = useRef(null);
   const theme = useAppTheme();
   const { backgroundColor, textColor, borderColor } = getThemeColors(theme);
-  const dispatch = useDispatch();
 
-  // Initialize activeIndex from route params so the correct tab is mounted
-  // immediately (prevents brief mount of Home with no params).
-  const initialTabIndex = (() => {
+  // Initialize activeIndex from route params
+  const getInitialIndex = () => {
     const navTo = route?.params?.navigateToTab;
     const idx = navTo ? TAB_ITEMS.findIndex(tab => tab.key === navTo) : -1;
     return idx >= 0 ? idx : 0;
-  })();
+  };
 
-  const [activeIndex, setActiveIndex] = useState(initialTabIndex);
+  const [activeIndex, setActiveIndex] = useState(getInitialIndex());
 
-  // Handle navigation to specific tab with params
+  // Handle initial navigation from route params
   useEffect(() => {
-    const params = route.params || {};
-    
-    // If caller passed preloadedReels, hydrate publicReels in Redux immediately
-    if (params.preloadedReels && Array.isArray(params.preloadedReels) && params.preloadedReels.length > 0) {
-      dispatch(fetchPublicReels_Success({ 
-        reels: params.preloadedReels, 
-        pagination: { 
-          page: 1, 
-          pages: 1, 
-          per_page: params.preloadedReels.length, 
-          total: params.preloadedReels.length 
-        } 
-      }));
+    const initialIndex = getInitialIndex();
+    setActiveIndex(initialIndex);
+    if (flatListRef.current) {
+      flatListRef.current.scrollToIndex({ index: initialIndex, animated: false });
     }
-    
-    // Handle tab navigation
-    if (params.navigateToTab) {
-      const tabIndex = TAB_ITEMS.findIndex(tab => tab.key === params.navigateToTab);
-      if (tabIndex !== -1 && tabIndex !== activeIndex) {
-        isManualChangeRef.current = true;
-        setActiveIndex(tabIndex);
-        // Use setTimeout to ensure swiper is ready
-        setTimeout(() => {
-          if (swiperRef.current && !swiperUpdatingRef.current) {
-            swiperUpdatingRef.current = true;
-            swiperRef.current.scrollTo(tabIndex, true);
-            setTimeout(() => {
-              swiperUpdatingRef.current = false;
-              isManualChangeRef.current = false;
-            }, 300);
-          }
-        }, 50);
-      }
-    }
-  }, [route.params]);
+  }, []);
 
-  const handleTabPress = index => {
-    // Prevent action if already on this tab or if swiper is updating
-    if (index === activeIndex || swiperUpdatingRef.current) {
+  // Handle tab press
+  const handleTabPress = (index) => {
+    if (index === activeIndex || !flatListRef.current) {
       return;
     }
-    
-    console.log('Tab pressed:', TAB_ITEMS[index].key, 'Index:', index, 'Current activeIndex:', activeIndex);
-    
-    // Mark as manual change to prevent onIndexChanged from interfering
-    isManualChangeRef.current = true;
-    swiperUpdatingRef.current = true;
-    
-    // Update state immediately for instant visual feedback
+
     setActiveIndex(index);
-    
-    // Scroll swiper to the new index immediately (no animation for tab clicks)
-    if (swiperRef.current) {
-      try {
-        swiperRef.current.scrollTo(index, false);
-      } catch (error) {
-        console.log('Error scrolling swiper:', error);
-      }
-    }
-    
-    // Clear any navigation params that might be causing issues
-    navigation.setParams({ 
-      navigateToTab: null,
-      reelId: null,
-      preloadedReels: null,
-      userId: null,
-      editingReel: null,
-      editingReelId: null
-    });
-    
-    // Reset flags after a delay to allow swiper to update
-    setTimeout(() => {
-      isManualChangeRef.current = false;
-      swiperUpdatingRef.current = false;
-      console.log('Tab navigation complete. New activeIndex:', index);
-    }, 200);
+    flatListRef.current.scrollToIndex({ index: index, animated: false });
   };
+
+  // Render screen component
+  const renderScreen = ({ item, index }) => {
+    const ScreenComponent = item.component;
+    return (
+      <View style={[styles.slide, { backgroundColor }]}>
+        <ScreenComponent
+          navigation={navigation}
+          routeKey={item.key}
+        />
+      </View>
+    );
+  };
+
+  // Get layout for FlatList
+  const getItemLayout = (data, index) => ({
+    length: SCREEN_WIDTH,
+    offset: SCREEN_WIDTH * index,
+    index,
+  });
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
-      <Swiper
-        ref={swiperRef}
-        loop={false}
-        index={activeIndex}
-        showsPagination={false}
-        onIndexChanged={(index) => {
-          // Only update if this is a swipe gesture (not manual tab press)
-          // Also check if swiper is not currently being updated programmatically
-          if (!isManualChangeRef.current && !swiperUpdatingRef.current) {
-            if (index !== activeIndex) {
-              console.log('Swiper index changed via swipe:', index, 'Previous activeIndex:', activeIndex);
-              setActiveIndex(index);
-              // Clear navigation params when swiping between tabs
-              navigation.setParams({
-                navigateToTab: null,
-                reelId: null,
-                preloadedReels: null,
-                userId: null,
-                editingReel: null,
-                editingReelId: null
-              });
-            }
-          } else {
-            console.log('onIndexChanged ignored (manual change or updating):', index);
+      <FlatList
+        ref={flatListRef}
+        data={TAB_ITEMS}
+        renderItem={renderScreen}
+        keyExtractor={(item) => item.key}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        getItemLayout={getItemLayout}
+        initialScrollIndex={activeIndex}
+        onMomentumScrollEnd={(event) => {
+          const index = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+          if (index !== activeIndex && index >= 0 && index < TAB_ITEMS.length) {
+            setActiveIndex(index);
           }
         }}
-        loadMinimal
-        loadMinimalSize={1}>
-        {TAB_ITEMS.map(({ key, component: ScreenComponent }, idx) => {
-          const profileParams = key === 'Profile' && route.params?.userId
-            ? { userId: route.params.userId }
-            : undefined;
-
-          const postParams = key === 'Post' && route.params?.editingReel
-            ? {
-                editingReel: route.params.editingReel,
-                editingReelId: route.params.editingReelId,
-              }
-            : undefined;
-
-          const homeParams = key === 'Home' && route.params?.reelId
-            ? {
-                reelId: route.params.reelId,
-                preloadedReels: route.params.preloadedReels,
-              }
-            : undefined;
-
-          const homeInitialReels = key === 'Home'
-            ? (route.params?.preloadedReels || undefined)
-            : undefined;
-
-          return (
-            <View style={[styles.slide, { backgroundColor }]} key={key}>
-              <ScreenComponent
-                navigation={navigation}
-                routeKey={key}
-                routeParams={profileParams || postParams || homeParams}
-                // Explicitly pass initialReels only to Home
-                initialReels={homeInitialReels}
-              />
-            </View>
-          );
-        })}
-      </Swiper>
+        scrollEnabled={true}
+        bounces={false}
+      />
 
       <View style={[
         styles.tabBar,
@@ -309,6 +216,7 @@ const styles = StyleSheet.create({
   },
   slide: {
     flex: 1,
+    width: SCREEN_WIDTH,
   },
   tabBar: {
     flexDirection: 'row',

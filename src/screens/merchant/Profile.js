@@ -59,29 +59,16 @@ const Profile = () => {
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState(null);
 
-  // State for merchant stats
-  const [merchantStats, setMerchantStats] = useState(null);
-
-  // State for followers count
-  const [followersCount, setFollowersCount] = useState(0);
-
   // Fetch merchant profile
   const fetchMerchantProfile = useCallback(async () => {
-    if (!merchantId) {
-      setProfileError('Merchant ID not found');
-      return;
-    }
-
     setProfileLoading(true);
     setProfileError(null);
+    
     try {
-      const endpoint = `${ROUTES.MERCHANT_PUBLIC_PROFILE}${merchantId}/public-profile`;
-      const response = await getData(endpoint);
-
-      if (response && typeof response === 'object' && response.business_name) {
-        setMerchantProfile(response);
-      } else if (response?.data?.business_name) {
-        setMerchantProfile(response.data);
+      const response = await getData(ROUTES.MERCHANT_PROFILE);
+      
+      if (response && response.profile) {
+        setMerchantProfile(response.profile);
       } else {
         setProfileError('Invalid profile data received');
       }
@@ -90,89 +77,29 @@ const Profile = () => {
     } finally {
       setProfileLoading(false);
     }
-  }, [merchantId]);
-
-  // Fetch merchant stats
-  const fetchMerchantStats = useCallback(async () => {
-    if (!merchantId) {
-      return;
-    }
-
-    try {
-      const endpoint = `${ROUTES.MERCHANT_STATS}${merchantId}/stats`;
-      const response = await getData(endpoint);
-
-      if (response && response.status === 'success' && response.data) {
-        setMerchantStats(response.data);
-      } else if (response && response.data) {
-        setMerchantStats(response.data);
-      }
-    } catch (error) {
-      // Silently handle errors for stats
-    }
-  }, [merchantId]);
-
-  // Fetch followers count
-  const fetchFollowersCount = useCallback(async () => {
-    if (!merchantId) {
-      return;
-    }
-
-    try {
-      const endpoint = `${ROUTES.MERCHANT_FOLLOWERS_COUNT}${merchantId}/followers/count`;
-      const response = await getData(endpoint);
-
-      if (
-        response &&
-        response.status === 'success' &&
-        response.follower_count !== undefined
-      ) {
-        setFollowersCount(response.follower_count);
-      } else if (response && response.follower_count !== undefined) {
-        setFollowersCount(response.follower_count);
-      } else if (
-        response &&
-        response.data &&
-        response.data.follower_count !== undefined
-      ) {
-        setFollowersCount(response.data.follower_count);
-      }
-    } catch (error) {
-      // Silently handle errors for followers count
-    }
-  }, [merchantId]);
+  }, []);
 
   useEffect(() => {
-    if (reels.length === 0 && !loading) {
-      dispatch(fetchMerchantReels_Request({page: 1, per_page: 20}));
-    }
-  }, [dispatch, reels.length, loading]);
-
-  // Fetch profile, stats and followers count only once when merchantId is available
-  useEffect(() => {
-    if (merchantId && !merchantProfile) {
+    if (!merchantProfile) {
       fetchMerchantProfile();
-    }
-    if (merchantId) {
-      fetchMerchantStats();
-      fetchFollowersCount();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [merchantId]);
 
   useFocusEffect(
     useCallback(() => {
-      dispatch(fetchMerchantReels_Request({page: 1, per_page: 20}));
-      // Only fetch profile if not already loaded
-      if (merchantId && !merchantProfile) {
+     
+      if (!merchantProfile) {
         fetchMerchantProfile();
       }
-      // Refresh stats and followers count on focus
-      if (merchantId) {
-        fetchMerchantStats();
-        fetchFollowersCount();
-      }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
+      
+      
+      const timer = setTimeout(() => {
+        dispatch(fetchMerchantReels_Request({page: 1, per_page: 20}));
+      }, 300);
+
+      return () => clearTimeout(timer);
+     
     }, [dispatch, merchantId]),
   );
 
@@ -186,8 +113,7 @@ const Profile = () => {
     return views.toString();
   }, []);
 
-  const [pressedReels, setPressedReels] = useState({});
-  const [visibleMenuReelId, setVisibleMenuReelId] = useState(null);
+    const [visibleMenuReelId, setVisibleMenuReelId] = useState(null);
   const [deletingReelId, setDeletingReelId] = useState(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingReelData, setEditingReelData] = useState(null);
@@ -301,7 +227,6 @@ const Profile = () => {
 
   const renderReelItem = useCallback(
     ({item}) => {
-      const isPressed = pressedReels[item.id] || false;
       const thumbnail = item.thumbnail || item.videoUrl;
       const views = formatViews(item.views || item.views_count || 0);
       const isMenuVisible = visibleMenuReelId === (item.id || item.reel_id);
@@ -310,55 +235,9 @@ const Profile = () => {
       return (
         <TouchableOpacity
           style={[styles.postItem, {borderColor: borderColor}]}
-          activeOpacity={1}
-          onPressIn={() =>
-            setPressedReels(prev => ({...prev, [item.id]: true}))
-          }
-          onPressOut={() =>
-            setPressedReels(prev => ({...prev, [item.id]: false}))
-          }
+          activeOpacity={0.7}
           onPress={() => {
-            const clickedReelId = item.id || item.reel_id;
-
-            const clickedReelIndex = reels.findIndex(
-              r =>
-                (r.id || r.reel_id)?.toString() === clickedReelId?.toString(),
-            );
-
-            let orderedReels = [];
-            if (clickedReelIndex !== -1) {
-              orderedReels = [
-                ...reels.slice(clickedReelIndex),
-                ...reels.slice(0, clickedReelIndex),
-              ];
-            } else {
-              orderedReels = [
-                item,
-                ...reels.filter(
-                  r =>
-                    (r.id || r.reel_id)?.toString() !==
-                    clickedReelId?.toString(),
-                ),
-              ];
-            }
-
-            navigation.dispatch(
-              CommonActions.reset({
-                index: 0,
-                routes: [
-                  {
-                    name: 'MerchantBottomTab',
-                    params: {
-                      navigateToTab: 'Home',
-                      reelId: clickedReelId,
-                      preloadedReels: orderedReels,
-
-                      timestamp: Date.now(),
-                    },
-                  },
-                ],
-              }),
-            );
+            // Reel click navigation removed - reels now stay on profile page
           }}>
           <Image
             source={{uri: thumbnail}}
@@ -439,7 +318,7 @@ const Profile = () => {
             <Text style={styles.viewCountText}>{views}</Text>
           </View>
           <View
-            style={[styles.postOverlay, isPressed && styles.postOverlayVisible]}
+            style={[styles.postOverlay]}
             pointerEvents="none">
             <View style={styles.postStats}>
               <Ionicons name="heart" size={16} color="#FFFFFF" />
@@ -453,7 +332,6 @@ const Profile = () => {
     },
     [
       borderColor,
-      pressedReels,
       visibleMenuReelId,
       deletingReelId,
       reels,
@@ -626,29 +504,30 @@ const Profile = () => {
             {/* Avatar */}
             <View style={styles.avatarContainer}>
               <Image
-                source={{uri: 'https://i.pravatar.cc/150?img=1'}}
+                source={{uri: merchantProfile?.profile_img || 'https://i.pravatar.cc/150?img=1'}}
                 style={styles.avatar}
               />
             </View>
 
             {/* Merchant Name */}
-            <Text style={[styles.username, {color: textColor}]}>
-              {merchantProfile?.business_name || 'Merchant Store'}
-            </Text>
+            <View style={styles.nameContainer}>
+              <Text style={[styles.username, {color: textColor}]}>
+                {merchantProfile?.business_name || 'Merchant Store'}
+              </Text>
+              {merchantProfile?.is_verified && (
+                <Ionicons name="checkmark-circle" size={20} color={Colors.PRIMARY} style={styles.verifiedBadge} />
+              )}
+            </View>
             {/* Username below name */}
             <Text style={[styles.userHandle, {color: textColor}]}>
-              {merchantProfile?.business_name
-                ? `@${merchantProfile.business_name
-                    .toLowerCase()
-                    .replace(/\s+/g, '_')}`
-                : '@merchant'}
+              @{merchantProfile?.username || 'merchant'}
             </Text>
 
             {/* Stats */}
             <View style={styles.statsContainer}>
               <View style={styles.statItem}>
                 <Text style={[styles.statNumber, {color: textColor}]}>
-                  {merchantStats?.total_reels || reels?.length || 0}
+                  {reels?.length || 0}
                 </Text>
                 <Text style={[styles.statLabel, {color: textColor}]}>
                   Reels
@@ -656,17 +535,7 @@ const Profile = () => {
               </View>
               <View style={styles.statItem}>
                 <Text style={[styles.statNumber, {color: textColor}]}>
-                  {followersCount}
-                </Text>
-                <Text style={[styles.statLabel, {color: textColor}]}>
-                  Followers
-                </Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={[styles.statNumber, {color: textColor}]}>
-                  {merchantStats?.total_likes ||
-                    reels?.reduce((sum, reel) => sum + (reel.likes || 0), 0) ||
-                    0}
+                  {reels?.reduce((sum, reel) => sum + (reel.likes || 0), 0) || 0}
                 </Text>
                 <Text style={[styles.statLabel, {color: textColor}]}>
                   Likes
@@ -707,25 +576,9 @@ const Profile = () => {
               </TouchableOpacity>
             </View>
 
-            {/* Bio Section */}
-            {merchantProfile?.business_description ? (
-              <Text style={[styles.bio, {color: textColor}]}>
-                {merchantProfile.business_description}
-              </Text>
-            ) : (
-              <TouchableOpacity activeOpacity={0.7}>
-                <Text style={[styles.addBioText, {color: textColor}]}>
-                  Tap to add bio
-                </Text>
-              </TouchableOpacity>
-            )}
+          
 
-            {/* Content Display Option */}
-            <View style={styles.contentOptionContainer}>
-              <TouchableOpacity style={styles.contentOptionButton}>
-                <Ionicons name="videocam-outline" size={20} color={textColor} />
-              </TouchableOpacity>
-            </View>
+         
 
             {/* Reels Grid */}
             <View style={styles.postsGridContainer}>
@@ -880,11 +733,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   username: {
-    fontSize: moderateScale(18),
+    fontSize: moderateScale(20),
     fontWeight: '700',
-    textAlign: 'center',
-    marginTop: verticalScale(12),
     marginBottom: verticalScale(4),
+  },
+  nameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: verticalScale(4),
+  },
+  verifiedBadge: {
+    marginLeft: scale(4),
   },
   userHandle: {
     fontSize: moderateScale(14),
@@ -928,20 +788,8 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(12),
     marginTop: verticalScale(2),
   },
-  bio: {
-    fontSize: moderateScale(13),
-    lineHeight: moderateScale(18),
-    textAlign: 'center',
-    marginTop: verticalScale(8),
-    marginBottom: verticalScale(12),
-  },
-  addBioText: {
-    fontSize: moderateScale(13),
-    textAlign: 'center',
-    marginTop: verticalScale(8),
-    marginBottom: verticalScale(12),
-    opacity: 0.6,
-  },
+
+ 
   actionButtons: {
     flexDirection: 'row',
     gap: scale(8),
@@ -961,7 +809,6 @@ const styles = StyleSheet.create({
     width: moderateScale(44),
     height: moderateScale(44),
     borderRadius: moderateScale(8),
-    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -969,42 +816,7 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14),
     fontWeight: '600',
   },
-  followButton: {
-    flex: 1,
-    paddingVertical: verticalScale(8),
-    borderRadius: moderateScale(8),
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  followButtonText: {
-    fontSize: moderateScale(14),
-    fontWeight: '600',
-  },
-  messageButton: {
-    flex: 1,
-    paddingVertical: verticalScale(8),
-    borderRadius: moderateScale(8),
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  messageButtonText: {
-    fontSize: moderateScale(14),
-    fontWeight: '600',
-  },
-  shareButton: {
-    width: moderateScale(40),
-    height: moderateScale(40),
-    borderRadius: moderateScale(8),
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  contentOptionContainer: {
-    paddingHorizontal: scale(16),
-    paddingVertical: verticalScale(8),
-  },
+
   contentOptionButton: {
     alignSelf: 'flex-start',
   },
@@ -1154,25 +966,6 @@ const styles = StyleSheet.create({
     marginTop: verticalScale(8),
     fontSize: moderateScale(13),
     opacity: 0.6,
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: scale(8),
-    marginTop: verticalScale(16),
-    marginBottom: verticalScale(12),
-    paddingVertical: verticalScale(12),
-    paddingHorizontal: scale(20),
-    borderRadius: moderateScale(8),
-    borderWidth: 1,
-    backgroundColor: '#FFFFFF',
-    alignSelf: 'center',
-    minWidth: scale(120),
-  },
-  logoutButtonText: {
-    fontSize: moderateScale(14),
-    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,

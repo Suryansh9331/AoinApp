@@ -103,7 +103,7 @@ const Home = ({routeParams, initialReels}) => {
 
   useEffect(() => {
     fetchReels();
-  }, [fetchReels]);
+  }, []); // Remove fetchReels dependency to prevent repeated calls
 
   // Fetch unread notification count
   const fetchUnreadCount = useCallback(async () => {
@@ -143,13 +143,13 @@ const Home = ({routeParams, initialReels}) => {
 
   useEffect(() => {
     fetchUnreadCount();
-  }, [fetchUnreadCount]);
+  }, []); // Remove fetchUnreadCount dependency
 
   // Refresh count when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       fetchUnreadCount();
-    }, [fetchUnreadCount]),
+    }, []),
   );
 
   const showLoading = useMemo(

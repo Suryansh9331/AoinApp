@@ -102,7 +102,7 @@ const Search = () => {
 
   useEffect(() => {
     fetchTrendingData();
-  }, [fetchTrendingData]);
+  }, []);
 
   const renderHeaderRight = () => {
     return (

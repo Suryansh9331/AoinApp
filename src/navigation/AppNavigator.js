@@ -26,6 +26,7 @@ import MerchantSettings from '../screens/merchant/Settings';
 import HelpCenter from '../screens/user/HelpCenter';
 import MyProfile from '../screens/user/MyProfile';
 import EditProfile from '../screens/merchant/EditProfile';
+import MyProfileEdit from '../screens/user/MyProfileEdit';
 import PerticularReelProfile from '../screens/user/PerticularReelProfile';
 import Post from '../screens/merchant/Post';
 import Massages from '../screens/merchant/Massages';
@@ -204,6 +205,7 @@ const AppNavigator = () => {
         <Stack.Screen name="EditProfile" component={EditProfile} />
         <Stack.Screen name="MerchantSettings" component={MerchantSettings} />
         <Stack.Screen name="PerticularReelProfile" component={PerticularReelProfile} />
+        <Stack.Screen name="MyProfileEdit" component={MyProfileEdit} />
         <Stack.Screen 
           name="Post" 
           component={Post}
