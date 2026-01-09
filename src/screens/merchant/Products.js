@@ -69,7 +69,7 @@ const Products = () => {
     try {
       setLoading(true);
       const response = await getData(ROUTES.PRODUCTS_AVAILABLE);
-
+      
       if (response && response.status === 'success' && response.data) {
         const mappedProducts = response.data.map(item => ({
           id: item.product_id.toString(),

@@ -116,18 +116,17 @@ const VerifyOTP = ({ route }) => {
               refreshToken: refreshToken,
             })
           );
-
-          // Clear auth data first
-          await setObject(AUTH_STORAGE_KEY, null);
-          setAuthToken(null);
-          console.log("12323343",response)
-          // Show success message and navigate to login
-          Alert.alert('Success', response?.message || 'Account created successfully! Please login to continue.', [
+          
+          console.log("Registration successful, user logged in:", response)
+          // Show success message and navigate to home
+          Alert.alert('Registration Successful!', 'Your account has been created successfully!', [
             {
-              text: 'OK',
+              text: 'Continue',
               onPress: () => {
-                // Navigate to login screen
-                navigation.replace('Login');
+                // Navigate to home screen
+                navigation.replace('MerchantBottomTab', {
+                  screen: 'Home',
+                });
               },
             },
           ]);
