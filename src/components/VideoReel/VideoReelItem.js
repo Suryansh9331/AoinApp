@@ -12,28 +12,28 @@ import {
 } from 'react-native';
 import Video from 'react-native-video';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
-import { Colors } from '../../utils/Colors';
+import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
+import {Colors} from '../../utils/Colors';
 import useAppTheme from '../../theme/useAppTheme';
-import { getThemeColors } from '../../theme/themeColors';
-import { useNavigation } from '@react-navigation/native';
-import { useSelector, useDispatch } from 'react-redux';
+import {getThemeColors} from '../../theme/themeColors';
+import {useNavigation} from '@react-navigation/native';
+import {useSelector, useDispatch} from 'react-redux';
 import {
   likeReel_Request,
   unlikeReel_Request,
   shareReel_Request,
 } from '../../redux/slices/reelSlice';
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const {width: SCREEN_WIDTH, height: SCREEN_HEIGHT} = Dimensions.get('window');
 
-const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
+const VideoReelItem = ({item, isActive, onLike, onShare, itemHeight}) => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const userData = useSelector(state => state.auth.data);
   const userRole = userData?.data?.role || userData?.role || 'user';
   const theme = useAppTheme();
-  const { backgroundColor, textColor } = getThemeColors(theme);
+  const {backgroundColor, textColor} = getThemeColors(theme);
   // Convert isLiked to boolean (handle string "true"/"false" from API)
-  const getIsLiked = (value) => {
+  const getIsLiked = value => {
     if (typeof value === 'boolean') return value;
     if (typeof value === 'string') return value.toLowerCase() === 'true';
     return false;
@@ -103,11 +103,11 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
   const handleLike = () => {
     const newLikedState = !isLiked;
     const reelId = item.reel_id || item.id;
-    
+
     // Optimistically update UI
     setIsLiked(newLikedState);
-    setLikes(prev => newLikedState ? prev + 1 : prev - 1);
-    
+    setLikes(prev => (newLikedState ? prev + 1 : prev - 1));
+
     // Animate like button
     Animated.sequence([
       Animated.parallel([
@@ -136,9 +136,9 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
 
     // Dispatch Redux action
     if (newLikedState) {
-      dispatch(likeReel_Request({ reelId }));
+      dispatch(likeReel_Request({reelId}));
     } else {
-      dispatch(unlikeReel_Request({ reelId }));
+      dispatch(unlikeReel_Request({reelId}));
     }
 
     // Callback for parent component
@@ -151,7 +151,7 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
     if (!isLiked) {
       handleLike();
     }
-    
+
     // Show double tap animation
     Animated.sequence([
       Animated.parallel([
@@ -171,10 +171,10 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
 
   const handleShare = async () => {
     const reelId = item.reel_id || item.id;
-    
+
     try {
       // Dispatch share action to API
-      dispatch(shareReel_Request({ reelId }));
+      dispatch(shareReel_Request({reelId}));
 
       // Native share functionality
       const result = await Share.share({
@@ -192,7 +192,7 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
     }
   };
 
-  const formatNumber = (num) => {
+  const formatNumber = num => {
     if (num >= 1000000) {
       return (num / 1000000).toFixed(1) + 'M';
     } else if (num >= 1000) {
@@ -242,16 +242,22 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
       }
     }
   };
+  console.log('>>>>>>>>>> REEL DEBUG <<<<<<<<<<');
+  console.log('ID:', item.reel_id || item.id);
+  console.log('URL:', item.videoUrl);
 
   return (
-    <View style={[styles.container, { backgroundColor: '#000', height: itemHeight || SCREEN_HEIGHT }]}>
+    <View
+      style={[
+        styles.container,
+        {backgroundColor: '#000', height: itemHeight || SCREEN_HEIGHT},
+      ]}>
       <TouchableOpacity
         activeOpacity={1}
         style={styles.videoContainer}
-        onPress={handleVideoPress}
-      >
+        onPress={handleVideoPress}>
         <Video
-          source={{ uri: item.videoUrl }}
+          source={{uri: item.videoUrl}}
           style={styles.video}
           resizeMode="cover"
           paused={!isPlaying}
@@ -260,7 +266,7 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
           playInBackground={false}
           playWhenInactive={false}
           ignoreSilentSwitch="ignore"
-          onError={(error) => {
+          onError={error => {
             console.error('Video error:', error);
           }}
           onLoad={() => {
@@ -274,11 +280,10 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
             styles.doubleTapHeart,
             {
               opacity: doubleTapOpacity,
-              transform: [{ scale: doubleTapOpacity }],
+              transform: [{scale: doubleTapOpacity}],
             },
           ]}
-          pointerEvents="none"
-        >
+          pointerEvents="none">
           <Ionicons name="heart" size={80} color="#FF3040" />
         </Animated.View>
 
@@ -344,29 +349,25 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
       {/* Right side action buttons */}
       <View style={styles.rightActions}>
         {/* User Avatar */}
-        <TouchableOpacity 
-          style={styles.avatarContainer} 
+        <TouchableOpacity
+          style={styles.avatarContainer}
           onPress={() => {
             if (userRole === 'merchant') {
               // For merchant, navigate to Profile tab
-              navigation.navigate('MerchantBottomTab', { 
+              navigation.navigate('MerchantBottomTab', {
                 navigateToTab: 'Profile',
-                userId: item.merchant_id || item.userId || item.id 
+                userId: item.merchant_id || item.userId || item.id,
               });
             } else {
               // For user, navigate to PerticularReelProfile screen
               navigation.navigate('PerticularReelProfile', {
                 userId: item.merchant_id || item.userId || item.id,
-                merchantId: item.merchant_id || item.userId || item.id 
+                merchantId: item.merchant_id || item.userId || item.id,
               });
             }
           }}
-          activeOpacity={0.7}
-        >
-          <Image
-            source={{ uri: item.userAvatar }}
-            style={styles.avatar}
-          />
+          activeOpacity={0.7}>
+          <Image source={{uri: item.userAvatar}} style={styles.avatar} />
           <View style={styles.followButton}>
             <Ionicons name="add" size={16} color="#FFFFFF" />
           </View>
@@ -376,28 +377,22 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
         <TouchableOpacity
           style={styles.actionButton}
           onPress={handleLike}
-          activeOpacity={0.7}
-        >
+          activeOpacity={0.7}>
           <Animated.View
             style={[
               styles.actionIconContainer,
               {
-                transform: [{ scale: likeScale }],
+                transform: [{scale: likeScale}],
               },
-            ]}
-          >
+            ]}>
             <Ionicons
               name={isLiked ? 'heart' : 'heart-outline'}
               size={moderateScale(32)}
               color={isLiked ? '#FF3040' : '#FFFFFF'}
             />
             <Animated.View
-              style={[
-                styles.likeAnimation,
-                { opacity: likeOpacity },
-              ]}
-              pointerEvents="none"
-            >
+              style={[styles.likeAnimation, {opacity: likeOpacity}]}
+              pointerEvents="none">
               <Ionicons name="heart" size={moderateScale(40)} color="#FF3040" />
             </Animated.View>
           </Animated.View>
@@ -408,8 +403,7 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
         <TouchableOpacity
           style={styles.actionButton}
           onPress={handleShare}
-          activeOpacity={0.7}
-        >
+          activeOpacity={0.7}>
           <Ionicons
             name="paper-plane-outline"
             size={moderateScale(32)}
@@ -427,6 +421,26 @@ const VideoReelItem = ({ item, isActive, onLike, onShare, itemHeight }) => {
         <Text style={styles.caption} numberOfLines={2}>
           {item.caption}
         </Text>
+        {item?.product_id && (
+          <Animated.View
+            style={{
+              transform: [{scale: buyPulse}],
+              marginTop: verticalScale(10),
+              alignSelf: 'flex-start',
+            }}>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() =>
+                Linking.openURL(
+                  `https://aoinstore.com/product/${item.product_id}`,
+                )
+              }
+              style={styles.buyButton}>
+              <Text style={styles.buyButtonText}>Buy Now</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+
         <View style={styles.musicInfo}>
           <Ionicons name="musical-notes" size={16} color="#FFFFFF" />
           <Text style={styles.musicText}>Original Audio</Text>
@@ -583,9 +597,25 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(13),
     fontWeight: '500',
   },
+
+  buyButton: {
+    backgroundColor: '#F2631F',
+    paddingVertical: verticalScale(10),
+    paddingHorizontal: scale(22),
+    borderRadius: scale(24),
+    shadowColor: '#F2631F',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+
+  buyButtonText: {
+    color: '#FFFFFF',
+    fontSize: moderateScale(14),
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
 });
 
 export default VideoReelItem;
-
-
-
