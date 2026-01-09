@@ -43,7 +43,9 @@ const Register = ({ route }) => {
       setTimeout(() => {
         setLoading(false);
         Alert.alert('Success', 'Registration successful!');
-        navigation.navigate('Login');
+        navigation.navigate('MerchantBottomTab', {
+          screen: 'Home',
+        });
       }, 2000);
     } else {
       // Phone signup
@@ -101,12 +103,18 @@ const Register = ({ route }) => {
           const errorData = error?.data || {};
           const backendError = errorData?.error || errorData?.message || '';
           
-          if (backendError.includes('user_id') || backendError.includes('database') || backendError.includes('SQL')) {
+          if (backendError.includes('unverified') && backendError.includes('Trial accounts')) {
+            errorTitle = 'Phone Number Not Verified';
+            errorMessage = 'This phone number is not verified for trial accounts. Please use a verified number or contact support.';
+          } else if (backendError.includes('twilio.com/user/account/phone-numbers/verified')) {
+            errorTitle = 'Phone Number Verification Required';
+            errorMessage = 'Please verify your phone number at twilio.com/user/account/phone-numbers/verified or purchase a Twilio number to send messages.';
+          } else if (backendError.includes('user_id') || backendError.includes('database') || backendError.includes('SQL')) {
             errorTitle = 'Service Temporarily Unavailable';
             errorMessage = 'We are experiencing a technical issue. Please try again in a few moments.\n\nIf the problem continues, please contact support.';
           } else {
             errorTitle = 'Server Error';
-            errorMessage = 'Server error occurred. Please try again.\n\nIf the issue persists, please contact support.';
+            errorMessage = 'Server error occurred. Please try again.\n\nIf issue persists, please contact support.';
           }
         } else if (error?.status === 400) {
           errorMessage = error?.message || 'Invalid phone number. Please check and try again.';

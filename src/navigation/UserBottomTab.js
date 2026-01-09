@@ -9,8 +9,8 @@ import useAppTheme from '../theme/useAppTheme';
 import { getThemeColors } from '../theme/themeColors';
 import Home from '../screens/user/Home';
 import Explore from '../screens/user/Explore';
-import Notification from '../screens/user/Notification';
 import Profile from '../screens/user/Profile';
+import Settings from '../screens/user/Settings';
 
 const TAB_ITEMS = [
   {
@@ -26,12 +26,6 @@ const TAB_ITEMS = [
     icon: { Component: Ionicons, active: 'compass', inactive: 'compass-outline' },
   },
   {
-    key: 'Notification',
-    label: 'Notification',
-    component: Notification,
-    icon: { Component: Ionicons, active: 'notifications', inactive: 'notifications-outline' },
-  },
-  {
     key: 'Profile',
     label: 'Profile',
     component: Profile,
@@ -41,6 +35,13 @@ const TAB_ITEMS = [
       inactive: 'person-outline',
     },
   },
+  {
+    key: 'Settings',
+    label: 'Settings',
+    component: Settings,
+    icon: { Component: Ionicons, active: 'settings', inactive: 'settings-outline' },
+  },
+  
 ];
 
 const UserBottomTab = () => {

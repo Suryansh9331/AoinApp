@@ -21,6 +21,7 @@ export const ROUTES = Object.freeze({
   MERCHANT_FOLLOW: '/api/merchants/{merchant_id}/follow',
   MERCHANT_UNFOLLOW: '/api/merchants/{merchant_id}/unfollow',
   MERCHANT_FOLLOW_LIST: '/api/merchants/following',
+  MERCHANT_FOLLOWERS: '/api/merchants/followers',
   GET_TRENDING_LIST:'/api/reels/feed/trending',
   NOTIFICATIONS_UNREAD_COUNT: '/api/merchants/notifications/unread-count',
   NOTIFICATIONS: 'api/merchants/notifications',

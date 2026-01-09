@@ -58,6 +58,8 @@ const Profile = () => {
   const [merchantProfile, setMerchantProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState(null);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followersData, setFollowersData] = useState([]);
 
   // Fetch merchant profile
   const fetchMerchantProfile = useCallback(async () => {
@@ -79,28 +81,58 @@ const Profile = () => {
     }
   }, []);
 
+  // Fetch followers count
+  const fetchFollowersCount = useCallback(async () => {
+    if (!merchantId) {
+      return;
+    }
+
+    try {
+      const response = await getData(`${ROUTES.MERCHANT_FOLLOWERS}?page=1&per_page=20`);
+      console.log("Followers Response:", response);
+      
+      if (response && response.status === 'success') {
+        setFollowersCount(response.total_followers || 0);
+        setFollowersData(response.data || []);
+      } else if (response && response.total_followers !== undefined) {
+        setFollowersCount(response.total_followers);
+        setFollowersData(response.data || []);
+      }
+    } catch (error) {
+      console.log('Followers count fetch error:', error);
+      // Silently handle errors for followers count
+    }
+  }, [merchantId]);
+
   useEffect(() => {
     if (!merchantProfile) {
       fetchMerchantProfile();
+    }
+    if (merchantId) {
+      fetchFollowersCount();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [merchantId]);
 
   useFocusEffect(
     useCallback(() => {
-     
+      // Only fetch profile if not already loaded
       if (!merchantProfile) {
         fetchMerchantProfile();
       }
+      // Refresh followers count on focus
+      if (merchantId) {
+        fetchFollowersCount();
+      }
       
-      
+      // Add a small delay to prevent rapid successive calls for reels
       const timer = setTimeout(() => {
         dispatch(fetchMerchantReels_Request({page: 1, per_page: 20}));
       }, 300);
 
       return () => clearTimeout(timer);
-     
-    }, [dispatch, merchantId]),
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dispatch, merchantId, fetchFollowersCount]),
   );
 
   const formatViews = useCallback(views => {
@@ -531,6 +563,14 @@ const Profile = () => {
                 </Text>
                 <Text style={[styles.statLabel, {color: textColor}]}>
                   Reels
+                </Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={[styles.statNumber, {color: textColor}]}>
+                  {followersCount}
+                </Text>
+                <Text style={[styles.statLabel, {color: textColor}]}>
+                  Followers
                 </Text>
               </View>
               <View style={styles.statItem}>

@@ -67,15 +67,15 @@ const Profile = () => {
       },
       showArrow: true,
     },
-    {
-      id: '2',
-      title: 'Settings',
-      icon: 'settings-outline',
-      onPress: () => {
-        navigation.navigate('Settings');
-      },
-      showArrow: true,
-    },
+    // {
+    //   id: '2',
+    //   title: 'Settings',
+    //   icon: 'settings-outline',
+    //   onPress: () => {
+    //     navigation.navigate('Settings');
+    //   },
+    //   showArrow: true,
+    // },
     {
       id: '3',
       title: 'Help Center',
@@ -130,9 +130,6 @@ const Profile = () => {
             Account
           </Text>
         </View>
-        <TouchableOpacity style={styles.headerButton}>
-          <Ionicons name="notifications-outline" size={24} color={textColor} />
-        </TouchableOpacity>
       </View>
 
       {/* Menu Items List */}
