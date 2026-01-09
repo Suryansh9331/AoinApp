@@ -506,8 +506,7 @@ const VideoReelItem = ({item, isActive, onLike, onShare, itemHeight}) => {
   const [likes, setLikes] = useState(item.likes || 0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [showPauseIcon, setShowPauseIcon] = useState(false);
-
+  
   const likeScale = useRef(new Animated.Value(1)).current;
   const likeOpacity = useRef(new Animated.Value(0)).current;
   const doubleTapOpacity = useRef(new Animated.Value(0)).current;
@@ -732,15 +731,6 @@ const VideoReelItem = ({item, isActive, onLike, onShare, itemHeight}) => {
               <Ionicons name="play" size={moderateScale(32)} color="#FFFFFF" />
             </View>
           </TouchableOpacity>
-        )}
-
-        {/* Pause icon overlay when video is playing */}
-        {showPauseIcon && !isPaused && isPlaying && (
-          <View style={styles.pauseIconOverlay}>
-            <View style={styles.pauseIconContainer}>
-              <Ionicons name="pause" size={moderateScale(32)} color="#FFFFFF" />
-            </View>
-          </View>
         )}
 
       </TouchableOpacity>
