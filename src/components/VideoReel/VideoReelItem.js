@@ -9,6 +9,7 @@ import {
   Animated,
   Share,
   Platform,
+  Linking,
 } from 'react-native';
 import Video from 'react-native-video';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -50,6 +51,7 @@ const VideoReelItem = ({item, isActive, onLike, onShare, itemHeight}) => {
   const likeScale = useRef(new Animated.Value(1)).current;
   const likeOpacity = useRef(new Animated.Value(0)).current;
   const doubleTapOpacity = useRef(new Animated.Value(0)).current;
+  const buyPulse = useRef(new Animated.Value(1)).current;
   const lastTap = useRef(null);
 
   // Function to show controls and hide after 3-4 seconds
@@ -242,10 +244,7 @@ const VideoReelItem = ({item, isActive, onLike, onShare, itemHeight}) => {
       }
     }
   };
-  console.log('>>>>>>>>>> REEL DEBUG <<<<<<<<<<');
-  console.log('ID:', item.reel_id || item.id);
-  console.log('URL:', item.videoUrl);
-
+  
   return (
     <View
       style={[
