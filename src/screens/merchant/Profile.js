@@ -844,7 +844,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     borderRadius: moderateScale(4),
     padding: scale(4),
-  },
+  },   
   menuButton: {
     position: 'absolute',
     top: scale(6),
