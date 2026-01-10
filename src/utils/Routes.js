@@ -34,7 +34,9 @@ export const ROUTES = Object.freeze({
   MERCHANT_FOLLOWERS_COUNT: '/api/merchants/',
   MERCHANT_PUBLIC_PROFILE: '/api/merchants/',
   MERCHANT_STATS: '/api/reels/merchant/',
+  MERCHANT_STATS_DETAIL: '/api/reels/merchant/',
   USER_PROFILE: '/api/users/profile',
+  USER_PROFILE_IMAGE: '/api/users/profile/image',
   GOOGLE_LOGIN: 'https://api.aoinstore.com/api/auth/google',
 });
 

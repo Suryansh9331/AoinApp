@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback, useMemo} from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,27 +10,27 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
-import {SafeAreaView} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native';
 import Header from '../../components/Header/Header';
-import {useSelector} from 'react-redux';
+import { useSelector } from 'react-redux';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
+import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import useAppTheme from '../../theme/useAppTheme';
-import {getThemeColors} from '../../theme/themeColors';
-import {Colors} from '../../utils/Colors';
-import {launchImageLibrary} from 'react-native-image-picker';
-import {StatusBar} from 'react-native';
-import {getData, putData} from '../../utils/APiCall';
-import {ROUTES} from '../../utils/Routes';
+import { getThemeColors } from '../../theme/themeColors';
+import { Colors } from '../../utils/Colors';
+import { launchImageLibrary } from 'react-native-image-picker';
+import { StatusBar } from 'react-native';
+import { getData, putData, uploadFormData } from '../../utils/APiCall';
+import { ROUTES } from '../../utils/Routes';
 import Input from '../../components/reuseable/Input';
 
 const EditProfile = () => {
   const theme = useAppTheme();
-  const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
+  const { backgroundColor, textColor, borderColor } = getThemeColors(theme);
   const navigation = useNavigation();
   const userData = useSelector(state => state.auth.data);
-  
+
   // Get merchant_id from logged-in user data
   const merchantId = useMemo(() => {
     const userInfo = userData?.data || userData || {};
@@ -46,11 +46,11 @@ const EditProfile = () => {
   const fetchMerchantProfile = useCallback(async () => {
     setProfileLoading(true);
     setProfileError(null);
-    
+
     try {
       const response = await getData(ROUTES.MERCHANT_PROFILE);
-      console.log("Edit Profile Response:", response);
-      
+       console.log(response)
+
       if (response && response.profile) {
         setMerchantProfile(response.profile);
       } else {
@@ -83,7 +83,9 @@ const EditProfile = () => {
   const [profileImage, setProfileImage] = useState(
     merchantProfile?.profile_img || 'https://i.pravatar.cc/150?img=1',
   );
-  
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
+  const [imageUploading, setImageUploading] = useState(false);
+
   // Additional fields for PUT request
   const [countryCode, setCountryCode] = useState(merchantProfile?.country_code || 'IN');
   const [stateProvince, setStateProvince] = useState(merchantProfile?.state_province || '');
@@ -137,23 +139,78 @@ const EditProfile = () => {
       }
       if (response.assets && response.assets.length > 0) {
         const image = response.assets[0];
+       
         setProfileImage(image.uri);
+        setSelectedImageFile(image);
       }
     });
   };
 
+  const uploadProfileImage = async () => {
+    if (!selectedImageFile) {
+      return null;
+    }
+
+    try {
+      setImageUploading(true);
+
+
+      const formData = new FormData();
+
+
+      formData.append('profile_image', {
+        uri: selectedImageFile.uri,
+        type: selectedImageFile.type || 'image/jpeg',
+        name: selectedImageFile.fileName || 'profile_image.jpg',
+      });
+
+
+
+
+      const response = await uploadFormData(ROUTES.USER_PROFILE_IMAGE, formData);
+
+
+      if (response && response.message === "Profile image uploaded successfully") {
+
+        setSelectedImageFile(null);
+        return response.profile_img_url;
+      } else {
+       
+        throw new Error('Upload failed - unexpected response');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      // Only show error alert if it's a real upload error, not if we're just returning null
+      if (error.message !== 'Upload failed - unexpected response') {
+        Alert.alert('Error', 'Failed to upload profile image');
+      }
+      return null;
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
   const handleSave = async () => {
     try {
-      // Check if username has changed
+     
+      let uploadedImageUrl = null;
+      if (selectedImageFile) {
+        uploadedImageUrl = await uploadProfileImage();
+        if (!uploadedImageUrl) {
+          
+          return;
+        }
+      }
+
+   
       const originalUsername = merchantProfile?.username || '';
       const currentUsername = username.replace('@', '');
-      
-      // Build request body conditionally
+
       const requestBody = {
         business_name: name,
         business_description: bio,
         business_address: storeAddress,
-        profile_img: profileImage,
+        profile_img: uploadedImageUrl || profileImage, // Use uploaded URL or current image
         country_code: countryCode,
         state_province: stateProvince,
         city: city,
@@ -166,15 +223,14 @@ const EditProfile = () => {
         bank_ifsc_code: bankIfscCode,
       };
 
-      // Only include username if it has changed
       if (currentUsername !== originalUsername) {
         requestBody.username = currentUsername;
       }
 
-      console.log('Updating profile with:', requestBody);
-      
+     
+
       const response = await putData(ROUTES.MERCHANT_PROFILE, requestBody);
-      
+
       if (response && response.status === 'success') {
         Alert.alert('Success', 'Profile updated successfully!', [
           {
@@ -187,11 +243,10 @@ const EditProfile = () => {
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      
-      // Handle specific username restriction error
+
       if (error?.message?.includes('Username can only be updated once per year')) {
         Alert.alert(
-          'Username Update Restricted', 
+          'Username Update Restricted',
           'Username can only be updated once per year. Other profile information will still be updated.',
           [
             {
@@ -232,10 +287,10 @@ const EditProfile = () => {
         bank_ifsc_code: bankIfscCode,
       };
 
-      console.log('Updating profile without username:', requestBody);
       
+
       const response = await putData(ROUTES.MERCHANT_PROFILE, requestBody);
-      
+
       if (response && response.status === 'success') {
         Alert.alert('Success', 'Profile updated successfully! (Username unchanged)', [
           {
@@ -257,8 +312,8 @@ const EditProfile = () => {
   };
 
   return (
-    <View style={[styles.container, {backgroundColor}]}>
-      <SafeAreaView style={{backgroundColor}}>
+    <View style={[styles.container, { backgroundColor }]}>
+      <SafeAreaView style={{ backgroundColor }}>
         <Header
           title="Edit Profile"
           leftType="back"
@@ -267,26 +322,26 @@ const EditProfile = () => {
             backgroundColor,
             borderBottomWidth: 0,
           }}
-          titleStyle={{color: textColor}}
+          titleStyle={{ color: textColor }}
         />
       </SafeAreaView>
 
       {profileLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.PRIMARY} />
-          <Text style={[styles.loadingText, {color: textColor}]}>
+          <Text style={[styles.loadingText, { color: textColor }]}>
             Loading profile...
           </Text>
         </View>
       ) : profileError ? (
         <View style={styles.errorContainer}>
-          <Text style={[styles.errorText, {color: Colors.PRIMARY}]}>
+          <Text style={[styles.errorText, { color: Colors.PRIMARY }]}>
             {profileError}
           </Text>
           <TouchableOpacity
-            style={[styles.retryButton, {borderColor: borderColor}]}
+            style={[styles.retryButton, { borderColor: borderColor }]}
             onPress={fetchMerchantProfile}>
-            <Text style={[styles.retryButtonText, {color: Colors.PRIMARY}]}>
+            <Text style={[styles.retryButtonText, { color: Colors.PRIMARY }]}>
               Retry
             </Text>
           </TouchableOpacity>
@@ -299,20 +354,28 @@ const EditProfile = () => {
             contentContainerStyle={styles.scrollContent}>
             <View style={styles.profilePictureSection}>
               <View style={styles.profilePictureContainer}>
-                <Image source={{uri: profileImage}} style={styles.profilePicture} />
+                <Image source={{ uri: profileImage }} style={styles.profilePicture} />
+                {imageUploading && (
+                  <View style={styles.uploadingOverlay}>
+                    <ActivityIndicator size="large" color="#FFFFFF" />
+                    <Text style={styles.uploadingText}>Uploading...</Text>
+                  </View>
+                )}
                 <TouchableOpacity
                   style={styles.cameraIconContainer}
                   onPress={handleChangePhoto}
-                  activeOpacity={0.8}>
+                  activeOpacity={0.8}
+                  disabled={imageUploading}>
                   <Ionicons name="camera" size={20} color="#FFFFFF" />
                 </TouchableOpacity>
               </View>
               <TouchableOpacity
                 onPress={handleChangePhoto}
                 activeOpacity={0.7}
-                style={styles.changePhotoButton}>
-                <Text style={[styles.changePhotoText, {color: textColor}]}>
-                  Change photo
+                style={styles.changePhotoButton}
+                disabled={imageUploading}>
+                <Text style={[styles.changePhotoText, { color: textColor }]}>
+                  {imageUploading ? 'Uploading...' : 'Change photo'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -428,7 +491,7 @@ const EditProfile = () => {
 
           {/* Action Buttons */}
           <View
-            style={[styles.actionButtonsContainer, {borderTopColor: borderColor}]}>
+            style={[styles.actionButtonsContainer, { borderTopColor: borderColor }]}>
             <TouchableOpacity
               style={[
                 styles.cancelButton,
@@ -439,7 +502,7 @@ const EditProfile = () => {
               ]}
               onPress={handleCancel}
               activeOpacity={0.7}>
-              <Text style={[styles.cancelButtonText, {color: textColor}]}>
+              <Text style={[styles.cancelButtonText, { color: textColor }]}>
                 Cancel
               </Text>
             </TouchableOpacity>
@@ -585,6 +648,23 @@ const styles = StyleSheet.create({
   retryButtonText: {
     fontSize: moderateScale(14),
     fontWeight: '600',
+  },
+  uploadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: moderateScale(75),
+  },
+  uploadingText: {
+    color: '#FFFFFF',
+    fontSize: moderateScale(12),
+    marginTop: verticalScale(8),
+    fontWeight: '500',
   },
 });
 

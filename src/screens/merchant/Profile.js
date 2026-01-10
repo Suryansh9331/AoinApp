@@ -56,7 +56,7 @@ const Profile = () => {
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
   const userData = useSelector(state => state.auth.data);
-  
+  console.log("User Data:",userData)
   // Local state for reels instead of Redux
   const [reels, setReels] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -72,6 +72,7 @@ const Profile = () => {
   const [profileError, setProfileError] = useState(null);
   const [followersCount, setFollowersCount] = useState(0);
   const [followersData, setFollowersData] = useState([]);
+  const [merchantStats, setMerchantStats] = useState(null);
 
   const fetchMerchantProfile = useCallback(async () => {
     setProfileLoading(true);
@@ -99,7 +100,7 @@ const Profile = () => {
 
     try {
       const response = await getData(`${ROUTES.MERCHANT_FOLLOWERS}?page=1&per_page=20`);
-      console.log("Followers Response:", response);
+      // console.log("Followers Response:", response);
       
       if (response && response.status === 'success') {
         setFollowersCount(response.total_followers || 0);
@@ -114,12 +115,33 @@ const Profile = () => {
     }
   }, [merchantId]);
 
+  const fetchMerchantStats = useCallback(async () => {
+    if (!merchantId) {
+      return;
+    }
+
+    try {
+      const response = await getData(`${ROUTES.MERCHANT_STATS_DETAIL}${merchantId}/stats`);
+      console.log('Merchant Stats Response:', response);
+      
+      if (response && response.status === 'success') {
+        setMerchantStats(response.data || response);
+      } else if (response.likes_count !== undefined || response.shares_count !== undefined) {
+        setMerchantStats(response);
+      }
+    } catch (error) {
+      console.log('Merchant stats fetch error:', error);
+      // Silently handle errors for stats
+    }
+  }, [merchantId]);
+
   useEffect(() => {
     if (!merchantProfile) {
       fetchMerchantProfile();
     }
     if (merchantId) {
       fetchFollowersCount();
+      fetchMerchantStats();
     }
    
   }, [merchantId]);
@@ -647,12 +669,14 @@ const Profile = () => {
               </View>
               <View style={styles.statItem}>
                 <Text style={[styles.statNumber, {color: textColor}]}>
-                  {reels?.reduce((sum, reel) => sum + (reel.likes || 0), 0) || 0}
+                  {merchantStats?.likes_count || 0}
                 </Text>
                 <Text style={[styles.statLabel, {color: textColor}]}>
                   Likes
                 </Text>
               </View>
+              
+              
             </View>
 
             {/* Action Buttons */}

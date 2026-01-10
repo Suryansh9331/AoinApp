@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   TextInput,
   FlatList,
+  StatusBar,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -18,6 +19,7 @@ import useAppTheme from '../../theme/useAppTheme';
 import {getThemeColors} from '../../theme/themeColors';
 import {moderateScale, verticalScale, scale} from 'react-native-size-matters';
 import Header from '../../components/Header/Header';
+import VideoReel from '../../components/VideoReel/VideoReel';
 import {getData} from '../../utils/APiCall';
 import {ROUTES} from '../../utils/Routes';
 import {Colors} from '../../utils/Colors';
@@ -33,6 +35,9 @@ const Search = () => {
   const [recentlyViewedLoading, setRecentlyViewedLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showTrendingReels, setShowTrendingReels] = useState(false);
+  const [selectedReelId, setSelectedReelId] = useState(null);
+  const [clickedReelId, setClickedReelId] = useState(null);
 
   // Dummy data for other sections
   const premiumSellers = [
@@ -91,9 +96,59 @@ const Search = () => {
       setLoading(true);
       const response = await getData(ROUTES.GET_TRENDING_LIST);
       if (response && response.status === 'success' && response.data) {
-        setTrendingData(response.data);
+        // Map trending data to match VideoReelItem expected structure
+        const mappedTrendingData = response.data.map((apiReel, index) => {
+          return {
+            id: apiReel.reel_id?.toString() || apiReel.id?.toString() || `trending-${index}`,
+            reel_id: apiReel.reel_id,
+            videoUrl: apiReel.video_url || apiReel.videoUrl,
+            thumbnail: apiReel.thumbnail_url || apiReel.thumbnail,
+            username: apiReel.merchant?.username || apiReel.merchant?.user_name || `merchant_${apiReel.merchant_id}` || 'User',
+            userAvatar: apiReel.merchant?.avatar || apiReel.merchant?.avatar_url || apiReel.product?.thumbnail_url || 'https://i.pravatar.cc/150?img=1',
+            caption: apiReel.description || '',
+            likes: apiReel.likes_count || 0,
+            comments: apiReel.comments_count || 0,
+            shares: apiReel.shares_count || 0,
+            views: apiReel.views_count || 0,
+            isLiked: apiReel.is_liked || false,
+            duration: apiReel.duration_seconds || 0,
+            product: apiReel.product || null,
+            product_id: apiReel.product_id,
+            merchant_id: apiReel.merchant_id,
+            approval_status: apiReel.approval_status,
+            is_active: apiReel.is_active,
+            created_at: apiReel.created_at,
+            updated_at: apiReel.updated_at,
+          };
+        });
+        setTrendingData(mappedTrendingData);
       } else if (Array.isArray(response)) {
-        setTrendingData(response);
+      
+        const mappedTrendingData = response.map((apiReel, index) => {
+          return {
+            id: apiReel.reel_id?.toString() || apiReel.id?.toString() || `trending-${index}`,
+            reel_id: apiReel.reel_id,
+            videoUrl: apiReel.video_url || apiReel.videoUrl,
+            thumbnail: apiReel.thumbnail_url || apiReel.thumbnail,
+            username: apiReel.merchant?.username || apiReel.merchant?.user_name || `merchant_${apiReel.merchant_id}` || 'User',
+            userAvatar: apiReel.merchant?.avatar || apiReel.merchant?.avatar_url || apiReel.product?.thumbnail_url || 'https://i.pravatar.cc/150?img=1',
+            caption: apiReel.description || '',
+            likes: apiReel.likes_count || 0,
+            comments: apiReel.comments_count || 0,
+            shares: apiReel.shares_count || 0,
+            views: apiReel.views_count || 0,
+            isLiked: apiReel.is_liked || false,
+            duration: apiReel.duration_seconds || 0,
+            product: apiReel.product || null,
+            product_id: apiReel.product_id,
+            merchant_id: apiReel.merchant_id,
+            approval_status: apiReel.approval_status,
+            is_active: apiReel.is_active,
+            created_at: apiReel.created_at,
+            updated_at: apiReel.updated_at,
+          };
+        });
+        setTrendingData(mappedTrendingData);
       }
     } catch (error) {
       console.error('Error fetching trending data:', error);
@@ -159,18 +214,25 @@ const Search = () => {
     </TouchableOpacity>
   );
 
-  // Render product card with play button
+  
   const renderProductCard = (item, index) => {
-    // Use thumbnail_url if available, otherwise fallback to video_url or thumbnail
+  
     const thumbnail = item.thumbnail_url || item.video_url || item.thumbnail;
+    const reelId = item.id || item.reel_id;
+    
+    
+    
     return (
       <TouchableOpacity
-        key={item.id || item.reel_id || index}
+        key={reelId || index}
         style={styles.productCard}
         activeOpacity={0.8}
         onPress={() => {
-          // Navigate to reel detail or play video
-          // Disabled for now - no navigation needed
+          
+          const reelId = item.id || item.reel_id;
+        
+          setClickedReelId(reelId);
+          setShowTrendingReels(true);
         }}>
         <Image
           source={{uri: thumbnail || 'https://via.placeholder.com/200x300'}}
@@ -336,9 +398,28 @@ const Search = () => {
 
         {/* Trending Now Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, {color: textColor}]}>
-            Trending Now
-          </Text>
+          <TouchableOpacity
+            style={styles.sectionHeader}
+            onPress={() => {
+              if (trendingData.length > 0) {
+                setClickedReelId(null); // Reset to show first reel
+                setShowTrendingReels(true);
+              }
+            }}>
+            <Text style={[styles.sectionTitle, {color: textColor}]}>
+              Trending Now
+            </Text>
+            <View style={styles.seeAllContainer}>
+              <Text style={[styles.seeAllText, {color: Colors.PRIMARY}]}>
+                See All
+              </Text>
+              <Ionicons
+                name="chevron-forward"
+                size={moderateScale(16)}
+                color={Colors.PRIMARY}
+              />
+            </View>
+          </TouchableOpacity>
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={Colors.PRIMARY} />
@@ -387,6 +468,57 @@ const Search = () => {
           )}
         </View>
       </ScrollView>
+      
+      {/* Trending Reels Full Screen View */}
+      {showTrendingReels && (
+        <View style={styles.fullScreenReelsContainer}>
+          <StatusBar
+            barStyle="light-content"
+            backgroundColor="#000000"
+            translucent={false}
+          />
+          <SafeAreaView style={{backgroundColor: '#000000'}}>
+            <Header
+              title="Trending Reels"
+              leftType="back"
+              onLeftPress={() => {
+                setClickedReelId(null); // Reset when closing
+                setShowTrendingReels(false);
+              }}
+              leftContent={
+                <TouchableOpacity
+                  onPress={() => {
+                    setClickedReelId(null); // Reset when closing
+                    setShowTrendingReels(false);
+                  }}
+                  style={styles.backButton}>
+                  <Ionicons
+                    name="arrow-back"
+                    size={moderateScale(24)}
+                    color="#FFFFFF"
+                  />
+                </TouchableOpacity>
+              }
+              containerStyle={{
+                backgroundColor: '#000000',
+                borderBottomWidth: 0,
+              }}
+              titleStyle={{color: '#FFFFFF'}}
+            />
+          </SafeAreaView>
+          {trendingData.length > 0 ? (
+            <VideoReel
+              data={trendingData}
+              initialReelId={clickedReelId}
+              key={`trending-reels-${clickedReelId || 'first'}-${trendingData.length}`}
+            />
+          ) : (
+            <View style={styles.noReelsContainer}>
+              <Text style={styles.noReelsText}>No trending reels available</Text>
+            </View>
+          )}
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -460,6 +592,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: scale(16),
     marginBottom: verticalScale(12),
+  },
+  seeAllContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(4),
+  },
+  seeAllText: {
+    fontSize: moderateScale(14),
+    fontWeight: '500',
   },
   sectionTitle: {
     fontSize: moderateScale(18),
@@ -564,6 +705,34 @@ const styles = StyleSheet.create({
     color: Colors.PRIMARY,
     fontSize: moderateScale(11),
     fontWeight: '700',
+  },
+  fullScreenReelsContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#000000',
+    zIndex: 1000,
+    flex: 1,
+  },
+  backButton: {
+    width: moderateScale(44),
+    height: moderateScale(44),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  noReelsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000000',
+  },
+  noReelsText: {
+    color: '#FFFFFF',
+    fontSize: moderateScale(16),
+    textAlign: 'center',
   },
 });
 
