@@ -14,7 +14,6 @@ try {
   GoogleSignin =
     require('@react-native-google-signin/google-signin').GoogleSignin;
 } catch (e) {
-  console.log('❌ Google Sign In package not installed');
 }
 
 /**
@@ -30,10 +29,7 @@ export const configureGoogleSignIn = () => {
     forceCodeForRefreshToken: true,
   });
 
-  console.log(
-    '✅ Google Sign In configured with Web Client ID:',
-    GOOGLE_CLIENT_ID,
-  );
+  
 };
 
 /**
@@ -69,7 +65,6 @@ if (!idToken) {
   throw new Error('Google did not return an ID token');
 }
 
-console.log('🪪 Google ID Token length:', idToken.length);
 
 
     // Send ONLY what backend expects

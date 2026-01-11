@@ -95,6 +95,14 @@ const MerchantBottomTab = () => {
   // Render screen component
   const renderScreen = ({ item, index }) => {
     const ScreenComponent = item.component;
+    // Only render the active screen
+    if (index !== activeIndex) {
+      return (
+        <View style={[styles.slide, { backgroundColor }]}>
+          {/* Empty view for non-active screens */}
+        </View>
+      );
+    }
     return (
       <View style={[styles.slide, { backgroundColor }]}>
         <ScreenComponent
@@ -124,13 +132,7 @@ const MerchantBottomTab = () => {
         showsHorizontalScrollIndicator={false}
         getItemLayout={getItemLayout}
         initialScrollIndex={activeIndex}
-        onMomentumScrollEnd={(event) => {
-          const index = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-          if (index !== activeIndex && index >= 0 && index < TAB_ITEMS.length) {
-            setActiveIndex(index);
-          }
-        }}
-        scrollEnabled={true}
+        scrollEnabled={false}
         bounces={false}
       />
 

@@ -3,27 +3,32 @@ import { View, Text, ActivityIndicator, StatusBar, SafeAreaView } from 'react-na
 import { getData } from '../../utils/APiCall';
 import { ROUTES } from '../../utils/Routes';
 import VideoReel from '../../components/VideoReel/VideoReel';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import Header from '../../components/Header/Header';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 import { moderateScale } from 'react-native-size-matters';
 import { Colors } from '../../utils/Colors';
 import useAppTheme from '../../theme/useAppTheme';
 import { getThemeColors } from '../../theme/themeColors';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
-import { TouchableOpacity } from 'react-native';
+import { setReelsData } from '../../redux/slices/reelsSlice';
 
 const UserReelsView = () => {
      const theme = useAppTheme();
      const { backgroundColor } = getThemeColors(theme);
      const navigation = useNavigation();
+     const route = useRoute();
+     const dispatch = useDispatch();
      const [reels, setReels] = useState([]);
      const [loading, setLoading] = useState(false);
      const [error, setError] = useState(null);
      const [hasFetched, setHasFetched] = useState(false);
      const [unreadCount, setUnreadCount] = useState(0);
      const userData = useSelector(state => state.auth.data);
+     const reelsDataFromRedux = useSelector(state => state.reels?.reels || []);
+
+     // Get params from navigation
+     const { initialReelId = null, reels: passedReels = null } = route.params || {};
 
      const fetchMerchantReelsDirect = async (pageNum = 1, perPage = 20) => {
           try {
@@ -114,9 +119,39 @@ const UserReelsView = () => {
      }, [userData]);
 
      useEffect(() => {
-          loadReels();
+          // Use reels from Redux if available, otherwise use passed reels
+          const reelsToUse = reelsDataFromRedux.length > 0 ? reelsDataFromRedux : (passedReels || []);
+          
+          if (reelsToUse.length > 0) {
+               const formattedReels = reelsToUse.map(reel => ({
+                    id: reel.reel_id,
+                    reel_id: reel.reel_id,
+                    videoUrl: reel.video_url,
+                    thumbnailUrl: reel.thumbnail_url || 'https://i.pravatar.cc/150?img=1', // Handle null thumbnails
+                    caption: reel.description || '',
+                    username: userData?.username || 'merchant',
+                    userAvatar: userData?.profile_image || 'https://via.placeholder.com/100',
+                    likes: reel.likes_count || 0,
+                    shares: reel.shares_count || 0,
+                    views: reel.views_count || 0,
+                    isLiked: reel.is_liked || false,
+                    merchant_id: reel.merchant_id,
+                    product: reel.product,
+                    duration: reel.duration_seconds,
+                    createdAt: reel.created_at,
+                    updatedAt: reel.updated_at,
+                    approval_status: reel.approval_status,
+                    is_active: reel.is_active,
+                    is_visible: reel.is_visible
+               }));
+               setReels(formattedReels);
+               setHasFetched(true);
+          } else {
+               // Otherwise fetch reels from API
+               loadReels();
+          }
           fetchUnreadCount();
-     }, []);
+     }, [reelsDataFromRedux, passedReels, userData]);
 
      useFocusEffect(
           useCallback(() => {
@@ -160,6 +195,7 @@ const UserReelsView = () => {
                     <VideoReel
                          data={reels}
                          key={`user-reels-${reels.length}`}
+                         initialReelId={initialReelId}
                     />
                ) : (
                     <View style={styles.loadingContainer}>

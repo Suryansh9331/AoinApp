@@ -149,7 +149,7 @@ const MyProfileEdit = ({ route }) => {
         date_of_birth: dateOfBirth || '',
         gender: gender || '',
       };
-   console.log('Update Data:', updateData);
+   
       const response = await putData(`${BASE_URL}${ROUTES.USER_PROFILE}`, updateData);
       
       if (response) {

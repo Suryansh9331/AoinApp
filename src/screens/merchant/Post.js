@@ -71,10 +71,10 @@ const Post = ({ routeParams }) => {
 
   // Memoize product list rendering
   const renderProductItem = useCallback((product, index) => {
-    const isSelected = selectedProduct?.id === product.id;
+    const isSelected = selectedProduct?.product_id === product.product_id;
     return (
       <TouchableOpacity
-        key={product.id + index}
+        key={product.product_id + index}
         style={[
           styles.productItem,
           {borderBottomColor: borderColor},
@@ -87,18 +87,18 @@ const Post = ({ routeParams }) => {
         onPress={() => handleProductSelect(product)}
         activeOpacity={0.7}>
         <Image
-          source={{uri: product.image}}
+          source={{uri: product.primary_image}}
           style={styles.productImage}
         />
         <View style={styles.productDetails}>
           <Text style={[styles.productName, {color: textColor}]}>
-            {product.name}
+            {product.product_name}
           </Text>
           <Text style={[styles.productCategory, {color: textColor, opacity: 0.7}]}>
-            {product.category}
+            {product.category_name}
           </Text>
           <Text style={[styles.productPrice, {color: Colors.PRIMARY}]}>
-            {product.price}
+            ₹{product.selling_price}
           </Text>
         </View>
         {isSelected && (
@@ -243,8 +243,8 @@ const Post = ({ routeParams }) => {
           selling_price: item.selling_price,
           stock_qty: item.stock_qty,
           category_id: item.category_id,
-          // Use placeholder image if no image URL in API response
-          image: `https://picsum.photos/200/200?random=${item.product_id}`,
+          primary_image: item.primary_image,
+          image: item.primary_image, // Use real image instead of dummy
         }));
         
         setProducts(mappedProducts);
@@ -330,15 +330,12 @@ const Post = ({ routeParams }) => {
     };
 
     launchImageLibrary(options, response => {
-      console.log('Video picker response:', response);
       
       if (response.didCancel) {
-        console.log('User cancelled video picker');
         return;
       }
       
       if (response.errorCode) {
-        console.log('Video picker error:', response.errorCode, response.errorMessage);
         
         let errorTitle = 'Error';
         let errorMessage = 'Failed to select video';
@@ -391,11 +388,7 @@ const Post = ({ routeParams }) => {
           duration: video.duration,
         };
         setSelectedVideo(videoData);
-        console.log('Video selected successfully:', {
-          uri: video.uri,
-          type: video.type,
-          name: video.fileName,
-        });
+        
       }
     });
   }, []);
@@ -475,23 +468,17 @@ const Post = ({ routeParams }) => {
         formData.append('product_id', selectedProduct.product_id.toString());
         formData.append('description', description.trim());
 
-        console.log('Starting upload with form data:', {
-          video: { uri: selectedVideo.uri, type: selectedVideo.type },
-          product_id: selectedProduct.product_id,
-          description: description.trim().substring(0, 20) + '...',
-        });
+
 
         // Upload with progress tracking
         const response = await uploadFormData(
           ROUTES.UPLOAD_REEL, 
           formData,
           (progress) => {
-            console.log('Upload progress:', progress);
             setUploadProgress(progress);
           }
         );
         
-        console.log('Upload successful:', response);
         
         Alert.alert('Success', 'Video uploaded successfully!', [
           {
@@ -597,9 +584,7 @@ const Post = ({ routeParams }) => {
                       paused={true}
                       muted={true}
                       repeat={false}
-                      onLoad={() => {
-                        console.log('Video thumbnail loaded');
-                      }}
+                      
                       onError={(error) => {
                         console.log('Video thumbnail error:', error);
                       }}
@@ -622,14 +607,22 @@ const Post = ({ routeParams }) => {
               <View style={styles.productInfoContainer}>
                 {selectedProduct ? (
                   <>
+                    {/* Product Image */}
+                    <View style={styles.productImageContainer}>
+                      <Image
+                        source={{ uri: selectedProduct.primary_image }}
+                        style={styles.productImage}
+                        resizeMode="cover"
+                      />
+                    </View>
                     <Text style={[styles.productDescription, {color: textColor}]}>
-                      {selectedProduct.name}
+                      {selectedProduct.product_name}
                     </Text>
                     <Text style={[styles.productAttributes, {color: textColor}]}>
-                      Category: {selectedProduct.category}
+                      Category: {selectedProduct.category_name}
                     </Text>
                     <Text style={[styles.productAttributes, {color: textColor}]}>
-                      Price: {selectedProduct.price}
+                      Price: ₹{selectedProduct.selling_price}
                     </Text>
                   </>
                 ) : (
@@ -829,6 +822,18 @@ const styles = StyleSheet.create({
   productInfoContainer: {
     flex: 1,
     paddingVertical: verticalScale(8),
+  },
+  productImageContainer: {
+    width: moderateScale(80),
+    height: moderateScale(80),
+    borderRadius: moderateScale(8),
+    overflow: 'hidden',
+    marginBottom: verticalScale(12),
+    alignSelf: 'flex-start',
+  },
+  productImage: {
+    width: '100%',
+    height: '100%',
   },
   productDescription: {
     fontSize: moderateScale(13),

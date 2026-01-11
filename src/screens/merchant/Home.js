@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useRef, useCallback} from 'react';
+import React, {useState, useCallback, useMemo} from 'react';
 import {
   View,
   StyleSheet,
@@ -8,14 +8,12 @@ import {
   SafeAreaView,
   TouchableOpacity,
 } from 'react-native';
-import {useDispatch, useSelector} from 'react-redux';
 import {useRoute, useNavigation, useFocusEffect} from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import VideoReel from '../../components/VideoReel/VideoReel';
 import useAppTheme from '../../theme/useAppTheme';
 import {getThemeColors} from '../../theme/themeColors';
 import {moderateScale} from 'react-native-size-matters';
-import {fetchPublicReels_Request} from '../../redux/slices/reelSlice';
 import Header from '../../components/Header/Header';
 import {getData} from '../../utils/APiCall';
 import {ROUTES} from '../../utils/Routes';
@@ -24,59 +22,103 @@ import {Colors} from '../../utils/Colors';
 const Home = ({routeParams, initialReels}) => {
   const theme = useAppTheme();
   const {backgroundColor} = getThemeColors(theme);
-  const dispatch = useDispatch();
   const route = useRoute();
   const navigation = useNavigation();
-  const [hasFetched, setHasFetched] = React.useState(false);
-  const [unreadCount, setUnreadCount] = React.useState(0);
-
-  const {publicReels, publicReelsLoading, publicReelsError} = useSelector(
-    state => state.reels,
-  );
-  // console.log('publicReels', publicReels);
-  const authData = useSelector(state => state.auth);
-  const [currentReelId, setCurrentReelId] = React.useState(
+  
+  // State
+  const [publicReels, setPublicReels] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [currentReelId, setCurrentReelId] = useState(
     routeParams?.reelId || route.params?.reelId,
   );
-  const [preloadedReels, setPreloadedReels] = React.useState(
+  const [preloadedReels, setPreloadedReels] = useState(
     initialReels ||
       routeParams?.preloadedReels ||
       route.params?.preloadedReels ||
       [],
   );
 
-  const previousReelsRef = useRef([]);
-  const previousPreloadedRef = useRef([]);
-
-  React.useEffect(() => {
-    const newReelId = routeParams?.reelId || route.params?.reelId;
-    const newPreloadedReels =
-      initialReels ||
-      routeParams?.preloadedReels ||
-      route.params?.preloadedReels ||
-      [];
-
-    if (newReelId !== currentReelId) {
-      setCurrentReelId(newReelId);
+  // API call to fetch public reels
+  const fetchPublicReels = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getData(`${ROUTES.PUBLIC_REELS}?page=1&per_page=20`);
+      
+      if (response?.data) {
+        const mappedReels = response.data.map((apiReel, index) => ({
+          id: apiReel.reel_id?.toString() || apiReel.id?.toString() || `public-${index}`,
+          reel_id: apiReel.reel_id,
+          videoUrl: apiReel.video_url,
+          thumbnail: apiReel.thumbnail_url,
+          username: apiReel.merchant?.username || apiReel.merchant?.user_name || `merchant_${apiReel.merchant_id}` || 'User',
+          userAvatar: apiReel.merchant?.avatar || apiReel.merchant?.avatar_url || apiReel.product?.thumbnail_url || 'https://i.pravatar.cc/150?img=1',
+          caption: apiReel.description || '',
+          likes: apiReel.likes_count || 0,
+          comments: apiReel.comments_count || 0,
+          shares: apiReel.shares_count || 0,
+          views: apiReel.views_count || 0,
+          isLiked: apiReel.is_liked || false,
+          duration: apiReel.duration_seconds || 0,
+          product: apiReel.product || null,
+          product_id: apiReel.product_id,
+          merchant_id: apiReel.merchant_id,
+          approval_status: apiReel.approval_status,
+          is_active: apiReel.is_active,
+          created_at: apiReel.created_at,
+          updated_at: apiReel.updated_at,
+          video_format: apiReel.video_format,
+          file_size_bytes: apiReel.file_size_bytes,
+          resolution: apiReel.resolution,
+        }));
+        setPublicReels(mappedReels);
+      } else if (Array.isArray(response)) {
+        setPublicReels(response);
+      } else {
+        setPublicReels([]);
+      }
+    } catch (error) {
+      console.error('Error fetching public reels:', error);
+      setError(error?.message || 'Failed to fetch reels');
+      setPublicReels([]);
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    const currentIds = previousPreloadedRef.current
-      .map(r => r.id || r.reel_id)
-      .sort()
-      .join(',');
-    const newIds = newPreloadedReels
-      .map(r => r.id || r.reel_id)
-      .sort()
-      .join(',');
-    const preloadedChanged = currentIds !== newIds;
-
-    if (preloadedChanged) {
-      setPreloadedReels(newPreloadedReels);
-      previousPreloadedRef.current = newPreloadedReels;
+  // API call to fetch unread notification count
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const response = await getData(ROUTES.NOTIFICATIONS_UNREAD_COUNT);
+      
+      if (response?.status === 'success' && response?.data) {
+        const count = typeof response.data === 'number' 
+          ? response.data 
+          : response.data.count || response.data.unread_count || 0;
+        setUnreadCount(count);
+      } else if (typeof response === 'number') {
+        setUnreadCount(response);
+      } else if (response?.count !== undefined) {
+        setUnreadCount(response.count);
+      } else if (response?.unread_count !== undefined) {
+        setUnreadCount(response.unread_count);
+      }
+    } catch (error) {
+      if (error?.status === 401) {
+        setUnreadCount(0);
+        return;
+      }
+      if (error?.status !== 401) {
+        console.error('Error fetching unread count:', error);
+      }
+      setUnreadCount(0);
     }
-  }, [routeParams, route.params, initialReels, currentReelId]);
+  }, []);
 
-  const displayData = useMemo(() => {
+  // Combine preloaded reels with public reels
+  const displayData = React.useMemo(() => {
     if (preloadedReels.length > 0) {
       const preloadedIds = new Set(
         preloadedReels
@@ -94,68 +136,90 @@ const Home = ({routeParams, initialReels}) => {
     return publicReels;
   }, [preloadedReels, publicReels]);
 
-  const fetchReels = useCallback(() => {
-    if (!publicReelsLoading && !hasFetched) {
-      setHasFetched(true);
-      dispatch(fetchPublicReels_Request({page: 1, per_page: 20}));
-    }
-  }, [dispatch, publicReelsLoading, hasFetched]);
-
-  useEffect(() => {
-    fetchReels();
-  }, []); // Remove fetchReels dependency to prevent repeated calls
-
-  // Fetch unread notification count
-  const fetchUnreadCount = useCallback(async () => {
-    // Check if user is logged in before making API call
-    if (!authData?.token || !authData?.data) {
-      setUnreadCount(0);
-      return;
-    }
-
-    try {
-      const response = await getData(ROUTES.NOTIFICATIONS_UNREAD_COUNT);
-      if (response && response.status === 'success' && response.data) {
-        const count = typeof response.data === 'number' 
-          ? response.data 
-          : response.data.count || response.data.unread_count || 0;
-        setUnreadCount(count);
-      } else if (response && typeof response === 'number') {
-        setUnreadCount(response);
-      } else if (response && response.count !== undefined) {
-        setUnreadCount(response.count);
-      } else if (response && response.unread_count !== undefined) {
-        setUnreadCount(response.unread_count);
-      }
-    } catch (error) {
-      // Silently handle 401 errors (user logged out)
-      if (error?.status === 401 || (error?.type === 'response' && error?.status === 401)) {
-        setUnreadCount(0);
-        return;
-      }
-      // Only log non-401 errors
-      if (error?.status !== 401) {
-        console.error('Error fetching unread count:', error);
-      }
-      setUnreadCount(0);
-    }
-  }, [authData]);
-
-  useEffect(() => {
+  // Initial data fetch
+  React.useLayoutEffect(() => {
+    fetchPublicReels();
     fetchUnreadCount();
-  }, []); // Remove fetchUnreadCount dependency
+  }, []);
 
-  // Refresh count when screen comes into focus
+  // Refresh notification count when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       fetchUnreadCount();
     }, []),
   );
 
-  const showLoading = useMemo(
-    () => displayData.length === 0 && (publicReelsLoading || !hasFetched),
-    [displayData.length, publicReelsLoading, hasFetched],
-  );
+  // Memoize the navigation handler
+  const handleNotificationPress = useCallback(() => {
+    navigation.navigate('Massages');
+  }, [navigation]);
+
+  // Memoize the header right content
+  const headerRightContent = useMemo(() => (
+    <TouchableOpacity
+      onPress={handleNotificationPress}
+      style={styles.notificationButton}
+      activeOpacity={0.7}>
+      <View style={styles.notificationIconContainer}>
+        <Ionicons
+          name="notifications-outline"
+          size={moderateScale(20)}
+          color="#FFFFFF"
+        />
+        {unreadCount > 0 && (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </Text>
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>
+  ), [handleNotificationPress, unreadCount]);
+
+  // Memoize header props
+  const headerProps = useMemo(() => ({
+    title: "Reels",
+    leftType: "none",
+    rightType: "none",
+    rightContent: headerRightContent,
+    containerStyle: {
+      backgroundColor: '#000000',
+      borderBottomWidth: 0,
+    },
+    titleStyle: {color: '#FFFFFF'}
+  }), [headerRightContent]);
+
+  // Memoize loading component
+  const LoadingComponent = useMemo(() => (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color="#F2631F" />
+      <Text style={styles.loadingText}>Loading reels...</Text>
+    </View>
+  ), []);
+
+  // Memoize error component
+  const ErrorComponent = useMemo(() => error ? (
+    <View style={styles.errorContainer}>
+      <Text style={styles.errorText}>{error}</Text>
+    </View>
+  ) : null, [error]);
+
+  // Memoize no reels component
+  const NoReelsComponent = useMemo(() => (
+    <View style={styles.loadingContainer}>
+      <Text style={styles.loadingText}>No reels available</Text>
+    </View>
+  ), []);
+
+  // Memoize VideoReel component
+  const VideoReelComponent = useMemo(() => displayData.length > 0 ? (
+    <VideoReel
+      data={displayData}
+      initialReelId={currentReelId}
+      key={`video-reel-${currentReelId || 'default'}`}
+    />
+  ) : null, [displayData, currentReelId]);
 
   return (
     <View style={[styles.container, {backgroundColor}]}>
@@ -165,57 +229,16 @@ const Home = ({routeParams, initialReels}) => {
         translucent={false}
       />
       <SafeAreaView style={{backgroundColor: '#000000'}}>
-        <Header
-          title="Reels"
-          leftType="none"
-          rightType="none"
-          rightContent={
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Massages')}
-              style={styles.notificationButton}
-              activeOpacity={0.7}>
-              <View style={styles.notificationIconContainer}>
-                <Ionicons
-                  name="notifications-outline"
-                  size={moderateScale(20)}
-                  color="#FFFFFF"
-                />
-                {unreadCount > 0 && (
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>
-                      {unreadCount > 99 ? '99+' : unreadCount}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </TouchableOpacity>
-          }
-          containerStyle={{
-            backgroundColor: '#000000',
-            borderBottomWidth: 0,
-          }}
-          titleStyle={{color: '#FFFFFF'}}
-        />
+        <Header {...headerProps} />
       </SafeAreaView>
-      {showLoading && displayData.length === 0 ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#F2631F" />
-          <Text style={styles.loadingText}>Loading reels...</Text>
-        </View>
-      ) : publicReelsError ? (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{publicReelsError}</Text>
-        </View>
-      ) : displayData.length > 0 ? (
-        <VideoReel
-          data={displayData}
-          initialReelId={currentReelId}
-          key={`video-reel-${currentReelId || 'default'}`} // Stable key - only changes when navigating to new reel
-        />
+      {loading && displayData.length === 0 ? (
+        LoadingComponent
+      ) : ErrorComponent ? (
+        ErrorComponent
+      ) : VideoReelComponent ? (
+        VideoReelComponent
       ) : (
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>No reels available</Text>
-        </View>
+        NoReelsComponent
       )}
     </View>
   );

@@ -90,7 +90,6 @@ function* fetchMerchantReelsWorker(action) {
         break; // Success, exit retry loop
       } catch (error) {
         retryCount++;
-        console.log(`Fetch merchant reels retry ${retryCount}/${maxRetries}:`, error);
         
         if (retryCount >= maxRetries) {
           throw error; // Re-throw the last error

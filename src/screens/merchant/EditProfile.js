@@ -49,7 +49,7 @@ const EditProfile = () => {
 
     try {
       const response = await getData(ROUTES.MERCHANT_PROFILE);
-       console.log(response)
+     
 
       if (response && response.profile) {
         setMerchantProfile(response.profile);

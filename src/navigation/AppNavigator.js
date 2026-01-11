@@ -28,6 +28,7 @@ import MyProfile from '../screens/user/MyProfile';
 import EditProfile from '../screens/merchant/EditProfile';
 import MyProfileEdit from '../screens/user/MyProfileEdit';
 import PerticularReelProfile from '../screens/user/PerticularReelProfile';
+import FollowerList from '../screens/user/FollowerList';
 import Post from '../screens/merchant/Post';
 import Massages from '../screens/merchant/Massages';
 import UserReelsView from '../screens/merchant/UserReelsView.js';
@@ -51,10 +52,9 @@ const AppNavigator = () => {
   const prevAuthRef = useRef(isAuthenticated);
 
   useEffect(() => {
-    // Check if user has seen intro screens and restore auth token
+   
     const initializeApp = async () => {
       try {
-        // Check intro status
         const introCompleted = getItem(INTRO_COMPLETED_KEY);
         if (introCompleted && typeof introCompleted === 'string') {
           setHasSeenIntro(introCompleted === 'true');
@@ -62,26 +62,24 @@ const AppNavigator = () => {
           setHasSeenIntro(false);
         }
 
-        // Restore auth token from MMKV storage if not in Redux
-        // Only restore if token is not expired
+        
         if (!token) {
-          const storedAuthData = getValidAuthData(); // This checks expiration automatically
+          const storedAuthData = getValidAuthData(); 
           if (storedAuthData && storedAuthData.token) {
-            console.log('Restoring auth token from MMKV storage');
+           
             const { token: storedToken, userData: storedUserData, refreshToken, expiresAt } = storedAuthData;
             
-            // Log expiration info
+           
             if (expiresAt) {
               const expiresDate = new Date(expiresAt);
               const timeRemaining = expiresAt - Date.now();
               const daysRemaining = Math.floor(timeRemaining / (24 * 60 * 60 * 1000));
-              console.log(`Token expires on: ${expiresDate.toLocaleString()}, ${daysRemaining} days remaining`);
             }
             
-            // Set token in APiCall module
+           
             setAuthToken(storedToken);
             
-            // Restore Redux state
+         
             dispatch(
               login_Success({
                 data: storedUserData,
@@ -94,7 +92,6 @@ const AppNavigator = () => {
             console.log('No valid auth token found in storage (expired or missing)');
           }
         } else {
-          // If token exists in Redux, ensure it's also in APiCall module
           setAuthToken(token);
         }
       } catch (error) {
@@ -108,13 +105,11 @@ const AppNavigator = () => {
     initializeApp();
   }, [dispatch, token]);
 
-  // Handle navigation when authentication status changes (only on change, not initial load)
   useEffect(() => {
     if (isLoading || !isNavReady || !navigationRef.current) {
       return;
     }
 
-    // Keep axios interceptor token in sync with Redux token
     if (isAuthenticated && token) {
       setAuthToken(token);
     } else if (!isAuthenticated) {
@@ -122,7 +117,6 @@ const AppNavigator = () => {
       removeItem(AUTH_STORAGE_KEY);
     }
 
-      // Navigate if auth status changed from false to true (after login)
       if (isAuthenticated && !prevAuthRef.current) {
         const targetRoute = userRole === 'merchant' ? 'MerchantBottomTab' : 'UserBottomTab';
         navigationRef.current.dispatch(
@@ -160,7 +154,6 @@ const AppNavigator = () => {
     );
   }
 
-  // Always start with Splash screen - let SplashScreen handle navigation logic
   const getInitialRoute = () => {
     return 'Splash';
   };
@@ -206,6 +199,7 @@ const AppNavigator = () => {
         <Stack.Screen name="EditProfile" component={EditProfile} />
         <Stack.Screen name="MerchantSettings" component={MerchantSettings} />
         <Stack.Screen name="PerticularReelProfile" component={PerticularReelProfile} />
+        <Stack.Screen name="FollowerList" component={FollowerList} />
         <Stack.Screen 
           name="UserReelsView" 
           component={UserReelsView}

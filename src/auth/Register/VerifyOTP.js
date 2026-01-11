@@ -106,7 +106,6 @@ const VerifyOTP = ({ route }) => {
             expiresIn: expiresIn || (DEFAULT_TOKEN_EXPIRY_DAYS * 24 * 60 * 60), // Store in seconds
           };
           setObject(AUTH_STORAGE_KEY, authData);
-          console.log('Auth data stored in MMKV with expiration:', new Date(expiresAt).toLocaleString());
 
           // Store in Redux
           dispatch(
@@ -117,8 +116,7 @@ const VerifyOTP = ({ route }) => {
             })
           );
           
-          console.log("Registration successful, user logged in:", response)
-          // Show success message and navigate to home
+         
           Alert.alert('Registration Successful!', 'Your account has been created successfully!', [
             {
               text: 'Continue',

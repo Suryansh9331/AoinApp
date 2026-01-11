@@ -69,31 +69,22 @@ const VerifyOTPLogin = ({ route }) => {
 
     setLoading(true);
     try {
-      console.log('Verifying login OTP:', {
-        phone: phoneNumber,
-        route: ROUTES.USER_LOGIN,
-      });
+      
 
       const response = await postData(ROUTES.USER_LOGIN, {
         phone: phoneNumber,
         otp: otp,
       });
 
-      console.log('Login OTP response:', response);
       setLoading(false);
 
       if (response) {
-        // Extract tokens and user data from response
-        // Response structure: { access_token, refresh_token, user, message }
+       
         const accessToken = response?.access_token || response?.data?.access_token;
         const refreshToken = response?.refresh_token || response?.data?.refresh_token;
         const userData = response?.user || response?.data?.user || response?.data;
         
-        console.log('Extracted tokens:', {
-          hasAccessToken: !!accessToken,
-          hasRefreshToken: !!refreshToken,
-          hasUserData: !!userData,
-        });
+       
 
         if (accessToken) {
           // Set auth token for API calls
@@ -111,7 +102,6 @@ const VerifyOTPLogin = ({ route }) => {
             expiresIn: expiresIn || (DEFAULT_TOKEN_EXPIRY_DAYS * 24 * 60 * 60), // Store in seconds
           };
           setObject(AUTH_STORAGE_KEY, authData);
-          console.log('Auth data stored in MMKV with expiration:', new Date(expiresAt).toLocaleString());
 
           // Store in Redux
           dispatch(

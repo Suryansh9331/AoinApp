@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback, useMemo} from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,73 +14,76 @@ import {
   Modal,
   TextInput,
 } from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useNavigation,
   CommonActions,
   useFocusEffect,
 } from '@react-navigation/native';
-import {useDispatch, useSelector} from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
+import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import useAppTheme from '../../theme/useAppTheme';
-import {getThemeColors} from '../../theme/themeColors';
-import {Colors} from '../../utils/Colors';
+import { getThemeColors } from '../../theme/themeColors';
+import { Colors } from '../../utils/Colors';
 import Skeleton from '../../components/Skeleton/Skeleton';
-import {clearCredentials} from '../../redux/slices/authSlice';
-import {clearAuthToken, getData} from '../../utils/APiCall';
-import {deleteReel, updateReel} from '../../utils/APiCall';
-import {removeItem, AUTH_STORAGE_KEY} from '../../utils/MMKVStorage';
-import {ROUTES} from '../../utils/Routes';
+import { clearCredentials } from '../../redux/slices/authSlice';
+import { clearAuthToken, getData } from '../../utils/APiCall';
+import { deleteReel, updateReel } from '../../utils/APiCall';
+import { removeItem, AUTH_STORAGE_KEY } from '../../utils/MMKVStorage';
+import { ROUTES } from '../../utils/Routes';
+import { setThemeMode } from '../../redux/slices/themeSlice';
+import { setReelsData } from '../../redux/slices/reelsSlice';
+import EditReelModal from './components/EditReelModal';
+import ProfileSkeleton from './components/ProfileSkeleton';
 
-
-const fetchMerchantReelsDirect = async (page = 1, perPage = 20) => {
-  try {
-    const response = await getData(`${ROUTES.MERCHANT_MY_REELS}?page=${page}&per_page=${perPage}`);
-    
-    return response;
-  } catch (error) {
-    console.error('Error fetching merchant reels:', error);
-    throw error;
-  }
-};
-
-const {width: SCREEN_WIDTH} = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const POST_ITEM_SIZE = Math.floor(SCREEN_WIDTH / 3);
 
 const Profile = () => {
   const theme = useAppTheme();
-  const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
+  const { backgroundColor, textColor, borderColor } = getThemeColors(theme);
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
   const userData = useSelector(state => state.auth.data);
-  console.log("User Data:",userData)
-  // Local state for reels instead of Redux
+  const themeState = useSelector(state => state.theme);
+  const handleThemeToggle = () => {
+    const newThemeMode = theme === 'dark' ? 'light' : 'dark';
+    dispatch(setThemeMode(newThemeMode));
+  };
   const [reels, setReels] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
   const merchantId = useMemo(() => {
     const userInfo = userData?.data || userData || {};
-    return userInfo.merchant_id || userInfo.id || userInfo.user_id || null;
-  }, [userData]);
-
+    return userInfo.merchant_id || userInfo.id || userInfo.user_id || null; }, [userData]);
   const [merchantProfile, setMerchantProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState(null);
   const [followersCount, setFollowersCount] = useState(0);
   const [followersData, setFollowersData] = useState([]);
-  const [merchantStats, setMerchantStats] = useState(null);
+  const [analyticsData, setAnalyticsData] = useState(null);
 
+
+  const fetchMerchantReelsDirect = async (page = 1, perPage = 20) => {
+    try {
+      const response = await getData(`${ROUTES.MERCHANT_MY_REELS}?page=${page}&per_page=${perPage}`);
+    
+      return response;
+    } catch (error) {
+      console.error('Error fetching merchant reels:', error);
+      throw error;
+    }
+  };
   const fetchMerchantProfile = useCallback(async () => {
     setProfileLoading(true);
     setProfileError(null);
-    
+
     try {
       const response = await getData(ROUTES.MERCHANT_PROFILE);
-      
+
       if (response && response.profile) {
         setMerchantProfile(response.profile);
       } else {
@@ -100,8 +103,7 @@ const Profile = () => {
 
     try {
       const response = await getData(`${ROUTES.MERCHANT_FOLLOWERS}?page=1&per_page=20`);
-      // console.log("Followers Response:", response);
-      
+
       if (response && response.status === 'success') {
         setFollowersCount(response.total_followers || 0);
         setFollowersData(response.data || []);
@@ -115,25 +117,18 @@ const Profile = () => {
     }
   }, [merchantId]);
 
-  const fetchMerchantStats = useCallback(async () => {
-    if (!merchantId) {
-      return;
-    }
-
+  const fetchMerchantAnalytics = useCallback(async () => {
     try {
-      const response = await getData(`${ROUTES.MERCHANT_STATS_DETAIL}${merchantId}/stats`);
-      console.log('Merchant Stats Response:', response);
-      
-      if (response && response.status === 'success') {
-        setMerchantStats(response.data || response);
-      } else if (response.likes_count !== undefined || response.shares_count !== undefined) {
-        setMerchantStats(response);
+      const response = await getData(ROUTES.MERCHANT_ANALYTICS);
+
+      if (response && response.data) {
+        setAnalyticsData(response.data);
       }
     } catch (error) {
-      console.log('Merchant stats fetch error:', error);
-      // Silently handle errors for stats
+      console.log('Analytics fetch error:', error);
     }
-  }, [merchantId]);
+  }, []);
+
 
   useEffect(() => {
     if (!merchantProfile) {
@@ -141,9 +136,9 @@ const Profile = () => {
     }
     if (merchantId) {
       fetchFollowersCount();
-      fetchMerchantStats();
+      fetchMerchantAnalytics();
     }
-   
+
   }, [merchantId]);
 
   // Fetch reels using direct API
@@ -152,7 +147,7 @@ const Profile = () => {
       setLoading(true);
       setError(null);
       const response = await fetchMerchantReelsDirect(page, perPage);
-      
+
       if (response && response.data) {
         if (page === 1) {
           setReels(response.data);
@@ -160,6 +155,10 @@ const Profile = () => {
           setReels(prev => [...prev, ...response.data]);
         }
         setHasMoreReels(response.data.length === perPage);
+        
+        // Store reels data in Redux for UserReelsView
+        dispatch(setReelsData(response.data));
+        
       } else {
         setReels([]);
         setHasMoreReels(false);
@@ -170,45 +169,47 @@ const Profile = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [dispatch]);
 
   useFocusEffect(
     useCallback(() => {
-     
+
       setCurrentPage(1);
       setHasMoreReels(true);
       setLoadingMore(false);
-      
-      
+
+
       if (!merchantProfile) {
         fetchMerchantProfile();
       }
-     
+
       if (merchantId) {
         fetchFollowersCount();
       }
-      
-      
+
+      fetchMerchantAnalytics();
+
+
       const timer = setTimeout(() => {
         fetchReels(1, 20);
       }, 300);
 
       return () => clearTimeout(timer);
-      
+
     }, [merchantId, fetchFollowersCount, setCurrentPage, setHasMoreReels, setLoadingMore, fetchReels]),
   );
 
-  
+
   const loadMoreReels = useCallback(async () => {
     if (!hasMoreReels || loadingMore || loading) return;
-    
+
     setLoadingMore(true);
     try {
       const nextPage = currentPage + 1;
       await fetchReels(nextPage, 20);
       setCurrentPage(nextPage);
-      
-      
+
+
     } catch (error) {
       console.log('Error loading more reels:', error);
     } finally {
@@ -226,7 +227,7 @@ const Profile = () => {
     return views.toString();
   }, []);
 
-    const [visibleMenuReelId, setVisibleMenuReelId] = useState(null);
+  const [visibleMenuReelId, setVisibleMenuReelId] = useState(null);
   const [deletingReelId, setDeletingReelId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMoreReels, setHasMoreReels] = useState(true);
@@ -254,7 +255,7 @@ const Profile = () => {
           navigation.dispatch(
             CommonActions.reset({
               index: 0,
-              routes: [{name: 'Splash'}],
+              routes: [{ name: 'Splash' }],
             }),
           );
         },
@@ -343,26 +344,26 @@ const Profile = () => {
   }, []);
 
   const renderReelItem = useCallback(
-    ({item}) => {
-      // Handle API response structure properly
+    ({ item }) => {
       const thumbnailUrl = item.thumbnail_url || item.thumbnail;
       const views = formatViews(item.views || item.views_count || 0);
       const isMenuVisible = visibleMenuReelId === (item.id || item.reel_id);
       const isDeleting = deletingReelId === (item.id || item.reel_id);
-      
-      // Use fallback image if thumbnail is null, undefined, or invalid
+
       const imageSource = thumbnailUrl && thumbnailUrl !== 'null' && thumbnailUrl !== null && thumbnailUrl !== undefined
-        ? {uri: thumbnailUrl} 
-        : {uri: 'https://i.pravatar.cc/150?img=1'};
+        ? { uri: thumbnailUrl }
+        : { uri: 'https://i.pravatar.cc/150?img=1' };
 
       return (
         <TouchableOpacity
-          style={[styles.postItem, {borderColor: borderColor}]}
+          style={[styles.postItem, { borderColor: borderColor }]}
           activeOpacity={0.7}
           onPress={() => {
-            const reelIndex = reels.findIndex(reel => reel.id === item.id || reel.reel_id === item.reel_id);
+            const currentReelId = item.reel_id || item.id;
+            
             navigation.navigate('UserReelsView', {
-              initialReelIndex: reelIndex >= 0 ? reelIndex : 0,
+              initialReelId: currentReelId,
+              reels: reels, 
             });
           }}>
           <Image
@@ -396,7 +397,7 @@ const Profile = () => {
             <View
               style={[
                 styles.menuOptions,
-                {backgroundColor: theme === 'dark' ? '#2A2A2A' : '#FFFFFF'},
+                { backgroundColor: theme === 'dark' ? '#2A2A2A' : '#FFFFFF' },
               ]}>
               <TouchableOpacity
                 style={styles.menuOption}
@@ -409,13 +410,13 @@ const Profile = () => {
                 <Text
                   style={[
                     styles.menuOptionText,
-                    {color: theme === 'dark' ? '#FFFFFF' : '#000000'},
+                    { color: theme === 'dark' ? '#FFFFFF' : '#000000' },
                   ]}>
                   Edit
                 </Text>
               </TouchableOpacity>
               <View
-                style={[styles.menuDivider, {backgroundColor: borderColor}]}
+                style={[styles.menuDivider, { backgroundColor: borderColor }]}
               />
               <TouchableOpacity
                 style={styles.menuOption}
@@ -425,7 +426,7 @@ const Profile = () => {
                   size={16}
                   color="#FF3040"
                 />
-                <Text style={[styles.menuOptionText, {color: '#FF3040'}]}>
+                <Text style={[styles.menuOptionText, { color: '#FF3040' }]}>
                   Delete
                 </Text>
               </TouchableOpacity>
@@ -468,20 +469,29 @@ const Profile = () => {
   );
 
   return (
-    <View style={[styles.container, {backgroundColor}]}>
+    <View style={[styles.container, { backgroundColor }]}>
       <View
         style={[
           styles.header,
-          {borderBottomColor: borderColor},
-          Platform.OS === 'ios' && {paddingTop: insets.top + verticalScale(10)},
+          { borderBottomColor: borderColor },
+          Platform.OS === 'ios' && { paddingTop: insets.top + verticalScale(10) },
         ]}>
         <View style={styles.headerLeft}>
-          <Text style={[styles.headerTitle, {color: textColor}]}>Profile</Text>
+          <Text style={[styles.headerTitle, { color: textColor }]}>Profile</Text>
           <TouchableOpacity style={styles.headerButton}>
             <Ionicons name="chevron-down" size={20} color={textColor} />
           </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={[styles.headerButton, styles.themeToggleButton]}
+            onPress={handleThemeToggle}>
+            <Ionicons 
+              name={theme === 'dark' ? 'sunny' : 'moon'} 
+              size={20} 
+              color={textColor} 
+            />
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerButton}
             onPress={() => navigation.navigate('MerchantSettings')}>
@@ -495,132 +505,16 @@ const Profile = () => {
         style={styles.scrollView}>
         {/* Profile Section */}
         {profileLoading && !merchantProfile ? (
-          <View style={styles.profileSection}>
-            {/* Avatar Skeleton */}
-            <View style={styles.avatarContainer}>
-              <Skeleton
-                width={moderateScale(100)}
-                height={moderateScale(100)}
-                radius={moderateScale(50)}
-              />
-            </View>
-
-            {/* Name Skeleton */}
-            <Skeleton
-              width={moderateScale(150)}
-              height={moderateScale(20)}
-              radius={4}
-              style={styles.skeletonName}
-            />
-            {/* Username Skeleton */}
-            <Skeleton
-              width={moderateScale(120)}
-              height={moderateScale(16)}
-              radius={4}
-              style={styles.skeletonUsername}
-            />
-
-            {/* Stats Skeleton */}
-            <View style={styles.statsContainer}>
-              <View style={styles.statItem}>
-                <Skeleton
-                  width={moderateScale(30)}
-                  height={moderateScale(18)}
-                  radius={4}
-                />
-                <Skeleton
-                  width={moderateScale(40)}
-                  height={moderateScale(12)}
-                  radius={4}
-                  style={{marginTop: verticalScale(4)}}
-                />
-              </View>
-              <View style={styles.statItem}>
-                <Skeleton
-                  width={moderateScale(30)}
-                  height={moderateScale(18)}
-                  radius={4}
-                />
-                <Skeleton
-                  width={moderateScale(50)}
-                  height={moderateScale(12)}
-                  radius={4}
-                  style={{marginTop: verticalScale(4)}}
-                />
-              </View>
-              <View style={styles.statItem}>
-                <Skeleton
-                  width={moderateScale(30)}
-                  height={moderateScale(18)}
-                  radius={4}
-                />
-                <Skeleton
-                  width={moderateScale(40)}
-                  height={moderateScale(12)}
-                  radius={4}
-                  style={{marginTop: verticalScale(4)}}
-                />
-              </View>
-            </View>
-
-            {/* Action Buttons Skeleton */}
-            <View style={styles.actionButtons}>
-              <Skeleton
-                width="70%"
-                height={moderateScale(44)}
-                radius={moderateScale(8)}
-              />
-              <Skeleton
-                width={moderateScale(44)}
-                height={moderateScale(44)}
-                radius={moderateScale(8)}
-              />
-            </View>
-
-            {/* Bio Skeleton */}
-            <View style={styles.skeletonBioContainer}>
-              <Skeleton width="90%" height={moderateScale(14)} radius={4} />
-              <Skeleton
-                width="80%"
-                height={moderateScale(14)}
-                radius={4}
-                style={{marginTop: verticalScale(6)}}
-              />
-              <Skeleton
-                width="60%"
-                height={moderateScale(14)}
-                radius={4}
-                style={{marginTop: verticalScale(6)}}
-              />
-            </View>
-
-            {/* Reels Grid Skeleton */}
-            <View style={styles.postsGridContainer}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.skeletonReelsRow}>
-                {[1, 2, 3, 4, 5, 6].map((_, index) => (
-                  <Skeleton
-                    key={`skeleton-reel-${index}`}
-                    width={POST_ITEM_SIZE}
-                    height={POST_ITEM_SIZE}
-                    radius={0}
-                    style={styles.skeletonReelItem}
-                  />
-                ))}
-              </ScrollView>
-            </View>
-          </View>
+          <ProfileSkeleton />
         ) : profileError && !merchantProfile ? (
           <View style={styles.profileErrorContainer}>
-            <Text style={[styles.errorText, {color: Colors.PRIMARY}]}>
+            <Text style={[styles.errorText, { color: Colors.PRIMARY }]}>
               {profileError}
             </Text>
             <TouchableOpacity
-              style={[styles.retryButton, {borderColor: borderColor}]}
+              style={[styles.retryButton, { borderColor: borderColor }]}
               onPress={fetchMerchantProfile}>
-              <Text style={[styles.retryButtonText, {color: Colors.PRIMARY}]}>
+              <Text style={[styles.retryButtonText, { color: Colors.PRIMARY }]}>
                 Retry
               </Text>
             </TouchableOpacity>
@@ -630,14 +524,14 @@ const Profile = () => {
             {/* Avatar */}
             <View style={styles.avatarContainer}>
               <Image
-                source={{uri: merchantProfile?.profile_img || 'https://i.pravatar.cc/150?img=1'}}
+                source={{ uri: merchantProfile?.profile_img || 'https://i.pravatar.cc/150?img=1' }}
                 style={styles.avatar}
               />
             </View>
 
             {/* Merchant Name */}
             <View style={styles.nameContainer}>
-              <Text style={[styles.username, {color: textColor}]}>
+              <Text style={[styles.username, { color: textColor }]}>
                 {merchantProfile?.business_name || 'Merchant Store'}
               </Text>
               {merchantProfile?.is_verified && (
@@ -645,38 +539,38 @@ const Profile = () => {
               )}
             </View>
             {/* Username below name */}
-            <Text style={[styles.userHandle, {color: textColor}]}>
+            <Text style={[styles.userHandle, { color: textColor }]}>
               @{merchantProfile?.username || 'merchant'}
             </Text>
 
             {/* Stats */}
             <View style={styles.statsContainer}>
               <View style={styles.statItem}>
-                <Text style={[styles.statNumber, {color: textColor}]}>
+                <Text style={[styles.statNumber, { color: textColor }]}>
                   {reels?.length || 0}
                 </Text>
-                <Text style={[styles.statLabel, {color: textColor}]}>
+                <Text style={[styles.statLabel, { color: textColor }]}>
                   Reels
                 </Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={[styles.statNumber, {color: textColor}]}>
+                <Text style={[styles.statNumber, { color: textColor }]}>
                   {followersCount}
                 </Text>
-                <Text style={[styles.statLabel, {color: textColor}]}>
+                <Text style={[styles.statLabel, { color: textColor }]}>
                   Followers
                 </Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={[styles.statNumber, {color: textColor}]}>
-                  {merchantStats?.likes_count || 0}
+                <Text style={[styles.statNumber, { color: textColor }]}>
+                  {analyticsData?.aggregated_stats?.total_likes || 0}
                 </Text>
-                <Text style={[styles.statLabel, {color: textColor}]}>
+                <Text style={[styles.statLabel, { color: textColor }]}>
                   Likes
                 </Text>
               </View>
-              
-              
+
+
             </View>
 
             {/* Action Buttons */}
@@ -691,7 +585,7 @@ const Profile = () => {
                 ]}
                 activeOpacity={0.7}
                 onPress={() => navigation.navigate('EditProfile')}>
-                <Text style={[styles.editButtonText, {color: Colors.PRIMARY}]}>
+                <Text style={[styles.editButtonText, { color: Colors.PRIMARY }]}>
                   Edit profile
                 </Text>
               </TouchableOpacity>
@@ -712,9 +606,9 @@ const Profile = () => {
               </TouchableOpacity>
             </View>
 
-          
 
-  
+
+
             {/* Reels Grid */}
             <View style={styles.postsGridContainer}>
               {reels.length > 0 ? (
@@ -728,12 +622,12 @@ const Profile = () => {
                   ListFooterComponent={loadingMore ? (
                     <View style={styles.loadingMoreContainer}>
                       <ActivityIndicator size="small" color={Colors.PRIMARY} />
-                      <Text style={[styles.loadingMoreText, {color: textColor}]}>
+                      <Text style={[styles.loadingMoreText, { color: textColor }]}>
                         Loading more...
                       </Text>
                     </View>
                   ) : null}
-                  
+
                   removeClippedSubviews={true}
                   maxToRenderPerBatch={10}
                   windowSize={5}
@@ -741,13 +635,13 @@ const Profile = () => {
               ) : loading ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="large" color={Colors.PRIMARY} />
-                  <Text style={[styles.loadingText, {color: textColor}]}>
+                  <Text style={[styles.loadingText, { color: textColor }]}>
                     Loading reels...
                   </Text>
                 </View>
               ) : error ? (
                 <View style={styles.errorContainer}>
-                  <Text style={[styles.errorText, {color: Colors.PRIMARY}]}>
+                  <Text style={[styles.errorText, { color: Colors.PRIMARY }]}>
                     {error}
                   </Text>
                 </View>
@@ -758,10 +652,10 @@ const Profile = () => {
                     size={48}
                     color={textColor}
                   />
-                  <Text style={[styles.emptyText, {color: textColor}]}>
+                  <Text style={[styles.emptyText, { color: textColor }]}>
                     No reels yet
                   </Text>
-                  <Text style={[styles.emptySubText, {color: textColor}]}>
+                  <Text style={[styles.emptySubText, { color: textColor }]}>
                     Upload your first reel to get started
                   </Text>
                 </View>
@@ -772,70 +666,14 @@ const Profile = () => {
       </ScrollView>
 
       {/* Edit Description Modal */}
-      <Modal
+      <EditReelModal
         visible={editModalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={handleCloseEditModal}>
-        <View style={styles.modalOverlay}>
-          <View
-            style={[styles.modalContent, {backgroundColor: backgroundColor}]}>
-            {/* Modal Header */}
-            <View
-              style={[styles.modalHeader, {borderBottomColor: borderColor}]}>
-              <TouchableOpacity
-                onPress={handleCloseEditModal}
-                disabled={updatingReel}
-                style={styles.modalCancelButton}>
-                <Text style={[styles.modalCancelText, {color: textColor}]}>
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-              <Text style={[styles.modalTitle, {color: textColor}]}>
-                Edit Description
-              </Text>
-              <TouchableOpacity
-                onPress={handleSaveDescription}
-                disabled={updatingReel || !editDescription.trim()}
-                style={[
-                  styles.modalSaveButton,
-                  (!editDescription.trim() || updatingReel) &&
-                    styles.modalSaveButtonDisabled,
-                ]}>
-                {updatingReel ? (
-                  <ActivityIndicator size="small" color={Colors.PRIMARY} />
-                ) : (
-                  <Text style={[styles.modalSaveText, {color: Colors.PRIMARY}]}>
-                    Save
-                  </Text>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            {/* Description Input */}
-            <View style={styles.modalBody}>
-              <TextInput
-                style={[
-                  styles.editDescriptionInput,
-                  {
-                    color: textColor,
-                    borderColor: borderColor,
-                    backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF',
-                  },
-                ]}
-                placeholder="Add description..."
-                placeholderTextColor={textColor + '80'}
-                value={editDescription}
-                onChangeText={setEditDescription}
-                multiline
-                numberOfLines={8}
-                textAlignVertical="top"
-                editable={!updatingReel}
-              />
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={handleCloseEditModal}
+        onSave={handleSaveDescription}
+        editDescription={editDescription}
+        setEditDescription={setEditDescription}
+        updatingReel={updatingReel}
+      />
     </View>
   );
 };
@@ -901,7 +739,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileSection: {
-    paddingHorizontal: scale(16),
+    
     paddingTop: verticalScale(20),
     alignItems: 'center',
   },
@@ -933,7 +771,7 @@ const styles = StyleSheet.create({
     marginTop: verticalScale(2),
   },
 
- 
+
   actionButtons: {
     flexDirection: 'row',
     gap: scale(8),
@@ -988,7 +826,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     borderRadius: moderateScale(4),
     padding: scale(4),
-  },   
+  },
   menuButton: {
     position: 'absolute',
     top: scale(6),
@@ -1001,25 +839,26 @@ const styles = StyleSheet.create({
   menuOptions: {
     position: 'absolute',
     top: scale(32),
-    left: scale(6),
+    left: scale(2),
     borderRadius: moderateScale(8),
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
     zIndex: 101,
     minWidth: moderateScale(120),
+    paddingVertical: verticalScale(5),
   },
   menuOption: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: scale(12),
-    paddingVertical: verticalScale(10),
+    paddingVertical: verticalScale(3),
     gap: scale(8),
   },
   menuOptionText: {
-    fontSize: moderateScale(14),
+    fontSize: moderateScale(12),
     fontWeight: '500',
   },
   menuDivider: {
@@ -1048,7 +887,7 @@ const styles = StyleSheet.create({
   },
   viewCountText: {
     color: '#FFFFFF',
-    fontSize: moderateScale(11),
+    fontSize: moderateScale(10),
     fontWeight: '600',
   },
   postOverlay: {
@@ -1090,7 +929,7 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(40),
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: scale(20),
+   
   },
   errorText: {
     fontSize: moderateScale(14),
@@ -1111,70 +950,15 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(13),
     opacity: 0.6,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    borderTopLeftRadius: moderateScale(20),
-    borderTopRightRadius: moderateScale(20),
-    maxHeight: '80%',
-  },
-  modalHeader: {
+  loadingMoreContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: scale(16),
-    paddingVertical: verticalScale(16),
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  modalCancelButton: {
-    padding: scale(8),
-    minWidth: scale(60),
-  },
-  modalCancelText: {
-    fontSize: moderateScale(16),
-    fontWeight: '500',
-  },
-  modalTitle: {
-    fontSize: moderateScale(18),
-    fontWeight: '700',
-    flex: 1,
-    textAlign: 'center',
-  },
-  modalSaveButton: {
-    padding: scale(8),
-    minWidth: scale(60),
-    alignItems: 'flex-end',
-  },
-  modalSaveButtonDisabled: {
-    opacity: 0.5,
-  },
-  modalSaveText: {
-    fontSize: moderateScale(16),
-    fontWeight: '600',
-  },
-  modalBody: {
-    padding: scale(16),
-  },
-  editDescriptionInput: {
-    minHeight: verticalScale(150),
-    padding: scale(12),
-    borderRadius: moderateScale(8),
-    borderWidth: 1,
-    fontSize: moderateScale(14),
-  },
-  profileLoadingContainer: {
-    paddingVertical: verticalScale(60),
-    alignItems: 'center',
     justifyContent: 'center',
-  },
-  profileErrorContainer: {
-    paddingVertical: verticalScale(40),
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: scale(5),
+    paddingVertical: verticalScale(10),
+  },
+  loadingMoreText: {
+    marginLeft: scale(8),
+    fontSize: moderateScale(12),
   },
   retryButton: {
     marginTop: verticalScale(16),
@@ -1186,38 +970,6 @@ const styles = StyleSheet.create({
   retryButtonText: {
     fontSize: moderateScale(14),
     fontWeight: '600',
-  },
-  skeletonName: {
-    alignSelf: 'center',
-    marginTop: verticalScale(12),
-    marginBottom: verticalScale(4),
-  },
-  skeletonUsername: {
-    alignSelf: 'center',
-    marginBottom: verticalScale(16),
-  },
-  skeletonBioContainer: {
-    alignItems: 'center',
-    marginTop: verticalScale(8),
-    marginBottom: verticalScale(12),
-    paddingHorizontal: scale(5),
-  },
-  skeletonReelItem: {
-    marginRight: scale(4),
-  },
-  skeletonReelsRow: {
-    paddingHorizontal: scale(5),
-    paddingVertical: verticalScale(8),
-  },
-  loadingMoreContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: verticalScale(10),
-  },
-  loadingMoreText: {
-    marginLeft: scale(8),
-    fontSize: moderateScale(12),
   },
 });
 

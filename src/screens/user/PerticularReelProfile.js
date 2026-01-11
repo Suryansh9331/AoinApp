@@ -25,6 +25,7 @@ import useAppTheme from '../../theme/useAppTheme';
 import {getThemeColors} from '../../theme/themeColors';
 import {Colors} from '../../utils/Colors';
 import Skeleton from '../../components/Skeleton/Skeleton';
+import ProfileSkeleton from '../merchant/components/ProfileSkeleton';
 import {fetchPublicReels_Request} from '../../redux/slices/reelSlice';
 import {getData, postData, deleteData} from '../../utils/APiCall';
 import {ROUTES} from '../../utils/Routes';
@@ -137,35 +138,6 @@ const PerticularReelProfile = () => {
     }
   }, [merchantId]);
 
-  // Check if user is following this merchant
-  const checkFollowStatus = useCallback(async () => {
-    if (!merchantId) {
-      return;
-    }
-
-    try {
-      // Check if merchant is in following list
-      const followingList = await getData(ROUTES.MERCHANT_FOLLOW_LIST);
-      if (followingList && Array.isArray(followingList)) {
-        const isFollowingMerchant = followingList.some(
-          merchant =>
-            (merchant.merchant_id || merchant.id)?.toString() ===
-            merchantId?.toString(),
-        );
-        setIsFollowing(isFollowingMerchant);
-      } else if (followingList?.data && Array.isArray(followingList.data)) {
-        const isFollowingMerchant = followingList.data.some(
-          merchant =>
-            (merchant.merchant_id || merchant.id)?.toString() ===
-            merchantId?.toString(),
-        );
-        setIsFollowing(isFollowingMerchant);
-      }
-    } catch (error) {
-      // Silently handle errors for follow status check
-    }
-  }, [merchantId]);
-
   // Fetch merchant reels
   const fetchMerchantReels = useCallback(() => {
     if (merchantId) {
@@ -185,7 +157,6 @@ const PerticularReelProfile = () => {
       fetchMerchantStats();
       fetchFollowersCount();
       fetchMerchantReels();
-      checkFollowStatus();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [merchantId]);
@@ -199,7 +170,6 @@ const PerticularReelProfile = () => {
         fetchMerchantStats();
         fetchFollowersCount();
         fetchMerchantReels();
-        checkFollowStatus();
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [merchantId]),
@@ -315,123 +285,7 @@ const PerticularReelProfile = () => {
         style={styles.scrollView}>
         {/* Profile Section */}
         {profileLoading && !merchantProfile ? (
-          <View style={styles.profileSection}>
-            {/* Avatar Skeleton */}
-            <View style={styles.avatarContainer}>
-              <Skeleton
-                width={moderateScale(100)}
-                height={moderateScale(100)}
-                radius={moderateScale(50)}
-              />
-            </View>
-
-            {/* Name Skeleton */}
-            <Skeleton
-              width={moderateScale(150)}
-              height={moderateScale(20)}
-              radius={4}
-              style={styles.skeletonName}
-            />
-            {/* Username Skeleton */}
-            <Skeleton
-              width={moderateScale(120)}
-              height={moderateScale(16)}
-              radius={4}
-              style={styles.skeletonUsername}
-            />
-
-            {/* Stats Skeleton */}
-            <View style={styles.statsContainer}>
-              <View style={styles.statItem}>
-                <Skeleton
-                  width={moderateScale(30)}
-                  height={moderateScale(18)}
-                  radius={4}
-                />
-                <Skeleton
-                  width={moderateScale(40)}
-                  height={moderateScale(12)}
-                  radius={4}
-                  style={{marginTop: verticalScale(4)}}
-                />
-              </View>
-              <View style={styles.statItem}>
-                <Skeleton
-                  width={moderateScale(30)}
-                  height={moderateScale(18)}
-                  radius={4}
-                />
-                <Skeleton
-                  width={moderateScale(50)}
-                  height={moderateScale(12)}
-                  radius={4}
-                  style={{marginTop: verticalScale(4)}}
-                />
-              </View>
-              <View style={styles.statItem}>
-                <Skeleton
-                  width={moderateScale(30)}
-                  height={moderateScale(18)}
-                  radius={4}
-                />
-                <Skeleton
-                  width={moderateScale(40)}
-                  height={moderateScale(12)}
-                  radius={4}
-                  style={{marginTop: verticalScale(4)}}
-                />
-              </View>
-            </View>
-
-            {/* Action Buttons Skeleton */}
-            <View style={styles.actionButtons}>
-              <Skeleton
-                width="70%"
-                height={moderateScale(44)}
-                radius={moderateScale(8)}
-              />
-              <Skeleton
-                width={moderateScale(44)}
-                height={moderateScale(44)}
-                radius={moderateScale(8)}
-              />
-            </View>
-
-            {/* Bio Skeleton */}
-            <View style={styles.skeletonBioContainer}>
-              <Skeleton width="90%" height={moderateScale(14)} radius={4} />
-              <Skeleton
-                width="80%"
-                height={moderateScale(14)}
-                radius={4}
-                style={{marginTop: verticalScale(6)}}
-              />
-              <Skeleton
-                width="60%"
-                height={moderateScale(14)}
-                radius={4}
-                style={{marginTop: verticalScale(6)}}
-              />
-            </View>
-
-            {/* Reels Grid Skeleton */}
-            <View style={styles.postsGridContainer}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.skeletonReelsRow}>
-                {[1, 2, 3, 4, 5, 6].map((_, index) => (
-                  <Skeleton
-                    key={`skeleton-reel-${index}`}
-                    width={POST_ITEM_SIZE}
-                    height={POST_ITEM_SIZE}
-                    radius={0}
-                    style={styles.skeletonReelItem}
-                  />
-                ))}
-              </ScrollView>
-            </View>
-          </View>
+          <ProfileSkeleton />
         ) : profileError && !merchantProfile ? (
           <View style={styles.profileErrorContainer}>
             <Text style={[styles.errorText, {color: Colors.PRIMARY}]}>
@@ -478,14 +332,17 @@ const PerticularReelProfile = () => {
                   Reels
                 </Text>
               </View>
-              <View style={styles.statItem}>
+              <TouchableOpacity 
+                style={styles.statItem}
+                onPress={() => navigation.navigate('FollowerList', { merchantId })}
+                activeOpacity={0.7}>
                 <Text style={[styles.statNumber, {color: textColor}]}>
                   {followersCount}
                 </Text>
                 <Text style={[styles.statLabel, {color: textColor}]}>
                   Followers
                 </Text>
-              </View>
+              </TouchableOpacity>
               <View style={styles.statItem}>
                 <Text style={[styles.statNumber, {color: textColor}]}>
                   {merchantStats?.total_likes ||
@@ -531,23 +388,9 @@ const PerticularReelProfile = () => {
               
             </View>
 
-            {/* Bio Section */}
-            {merchantProfile?.business_description ? (
-              <Text style={[styles.bio, {color: textColor}]}>
-                {merchantProfile.business_description}
-              </Text>
-            ) : (
-              <Text style={[styles.addBioText, {color: textColor}]}>
-                No bio available
-              </Text>
-            )}
+           
 
-            {/* Content Display Option */}
-            <View style={styles.contentOptionContainer}>
-              <TouchableOpacity style={styles.contentOptionButton}>
-                <Ionicons name="videocam-outline" size={20} color={textColor} />
-              </TouchableOpacity>
-            </View>
+           
 
             {/* Reels Grid */}
             <View style={styles.postsGridContainer}>
@@ -628,7 +471,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileSection: {
-    paddingHorizontal: scale(16),
+  
     paddingTop: verticalScale(20),
     alignItems: 'center',
   },
@@ -673,20 +516,7 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(12),
     marginTop: verticalScale(2),
   },
-  bio: {
-    fontSize: moderateScale(13),
-    lineHeight: moderateScale(18),
-    textAlign: 'center',
-    marginTop: verticalScale(8),
-    marginBottom: verticalScale(12),
-  },
-  addBioText: {
-    fontSize: moderateScale(13),
-    textAlign: 'center',
-    marginTop: verticalScale(8),
-    marginBottom: verticalScale(12),
-    opacity: 0.6,
-  },
+ 
   actionButtons: {
     flexDirection: 'row',
     gap: scale(8),
@@ -717,13 +547,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  contentOptionContainer: {
-    paddingHorizontal: scale(16),
-    paddingVertical: verticalScale(8),
-  },
-  contentOptionButton: {
-    alignSelf: 'flex-start',
-  },
+  
   postsGridContainer: {
     position: 'relative',
     paddingBottom: verticalScale(100),

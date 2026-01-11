@@ -64,8 +64,8 @@ const Settings = () => {
       {/* Header */}
      <Header
        title="Account Settings"
+        leftType="none"
        
-       onLeftPress={() => navigation.goBack()}
       />
 
       {/* Settings Options List */}

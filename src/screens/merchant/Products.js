@@ -35,6 +35,7 @@ const Products = () => {
   const [loading, setLoading] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
 
+  // Memoize styles that depend on theme
   const searchContainerStyle = useMemo(
     () => [
       styles.searchContainer,
@@ -43,6 +44,7 @@ const Products = () => {
     [theme],
   );
 
+  // Memoize empty component - only depends on search query
   const emptyComponent = useMemo(
     () => (
       <View style={styles.emptyContainer}>
@@ -59,12 +61,14 @@ const Products = () => {
     [searchQuery],
   );
 
+  // Memoize format price function
   const formatPrice = useCallback(price => {
     return `₹${parseFloat(price).toLocaleString('en-IN', {
       maximumFractionDigits: 2,
     })}`;
   }, []);
 
+  // Memoize fetch products function
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
@@ -80,7 +84,8 @@ const Products = () => {
           selling_price: item.selling_price,
           stock_qty: item.stock_qty,
           category_id: item.category_id,
-          image: `https://picsum.photos/200/200?random=${item.product_id}`,
+          primary_image: item.primary_image,
+          image: item.primary_image,
         }));
 
         setAllProducts(mappedProducts);
@@ -100,16 +105,9 @@ const Products = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [formatPrice]);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!hasFetched) {
-        fetchProducts();
-      }
-    }, [hasFetched, fetchProducts]),
-  );
-
+  // Memoize search function
   const handleSearch = useCallback(
     text => {
       setSearchQuery(text);
@@ -127,14 +125,7 @@ const Products = () => {
     [allProducts],
   );
 
-  const handleFilter = useCallback(() => {
-    console.log('Filter pressed');
-  }, []);
-
-  const handleSort = useCallback(() => {
-    console.log('Sort pressed');
-  }, []);
-
+  // Memoize render product item function
   const renderProductItem = useCallback(
     ({item}) => (
       <TouchableOpacity
@@ -163,6 +154,27 @@ const Products = () => {
       </TouchableOpacity>
     ),
     [borderColor, textColor],
+  );
+
+  // Memoize skeleton loading component
+  const loadingComponent = useMemo(
+    () => (
+      <View>
+        {[1, 2, 3, 4, 5, 6].map((_, index) => (
+          <ProductSkeleton key={`skeleton-${index}`} />
+        ))}
+      </View>
+    ),
+    [],
+  );
+
+  // Fetch products only when screen comes into focus and not fetched yet
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasFetched) {
+        fetchProducts();
+      }
+    }, [hasFetched, fetchProducts]),
   );
 
   return (
@@ -226,15 +238,11 @@ const Products = () => {
 
       {/* Products List */}
       {loading ? (
-        <View>
-          {[1, 2, 3, 4, 5, 6].map((_, index) => (
-            <ProductSkeleton key={`skeleton-${index}`} />
-          ))}
-        </View>
+        loadingComponent
       ) : (
         <FlatList
           data={products}
-          key="products-list" // Add a static key for the products list
+          key="products-list"
           renderItem={renderProductItem}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.listContent}

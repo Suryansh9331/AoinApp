@@ -65,16 +65,13 @@ const Register = ({ route }) => {
 
       setLoading(true);
       try {
-        console.log('Sending OTP request:', {
-          phone: formattedPhone,
-          route: ROUTES.SEND_OTP,
-        });
+        
 
         const response = await postData(ROUTES.SEND_OTP, {
           phone: formattedPhone,
         });
         
-        console.log('OTP send response:', response);
+      
         setLoading(false);
         
         if (response) {
@@ -91,8 +88,7 @@ const Register = ({ route }) => {
         }
       } catch (error) {
         setLoading(false);
-        console.log('OTP send error:', error);
-        console.log('Error details:', JSON.stringify(error, null, 2));
+       
         
         // Better error messages based on error type
         let errorMessage = 'Failed to send OTP. Please try again.';

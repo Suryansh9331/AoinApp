@@ -7,18 +7,20 @@ import {
   Alert,
   Platform,
   StatusBar,
+  Image,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation, CommonActions} from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
-import {useDispatch} from 'react-redux';
+import {useDispatch, useSelector} from 'react-redux';
 import useAppTheme from '../../theme/useAppTheme';
 import {getThemeColors} from '../../theme/themeColors';
 import {Colors} from '../../utils/Colors';
 import {clearCredentials} from '../../redux/slices/authSlice';
 import {clearAuthToken} from '../../utils/APiCall';
 import {removeItem, AUTH_STORAGE_KEY} from '../../utils/MMKVStorage';
+import Header from '../../components/Header/Header';
 
 const Profile = () => {
   const theme = useAppTheme();
@@ -26,6 +28,24 @@ const Profile = () => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
+  
+  // Get user data from Redux
+  const userData = useSelector(state => state.auth.data);
+  const userProfile = userData?.data || userData || {};
+  
+  
+  
+  // Format user name - handle different data structures
+  const userName = userProfile?.first_name && userProfile?.last_name 
+    ? `${userProfile.first_name} ${userProfile.last_name}`.trim()
+    : userProfile?.first_name 
+    ? userProfile.first_name.trim()
+    : userProfile?.username 
+    ? userProfile.username.trim()
+    : 'User';
+  const userEmail = userProfile?.email || userData?.email || '';
+  const userPhone = userProfile?.phone || '';
+  const userProfileImage = userProfile?.profile_img || userProfile?.avatar || userData?.profile_img || 'https://i.pravatar.cc/150?img=1';
 
   const handleLogout = () => {
     Alert.alert(
@@ -89,10 +109,7 @@ const Profile = () => {
       id: '4',
       title: 'Invite Friends',
       icon: 'person-add-outline',
-      onPress: () => {
-        // TODO: Navigate to invite friends
-        console.log('Navigate to Invite Friends');
-      },
+      
       showArrow: true,
     },
     {
@@ -113,22 +130,32 @@ const Profile = () => {
         translucent={false}
       /> */}
       {/* Header */}
-      <View style={[
-        styles.header, 
-        {borderBottomColor: borderColor},
-        Platform.OS === 'ios' && {paddingTop: insets.top + verticalScale(12)}
-      ]}>
-        <View style={styles.headerLeft}>
-          {navigation.canGoBack() && (
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={styles.headerButton}>
-              <Ionicons name="arrow-back" size={24} color={textColor} />
-            </TouchableOpacity>
-          )}
-          <Text style={[styles.headerTitle, {color: textColor}]}>
-            Account
-          </Text>
+      <Header
+        title="Account"
+        leftType="none"
+      />
+    
+      {/* Profile Section */}
+      <View style={[styles.profileSection, {borderBottomColor: borderColor}]}>
+        <View style={styles.profileInfo}>
+          <Image
+            source={{uri: userProfileImage}}
+            style={styles.profileImage}
+            resizeMode="cover"
+          />
+          <View style={styles.profileDetails}>
+            <Text style={[styles.profileName, {color: textColor}]}>
+              {userName}
+            </Text>
+            <Text style={[styles.profileEmail, {color: Colors.GRAY}]}>
+              {userEmail}
+            </Text>
+            {userPhone && (
+              <Text style={[styles.profilePhone, {color: Colors.GRAY}]}>
+                {userPhone.replace(/[^\d]/g, '')}
+              </Text>
+            )}
+          </View>
         </View>
       </View>
 
@@ -178,26 +205,40 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  
+  profileSection: {
+    paddingVertical: verticalScale(20),
     paddingHorizontal: scale(16),
-    paddingVertical: verticalScale(12),
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  headerLeft: {
+  profileInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: scale(16),
+  },
+  profileImage: {
+    width: moderateScale(80),
+    height: moderateScale(80),
+    borderRadius: moderateScale(40),
+    borderWidth: 2,
+    borderColor: Colors.PRIMARY,
+  },
+  profileDetails: {
     flex: 1,
   },
-  headerButton: {
-    padding: scale(8),
-  },
-  headerTitle: {
+  profileName: {
     fontSize: moderateScale(20),
     fontWeight: '700',
-    marginLeft: scale(8),
+    marginBottom: verticalScale(4),
+  },
+  profileEmail: {
+    fontSize: moderateScale(12),
+    fontWeight: '400',
+  },
+  profilePhone: {
+    fontSize: moderateScale(12),
+    fontWeight: '400',
+    marginTop: verticalScale(2),
   },
   menuContainer: {
     paddingTop: verticalScale(8),

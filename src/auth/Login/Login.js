@@ -63,7 +63,6 @@ const Login = () => {
         password: password,
       });
       
-      console.log('Merchant login response:', response);
       setLoading(false);
       
       if (response) {
@@ -84,7 +83,6 @@ const Login = () => {
             expiresIn: expiresIn || (DEFAULT_TOKEN_EXPIRY_DAYS * 24 * 60 * 60), 
           };
           setObject(AUTH_STORAGE_KEY, authData);
-          console.log('Auth data stored in MMKV with expiration:', new Date(expiresAt).toLocaleString());
 
           dispatch(
             login_Success({
@@ -158,7 +156,6 @@ const Login = () => {
         phone: formattedPhone,
       });
       
-      console.log('OTP send response:', response);
       setLoading(false);
       
       if (response) {

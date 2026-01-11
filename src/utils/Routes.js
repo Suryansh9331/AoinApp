@@ -37,6 +37,8 @@ export const ROUTES = Object.freeze({
   MERCHANT_STATS_DETAIL: '/api/reels/merchant/',
   USER_PROFILE: '/api/users/profile',
   USER_PROFILE_IMAGE: '/api/users/profile/image',
+  MERCHANT_ANALYTICS: 'api/reels/merchant/my/analytics',
+  SEARCH_REELS: '/api/reels/search',
   GOOGLE_LOGIN: 'https://api.aoinstore.com/api/auth/google',
 });
 

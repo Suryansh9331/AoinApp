@@ -11,7 +11,6 @@ import { postData, setAuthToken } from "../../utils/APiCall";
 import { setObject, AUTH_STORAGE_KEY, calculateTokenExpiry, DEFAULT_TOKEN_EXPIRY_DAYS } from "../../utils/MMKVStorage";
 
 function* loginWorker(action) {
-  console.log(action,'action');
   try {
  
     const payload = action.payload || {};
@@ -30,7 +29,6 @@ function* loginWorker(action) {
     };
     
     const response = yield call(postData, ROUTES.LOGIN, loginPayload);
-    console.log('Login response:', response);
     
     
     if (!response) {
@@ -46,7 +44,6 @@ function* loginWorker(action) {
       response?.token;
     
     if (!token) {
-      console.log('Token not found in response:', response);
       yield put(login_Failed('Authentication token missing in response.'));
       return;
     }
@@ -68,7 +65,6 @@ function* loginWorker(action) {
       expiresIn: expiresIn || (DEFAULT_TOKEN_EXPIRY_DAYS * 24 * 60 * 60), // Store in seconds
     };
     setObject(AUTH_STORAGE_KEY, authData);
-    console.log('Auth data stored in MMKV (from saga) with expiration:', new Date(expiresAt).toLocaleString());
 
     // Success case - pass the full response
     yield put(
@@ -78,7 +74,6 @@ function* loginWorker(action) {
       })
     );
   } catch (error) {
-    console.log('Login saga error:', error);
     
     // Handle error object from handleApiError
     let errorMessage = 'An unexpected error occurred.';

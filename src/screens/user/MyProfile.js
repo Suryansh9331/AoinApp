@@ -44,7 +44,6 @@ const MyProfile = () => {
     try {
       setLoading(true);
       const response = await getData(`${BASE_URL}${ROUTES.USER_PROFILE}`);
-
       if (response && response.profile) {
         const profile = response.profile;
         setProfileData(profile);

@@ -77,7 +77,7 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
             flatListRef.current.scrollToIndex({
               index: reelIndex,
               animated: false,
-              viewPosition: 0.5,
+              viewPosition: 0,
             });
             setCurrentIndex(reelIndex);
             hasScrolledToInitialReel.current = true;
@@ -106,12 +106,11 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
     }
   }, [initialReelId, reelsData, containerHeight]);
 
-  // Preserve current index when data structure hasn't changed (only like state updated)
+  
   useEffect(() => {
-    // Only reset if data structure actually changed (new items added/removed)
-    // Don't reset if only like state changed
+    
     if (isDataStructureChanged.current && reelsData.length > 0) {
-      // If structure changed and we have data, maintain current index if possible
+      
       if (currentIndex >= reelsData.length) {
         setCurrentIndex(reelsData.length - 1);
       }
@@ -135,18 +134,13 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
     minimumViewTime: 100,
   }).current;
 
-  // These handlers are kept for backward compatibility
-  // But VideoReelItem now uses Redux actions directly
+  
   const handleLike = useCallback((id, isLiked) => {
-    // Redux actions are handled in VideoReelItem
-    // This is just for any parent component callbacks
-    // Local state will be updated via data prop from Redux
+    
   }, []);
 
   const handleShare = useCallback((id) => {
-    // Redux actions are handled in VideoReelItem
-    // This is just for any parent component callbacks
-    // Local state will be updated via data prop from Redux
+   
   }, []);
 
   const renderItem = useCallback(({ item, index }) => {
@@ -230,7 +224,7 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
             flatListRef.current?.scrollToIndex({
               index: info.index,
               animated: true,
-              viewPosition: 0.5
+              viewPosition: 0
             });
           });
         }}

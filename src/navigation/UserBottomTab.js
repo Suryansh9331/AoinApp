@@ -1,6 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Platform, Text } from 'react-native';
-import Swiper from 'react-native-swiper';
+import { View, StyleSheet, TouchableOpacity, Platform, Text, FlatList, Dimensions } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -11,6 +10,8 @@ import Home from '../screens/user/Home';
 import Explore from '../screens/user/Explore';
 import Profile from '../screens/user/Profile';
 import Settings from '../screens/user/Settings';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const TAB_ITEMS = [
   {
@@ -46,56 +47,91 @@ const TAB_ITEMS = [
 
 const UserBottomTab = () => {
   const [activeIndex, setActiveIndex] = useState(0);
-  const swiperRef = useRef(null);
+  const flatListRef = useRef(null);
   const navigation = useNavigation();
   const route = useRoute();
   const theme = useAppTheme();
   const { backgroundColor, textColor, borderColor } = getThemeColors(theme);
 
-  // Handle navigation to specific tab with params
+  // Initialize activeIndex from route params
+  const getInitialIndex = () => {
+    const navTo = route?.params?.navigateToTab;
+    const idx = navTo ? TAB_ITEMS.findIndex(tab => tab.key === navTo) : -1;
+    return idx >= 0 ? idx : 0;
+  };
+
+  // Handle initial navigation from route params
   useEffect(() => {
-    const params = route.params;
-    if (params?.navigateToTab) {
-      const tabIndex = TAB_ITEMS.findIndex(tab => tab.key === params.navigateToTab);
-      if (tabIndex !== -1 && swiperRef.current) {
-        setActiveIndex(tabIndex);
-        swiperRef.current.scrollTo(tabIndex, true);
-      }
+    const initialIndex = getInitialIndex();
+    setActiveIndex(initialIndex);
+    if (flatListRef.current) {
+      flatListRef.current.scrollToIndex({ index: initialIndex, animated: false });
     }
-  }, [route.params]);
+  }, []);
 
   const handleTabPress = index => {
-    if (swiperRef.current) {
-      swiperRef.current.scrollTo(index, true);
+    if (index === activeIndex || !flatListRef.current) {
+      return;
     }
+    setActiveIndex(index);
+    flatListRef.current.scrollToIndex({ index: index, animated: false });
   };
+
+  // Render screen component
+  const renderScreen = ({ item, index }) => {
+    const ScreenComponent = item.component;
+    // Only render the active screen
+    if (index !== activeIndex) {
+      return (
+        <View style={[styles.slide, { backgroundColor }]}>
+          {/* Empty view for non-active screens */}
+        </View>
+      );
+    }
+    
+    const profileParams = item.key === 'Profile' && route.params?.userId 
+      ? { userId: route.params.userId }
+      : undefined;
+    
+    const homeParams = item.key === 'Home' && route.params?.reelId
+      ? { reelId: route.params.reelId }
+      : undefined;
+    
+    const screenParams = item.key === 'Home' ? homeParams : profileParams;
+    
+    return (
+      <View style={[styles.slide, { backgroundColor }]}>
+        <ScreenComponent 
+          navigation={navigation} 
+          routeKey={item.key}
+          routeParams={screenParams}
+        />
+      </View>
+    );
+  };
+
+  // Get layout for FlatList
+  const getItemLayout = (data, index) => ({
+    length: SCREEN_WIDTH,
+    offset: SCREEN_WIDTH * index,
+    index,
+  });
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
-      <Swiper
-        ref={swiperRef}
-        loop={false}
-        index={activeIndex}
-        showsPagination={false}
-        onIndexChanged={setActiveIndex}
-        loadMinimal
-        loadMinimalSize={1}>
-        {TAB_ITEMS.map(({ key, component: ScreenComponent }, idx) => {
-          const profileParams = key === 'Profile' && route.params?.userId 
-            ? { userId: route.params.userId }
-            : undefined;
-          
-          return (
-            <View style={[styles.slide, { backgroundColor }]} key={key}>
-              <ScreenComponent 
-                navigation={navigation} 
-                routeKey={key}
-                routeParams={profileParams}
-              />
-            </View>
-          );
-        })}
-      </Swiper>
+      <FlatList
+        ref={flatListRef}
+        data={TAB_ITEMS}
+        renderItem={renderScreen}
+        keyExtractor={(item) => item.key}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        getItemLayout={getItemLayout}
+        initialScrollIndex={activeIndex}
+        scrollEnabled={false}
+        bounces={false}
+      />
 
       <View style={[
         styles.tabBar,
@@ -151,6 +187,7 @@ const styles = StyleSheet.create({
   },
   slide: {
     flex: 1,
+    width: SCREEN_WIDTH,
   },
   tabBar: {
     flexDirection: 'row',

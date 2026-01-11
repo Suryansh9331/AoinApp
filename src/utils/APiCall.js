@@ -25,12 +25,7 @@ export const handleApiError = error => {
     const {status, data} = error.response;
     const errorMessage = data?.message || data?.error || data?.errorMessage || `Request failed with status ${status}`;
     
-    // Log full error for debugging
-    console.log('API Error Response:', {
-      status,
-      data,
-      message: errorMessage,
-    });
+    
     
     throw {
       type: 'response',
@@ -41,16 +36,7 @@ export const handleApiError = error => {
   }
 
   if (error.request) {
-    // Log more details for network errors
-    console.log('Network error details:', {
-      message: error.message,
-      code: error.code,
-      config: {
-        url: error.config?.url,
-        method: error.config?.method,
-        baseURL: error.config?.baseURL,
-      },
-    });
+    
     throw {
       type: 'network',
       message: 'Network error, no response received. Please check your internet connection and server URL.',
