@@ -60,6 +60,7 @@ const VideoReelItem = ({item, isActive, onLike, onShare, itemHeight}) => {
   const lastTap = useRef(null);
 
   useEffect(() => {
+    
     if (isActive) {
       setIsPlaying(true);
     } else {
@@ -219,11 +220,14 @@ const VideoReelItem = ({item, isActive, onLike, onShare, itemHeight}) => {
           playWhenInactive={false}
           ignoreSilentSwitch="ignore"
           pointerEvents="none"
+          onPlaybackStatusUpdate={(status) => {
+           
+          }}
           onError={error => {
             console.error('Video error:', error);
           }}
           onLoad={() => {
-            // Video loaded successfully
+            // console.log(`Video ${item.id || item.reel_id} loaded successfully`);
           }}
         />
 
@@ -277,6 +281,7 @@ const VideoReelItem = ({item, isActive, onLike, onShare, itemHeight}) => {
               navigation.navigate('PerticularReelProfile', {
                 userId: item.merchant_id || item.userId || item.id,
                 merchantId: item.merchant_id || item.userId || item.id,
+                profileImage: merchantProfileImage, // Pass profile image
               });
             }
           }}

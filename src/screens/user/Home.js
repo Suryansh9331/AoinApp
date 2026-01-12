@@ -22,8 +22,11 @@ const Home = ({ routeParams, initialReels }) => {
   const dispatch = useDispatch();
   const route = useRoute();
   const [hasFetched, setHasFetched] = React.useState(false);
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [hasMore, setHasMore] = React.useState(true);
+  const [videoReelKey, setVideoReelKey] = React.useState(`video-reel-home-${Date.now()}`);
 
-  const { publicReels, publicReelsLoading, publicReelsError } = useSelector(
+  const { publicReels, publicReelsLoading, publicReelsError, publicReelsPagination } = useSelector(
     state => state.reels,
   );
 
@@ -86,16 +89,34 @@ const Home = ({ routeParams, initialReels }) => {
     return publicReels;
   }, [preloadedReels, publicReels]);
 
-  const fetchReels = useCallback(() => {
-    if (!publicReelsLoading && !hasFetched) {
-      setHasFetched(true);
-      dispatch(fetchPublicReels_Request({ page: 1, per_page: 20 }));
+  const fetchReels = useCallback((page = 1, append = false) => {
+    if (!publicReelsLoading && (!hasFetched || append)) {
+      if (!append) {
+        setHasFetched(true);
+        setCurrentPage(1);
+      }
+      dispatch(fetchPublicReels_Request({ page, per_page: 20, append }));
     }
   }, [dispatch, publicReelsLoading, hasFetched]);
+
+  const fetchMoreReels = useCallback(() => {
+    if (hasMore && !publicReelsLoading && publicReelsPagination.page < publicReelsPagination.pages) {
+      const nextPage = currentPage + 1;
+      setCurrentPage(nextPage);
+      fetchReels(nextPage, true);
+    }
+  }, [hasMore, publicReelsLoading, publicReelsPagination, currentPage, fetchReels]);
 
   useEffect(() => {
     fetchReels();
   }, [fetchReels]);
+
+  // Update hasMore based on pagination
+  useEffect(() => {
+    if (publicReelsPagination) {
+      setHasMore(publicReelsPagination.page < publicReelsPagination.pages);
+    }
+  }, [publicReelsPagination]);
 
   const showLoading = useMemo(
     () => displayData.length === 0 && (publicReelsLoading || !hasFetched),
@@ -125,7 +146,10 @@ const Home = ({ routeParams, initialReels }) => {
         <VideoReel
           data={displayData}
           initialReelId={currentReelId}
-          key={`video-reel-${currentReelId || 'default'}`}
+          key={videoReelKey}
+          onEndReached={fetchMoreReels}
+          hasMore={hasMore}
+          isLoading={publicReelsLoading}
         />
       ) : (
         <View style={styles.loadingContainer}>

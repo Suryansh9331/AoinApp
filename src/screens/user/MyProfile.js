@@ -98,15 +98,8 @@ const MyProfile = () => {
 
   
   const handleSave = () => {
-    // TODO: Implement save profile API call
-    console.log('Saving profile:', {
-      fullName,
-      email,
-      dateOfBirth,
-      gender,
-      phoneNumber,
-    });
-    // Show success message or navigate back
+  
+    
     navigation.goBack();
   };
 

@@ -375,6 +375,9 @@ const Home = ({routeParams, initialReels}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [videoReelKey, setVideoReelKey] = useState(`video-reel-merchant-${Date.now()}`);
   const [currentReelId, setCurrentReelId] = useState(
     routeParams?.reelId || route.params?.reelId,
   );
@@ -410,11 +413,11 @@ const Home = ({routeParams, initialReels}) => {
   }, [unreadCount]);
 
   // -------------------- API LOGIC (UNCHANGED) --------------------
-  const fetchPublicReels = useCallback(async () => {
+  const fetchPublicReels = useCallback(async (page = 1, append = false) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await getData(`${ROUTES.PUBLIC_REELS}?page=1&per_page=20`);
+      const response = await getData(`${ROUTES.PUBLIC_REELS}?page=${page}&per_page=20`);
 
       if (response?.data) {
         const mappedReels = response.data.map((apiReel, index) => ({
@@ -454,17 +457,39 @@ const Home = ({routeParams, initialReels}) => {
           file_size_bytes: apiReel.file_size_bytes,
           resolution: apiReel.resolution,
         }));
-        setPublicReels(mappedReels);
+        
+        if (append) {
+          // Avoid duplicates when appending
+          const existingIds = new Set(publicReels.map(r => r.id || r.reel_id));
+          const newReels = mappedReels.filter(r => !existingIds.has(r.id || r.reel_id));
+          setPublicReels([...publicReels, ...newReels]);
+        } else {
+          setPublicReels(mappedReels);
+        }
+        
+        // Update pagination state
+        setCurrentPage(page);
+        setHasMore(response.pagination ? page < response.pagination.pages : false);
       } else {
-        setPublicReels([]);
+        setPublicReels(append ? publicReels : []);
+        setHasMore(false);
       }
     } catch (err) {
       setError(err?.message || 'Failed to fetch reels');
-      setPublicReels([]);
+      if (!append) {
+        setPublicReels([]);
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [publicReels]);
+
+  const fetchMoreReels = useCallback(() => {
+    if (hasMore && !loading) {
+      const nextPage = currentPage + 1;
+      fetchPublicReels(nextPage, true);
+    }
+  }, [hasMore, loading, currentPage, fetchPublicReels]);
 
   const fetchUnreadCount = useCallback(async () => {
     try {
@@ -566,7 +591,10 @@ const Home = ({routeParams, initialReels}) => {
         <VideoReel
           data={displayData}
           initialReelId={currentReelId}
-          key={`video-reel-${currentReelId || 'default'}`}
+          key={videoReelKey}
+          onEndReached={fetchMoreReels}
+          hasMore={hasMore}
+          isLoading={loading}
         />
       ) : (
         <View style={styles.loadingContainer}>

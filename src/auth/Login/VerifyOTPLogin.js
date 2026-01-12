@@ -130,7 +130,7 @@ const VerifyOTPLogin = ({ route }) => {
     } catch (error) {
       setLoading(false);
       console.log('Login OTP verification error:', error);
-      console.log('Error details:', JSON.stringify(error, null, 2));
+     
       
       let errorMessage = 'Failed to verify OTP. Please try again.';
       

@@ -14,7 +14,7 @@ import { getThemeColors } from '../../theme/themeColors';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const HEADER_HEIGHT = 56;
 
-const VideoReel = ({ data = [], initialReelId = null }) => {
+const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isLoading }) => {
   const theme = useAppTheme();
   const { backgroundColor } = getThemeColors(theme);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -52,17 +52,22 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
     }
   }, [initialReelId]);
 
-  // Scroll to specific reel when initialReelId is provided
+ 
   useEffect(() => {
+    
+    
     if (initialReelId && reelsData.length > 0 && containerHeight > 0 && !hasScrolledToInitialReel.current) {
       const reelIndex = reelsData.findIndex(reel => {
         // Check all possible ID fields and handle both string and number comparisons
         const reelId = reel.id || reel.reel_id;
-        return (
+        const matches = (
           reelId === initialReelId ||
           reelId?.toString() === initialReelId?.toString()
         );
+        
+        return matches;
       });
+
 
       if (reelIndex !== -1) {
         // Reset the scroll flag to ensure we can scroll again if needed
@@ -70,7 +75,12 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
         
         // Small delay to ensure the list is ready
         const scrollToReel = () => {
-          if (!flatListRef.current) return;
+          if (!flatListRef.current) {
+           
+            return;
+          }
+          
+         
           
           try {
             // First try scrollToIndex
@@ -81,7 +91,9 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
             });
             setCurrentIndex(reelIndex);
             hasScrolledToInitialReel.current = true;
+           
           } catch (error) {
+            console.log('scrollToIndex failed, trying scrollToOffset:', error);
             // If that fails, try scrollToOffset
             try {
               const offset = reelIndex * containerHeight;
@@ -91,8 +103,10 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
               });
               setCurrentIndex(reelIndex);
               hasScrolledToInitialReel.current = true;
+              
             } catch (e) {
-              // If both methods fail, try again after a short delay
+              
+           
               if (!hasScrolledToInitialReel.current) {
                 setTimeout(scrollToReel, 100);
               }
@@ -100,8 +114,10 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
           }
         };
 
-        // Initial attempt
+      
         scrollToReel();
+      } else {
+      
       }
     }
   }, [initialReelId, reelsData, containerHeight]);
@@ -125,9 +141,17 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
       );
       if (fullyVisibleItem && fullyVisibleItem.index !== currentIndex) {
         setCurrentIndex(fullyVisibleItem.index);
+        
+        // Check if we're near the end and should load more
+        if (onEndReached && hasMore && !isLoading) {
+          const threshold = 3; // Load more when 3 items from end
+          if (fullyVisibleItem.index >= reelsData.length - threshold) {
+            onEndReached();
+          }
+        }
       }
     }
-  }, [currentIndex]);
+  }, [currentIndex, reelsData.length, onEndReached, hasMore, isLoading]);
 
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 80,
@@ -178,6 +202,14 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
       const index = Math.round(offsetY / containerHeight);
       if (index >= 0 && index < reelsData.length && index !== currentIndex) {
         setCurrentIndex(index);
+        
+        // Check if we're near the end and should load more
+        if (onEndReached && hasMore && !isLoading) {
+          const threshold = 3; // Load more when 3 items from end
+          if (index >= reelsData.length - threshold) {
+            onEndReached();
+          }
+        }
       }
     }
   };
@@ -228,10 +260,15 @@ const VideoReel = ({ data = [], initialReelId = null }) => {
             });
           });
         }}
-        maintainVisibleContentPosition={{
-          minIndexForVisible: 0,
-        }}
       />
+      
+      {/* Loading indicator for pagination */}
+      {/* {isLoading && hasMore && (
+        <View style={styles.paginationLoading}>
+          <ActivityIndicator size="small" color="#F2631F" />
+          <Text style={styles.paginationLoadingText}>Loading more reels...</Text>
+        </View>
+      )} */}
     </View>
   );
 };
@@ -250,6 +287,20 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginTop: 10,
     fontSize: 16,
+  },
+  paginationLoading: {
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  paginationLoadingText: {
+    color: '#FFFFFF',
+    fontSize: 14,
   },
 });
 

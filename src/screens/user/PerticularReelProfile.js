@@ -42,10 +42,11 @@ const PerticularReelProfile = () => {
   const insets = useSafeAreaInsets();
 
   const merchantId = route.params?.merchantId || route.params?.userId;
+  const passedProfileImage = route.params?.profileImage; // Get passed profile image
   const {publicReels, publicReelsLoading, publicReelsError} = useSelector(
     state => state.reels,
   );
-
+  
   // Filter reels for this merchant
   const merchantReels = useMemo(() => {
     if (!merchantId) return [];
@@ -83,7 +84,7 @@ const PerticularReelProfile = () => {
     try {
       const endpoint = `${ROUTES.MERCHANT_PUBLIC_PROFILE}${merchantId}/public-profile`;
       const response = await getData(endpoint);
-
+     
       const profile =
         response?.merchant ||
         response?.data?.merchant ||
@@ -180,10 +181,16 @@ const PerticularReelProfile = () => {
   );
   // ✅ SINGLE SOURCE OF TRUTH FOR PROFILE IMAGE
   const profileImage = useMemo(() => {
+    // First priority: passed profile image from navigation params
+    if (passedProfileImage) {
+      return passedProfileImage;
+    }
+    
+    // Second priority: merchant profile from API
     if (!merchantProfile) return null;
 
     return merchantProfile.profile_img ?? merchantProfile.profile_image ?? null;
-  }, [merchantProfile]);
+  }, [passedProfileImage, merchantProfile]);
 
   const formatViews = useCallback(views => {
     if (!views) return '0';

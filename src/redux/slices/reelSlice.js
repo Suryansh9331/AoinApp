@@ -89,7 +89,17 @@ const reelSlice = createSlice({
       const payload = action.payload ?? {};
       state.publicReelsLoading = false;
       state.publicReelsError = null;
-      state.publicReels = payload.reels || [];
+      
+      // If append is true, add to existing reels, otherwise replace
+      if (payload.append) {
+        // Avoid duplicates when appending
+        const existingIds = new Set(state.publicReels.map(r => r.id || r.reel_id));
+        const newReels = (payload.reels || []).filter(r => !existingIds.has(r.id || r.reel_id));
+        state.publicReels = [...state.publicReels, ...newReels];
+      } else {
+        state.publicReels = payload.reels || [];
+      }
+      
       state.publicReelsPagination = payload.pagination || {
         page: 1,
         pages: 1,
