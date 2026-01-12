@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ActivityIndicator, StatusBar, SafeAreaView } from 'react-native';
+import { TouchableOpacity } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { getData } from '../../utils/APiCall';
 import { ROUTES } from '../../utils/Routes';
 import VideoReel from '../../components/VideoReel/VideoReel';
@@ -58,6 +60,7 @@ const UserReelsView = () => {
                          caption: reel.description || '',
                          username: userData?.username || 'merchant',
                          userAvatar: userData?.profile_image || 'https://via.placeholder.com/100',
+                         
                          likes: reel.likes_count || 0,
                          shares: reel.shares_count || 0,
                          views: reel.views_count || 0,
@@ -130,7 +133,9 @@ const UserReelsView = () => {
                     thumbnailUrl: reel.thumbnail_url || 'https://i.pravatar.cc/150?img=1', // Handle null thumbnails
                     caption: reel.description || '',
                     username: userData?.username || 'merchant',
-                    userAvatar: userData?.profile_image || 'https://via.placeholder.com/100',
+                    merchant: reel.merchant || null,
+
+
                     likes: reel.likes_count || 0,
                     shares: reel.shares_count || 0,
                     views: reel.views_count || 0,
@@ -169,18 +174,36 @@ const UserReelsView = () => {
                     translucent={false}
                />
                <SafeAreaView style={{ backgroundColor: '#000000' }}>
-                    <Header
-                         title="My Reels"
-                         leftType="none"
+                  <Header
+     title="My Reels"
 
-                         rightType="none"
+     /* ⬅️ INDEPENDENT LEFT ICON */
+     leftContent={
+          <TouchableOpacity
+               onPress={() => navigation.goBack()}
+               style={{
+                    width: 44,
+                    height: 44,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+               }}
+          >
+               <Ionicons
+                    name="arrow-back"
+                    size={24}
+                    color="#FFFFFF"
+               />
+          </TouchableOpacity>
+     }
 
-                         containerStyle={{
-                              backgroundColor: '#000000',
-                              borderBottomWidth: 0,
-                         }}
-                         titleStyle={{ color: '#FFFFFF' }}
-                    />
+     rightType="none"
+     containerStyle={{
+          backgroundColor: '#000000',
+          borderBottomWidth: 0,
+     }}
+     titleStyle={{ color: '#FFFFFF' }}
+/>
+
                </SafeAreaView>
                {showLoading ? (
                     <View style={styles.loadingContainer}>

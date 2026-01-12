@@ -190,11 +190,13 @@ const mapPublicReelData = (apiReel, currentUser = null) => {
       `merchant_${apiReel.merchant_id}` ||
       'User';
     userAvatar =
-      apiReel.merchant?.avatar ||
-      apiReel.merchant?.avatar_url ||
-      apiReel.merchant?.profile_picture ||
-      apiReel.product?.thumbnail_url ||
-      'https://i.pravatar.cc/150?img=' + (apiReel.merchant_id || 1);
+  apiReel.merchant?.profile_img ||           // 🔥 REAL IMAGE
+  apiReel.merchant?.avatar ||
+  apiReel.merchant?.avatar_url ||
+  apiReel.merchant?.profile_picture ||
+  apiReel.product?.thumbnail_url ||
+  null;
+
   }
 
   return {
@@ -205,6 +207,8 @@ const mapPublicReelData = (apiReel, currentUser = null) => {
     username: username,
     userAvatar: userAvatar,
     caption: apiReel.description || '',
+    merchant: apiReel.merchant, 
+
     likes: apiReel.likes_count || 0,
     comments: apiReel.comments_count || 0,
     shares: apiReel.shares_count || 0,

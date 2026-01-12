@@ -45,7 +45,7 @@ const SelectRoleScreen = () => {
           
             <View style={styles.buttonTextContainer}>
               <Text style={styles.roleTitle}>
-                Signin as a Merchant
+                Sign in as a Merchant
               </Text>
             </View>
           </View>
@@ -59,7 +59,7 @@ const SelectRoleScreen = () => {
             
             <View style={styles.buttonTextContainer}>
               <Text style={styles.roleTitle}>
-                Signin as a User
+                Sign in as a User
               </Text>
             </View>
           </View>
@@ -67,14 +67,8 @@ const SelectRoleScreen = () => {
 
         {/* Sign Up Text */}
         <View style={styles.signupContainer}>
-          <Text style={[styles.signupText, { color: getThemeColors(theme).textColor }]}>
-            Don't have an account?{' '}
-          </Text>
-          <TouchableOpacity onPress={handleSignUp}>
-            <Text style={styles.signupLink}>
-              Sign up
-            </Text>
-          </TouchableOpacity>
+         
+         
         </View>
       </View>
     </View>

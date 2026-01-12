@@ -84,10 +84,14 @@ const PerticularReelProfile = () => {
       const endpoint = `${ROUTES.MERCHANT_PUBLIC_PROFILE}${merchantId}/public-profile`;
       const response = await getData(endpoint);
 
-      if (response && typeof response === 'object' && response.business_name) {
-        setMerchantProfile(response);
-      } else if (response?.data?.business_name) {
-        setMerchantProfile(response.data);
+      const profile =
+        response?.merchant ||
+        response?.data?.merchant ||
+        response?.data ||
+        response;
+
+      if (profile?.business_name) {
+        setMerchantProfile(profile);
       } else {
         setProfileError('Invalid profile data received');
       }
@@ -174,6 +178,12 @@ const PerticularReelProfile = () => {
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [merchantId]),
   );
+  // ✅ SINGLE SOURCE OF TRUTH FOR PROFILE IMAGE
+  const profileImage = useMemo(() => {
+    if (!merchantProfile) return null;
+
+    return merchantProfile.profile_img ?? merchantProfile.profile_image ?? null;
+  }, [merchantProfile]);
 
   const formatViews = useCallback(views => {
     if (!views) return '0';
@@ -304,7 +314,12 @@ const PerticularReelProfile = () => {
             {/* Avatar */}
             <View style={styles.avatarContainer}>
               <Image
-                source={{uri: 'https://i.pravatar.cc/150?img=1'}}
+                key={profileImage}
+                source={
+                  profileImage
+                    ? {uri: profileImage}
+                    : require('../../../assest/images/AppLogo.png')
+                }
                 style={styles.avatar}
               />
             </View>
@@ -332,9 +347,11 @@ const PerticularReelProfile = () => {
                   Reels
                 </Text>
               </View>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.statItem}
-                onPress={() => navigation.navigate('FollowerList', { merchantId })}
+                onPress={() =>
+                  navigation.navigate('FollowerList', {merchantId})
+                }
                 activeOpacity={0.7}>
                 <Text style={[styles.statNumber, {color: textColor}]}>
                   {followersCount}
@@ -385,12 +402,7 @@ const PerticularReelProfile = () => {
                   </Text>
                 )}
               </TouchableOpacity>
-              
             </View>
-
-           
-
-           
 
             {/* Reels Grid */}
             <View style={styles.postsGridContainer}>
@@ -471,7 +483,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileSection: {
-  
     paddingTop: verticalScale(20),
     alignItems: 'center',
   },
@@ -516,7 +527,7 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(12),
     marginTop: verticalScale(2),
   },
- 
+
   actionButtons: {
     flexDirection: 'row',
     gap: scale(8),
@@ -547,7 +558,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  
+
   postsGridContainer: {
     position: 'relative',
     paddingBottom: verticalScale(100),

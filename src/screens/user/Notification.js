@@ -46,7 +46,7 @@ const Notification = () => {
             videoUrl: apiReel.video_url,
             thumbnail: apiReel.thumbnail_url,
             username: apiReel.merchant?.username || apiReel.merchant?.user_name || `merchant_${apiReel.merchant_id}` || 'User',
-            userAvatar: apiReel.merchant?.avatar || apiReel.merchant?.avatar_url || apiReel.product?.thumbnail_url || 'https://i.pravatar.cc/150?img=1',
+            merchant: apiReel.merchant|| null,
             caption: apiReel.description || '',
             likes: apiReel.likes_count || 0,
             comments: apiReel.comments_count || 0,

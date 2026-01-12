@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, {useState, useRef, useEffect, useCallback} from 'react';
 import {
   View,
   Text,
@@ -33,6 +33,14 @@ const VideoReelItem = ({item, isActive, onLike, onShare, itemHeight}) => {
   const userRole = userData?.data?.role || userData?.role || 'user';
   const theme = useAppTheme();
   const {backgroundColor, textColor} = getThemeColors(theme);
+  const merchantProfileImage =
+  item?.profile_img ||               // ← THIS IS THE REAL FIELD
+  item?.merchant?.profile_img ||     // fallback if nested
+  null;
+
+
+
+
   // Convert isLiked to boolean (handle string "true"/"false" from API)
   const getIsLiked = value => {
     if (typeof value === 'boolean') return value;
@@ -44,13 +52,12 @@ const VideoReelItem = ({item, isActive, onLike, onShare, itemHeight}) => {
   const [likes, setLikes] = useState(item.likes || 0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showPlayPauseIcon, setShowPlayPauseIcon] = useState(false);
-  
+
   const likeScale = useRef(new Animated.Value(1)).current;
   const likeOpacity = useRef(new Animated.Value(0)).current;
   const doubleTapOpacity = useRef(new Animated.Value(0)).current;
   const buyPulse = useRef(new Animated.Value(1)).current;
   const lastTap = useRef(null);
-
 
   useEffect(() => {
     if (isActive) {
@@ -67,7 +74,6 @@ const VideoReelItem = ({item, isActive, onLike, onShare, itemHeight}) => {
     setIsLiked(itemIsLiked);
     setLikes(item.likes || 0);
   }, [item.id, item.reel_id, item.isLiked, item.likes]);
-
 
   const handleLike = () => {
     const newLikedState = !isLiked;
@@ -171,11 +177,10 @@ const VideoReelItem = ({item, isActive, onLike, onShare, itemHeight}) => {
   };
 
   const handleVideoPress = () => {
-   
     const now = Date.now();
     const DOUBLE_PRESS_DELAY = 300;
 
-    if (lastTap.current && (now - lastTap.current) < DOUBLE_PRESS_DELAY) {
+    if (lastTap.current && now - lastTap.current < DOUBLE_PRESS_DELAY) {
       handleDoubleTap();
       lastTap.current = null;
     } else {
@@ -192,7 +197,7 @@ const VideoReelItem = ({item, isActive, onLike, onShare, itemHeight}) => {
       }, DOUBLE_PRESS_DELAY);
     }
   };
-  
+
   return (
     <View
       style={[
@@ -246,15 +251,13 @@ const VideoReelItem = ({item, isActive, onLike, onShare, itemHeight}) => {
         {/* Play/Pause icon overlay */}
         {showPlayPauseIcon && (
           <View style={styles.playPauseIcon} pointerEvents="none">
-            <Ionicons 
-              name={isPlaying ? 'pause' : 'play'} 
-              size={40} 
-              color="#FFFFFF" 
+            <Ionicons
+              name={isPlaying ? 'pause' : 'play'}
+              size={40}
+              color="#FFFFFF"
             />
           </View>
         )}
-
-
       </TouchableOpacity>
 
       {/* Right side action buttons */}
@@ -278,7 +281,16 @@ const VideoReelItem = ({item, isActive, onLike, onShare, itemHeight}) => {
             }
           }}
           activeOpacity={0.7}>
-          <Image source={{uri: item.userAvatar}} style={styles.avatar} />
+          <Image
+            key={merchantProfileImage} // 🔥 forces correct image render
+            source={
+              merchantProfileImage
+                ? {uri: merchantProfileImage}
+                : require('../../../assest/images/AppLogo.png') // local fallback
+            }
+            style={styles.avatar}
+          />
+
           <View style={styles.followButton}>
             <Ionicons name="add" size={16} color="#FFFFFF" />
           </View>

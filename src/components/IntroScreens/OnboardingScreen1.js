@@ -1,39 +1,40 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Dimensions,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { moderateScale, verticalScale, scale } from 'react-native-size-matters';
+import {View, Text, StyleSheet, Dimensions} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
+import {moderateScale, verticalScale, scale} from 'react-native-size-matters';
 import ActionButton from '../reuseable/ActionButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Colors } from '../../utils/Colors';
+import {Colors} from '../../utils/Colors';
 import useAppTheme from '../../theme/useAppTheme';
-import { getThemeColors } from '../../theme/themeColors';
-
-const { width } = Dimensions.get('window');
+import {getThemeColors} from '../../theme/themeColors';
+import { Image } from 'react-native';
+const {width} = Dimensions.get('window');
 
 const OnboardingScreen1 = () => {
   const navigation = useNavigation();
   const theme = useAppTheme();
-  const { backgroundColor, textColor } = getThemeColors(theme);
+  const {backgroundColor, textColor} = getThemeColors(theme);
 
   const handleNext = () => {
     navigation.navigate('Onboarding2');
   };
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
+    <View style={[styles.container, {backgroundColor}]}>
       <View style={styles.iconContainer}>
-        <Ionicons name="people-outline" size={moderateScale(100)} color={Colors.PRIMARY} />
+        <Image
+          source={require('../../../assest/images/Onboarding1.png')}
+          style={styles.image}
+          resizeMode="contain"
+        />
       </View>
-      
+
       <View style={styles.contentContainer}>
-        <Text style={[styles.title, { color: textColor }]}>Connect with Artists</Text>
-        <Text style={[styles.description, { color: textColor, opacity: 0.7 }]}>
-          Discover talented artists and connect with creative professionals from around the world.
+        <Text style={[styles.title, {color: textColor}]}>
+          One Place, All You Need
+        </Text>
+        <Text style={[styles.description, {color: textColor, opacity: 0.7}]}>
+          Discover thousands of products with seamless browsing.
         </Text>
       </View>
 
@@ -67,7 +68,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale(20),
   },
   title: {
-    fontSize: moderateScale(28),
+    fontSize: moderateScale(24),
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: verticalScale(16),
@@ -81,7 +82,12 @@ const styles = StyleSheet.create({
     paddingBottom: verticalScale(40),
     alignItems: 'center',
   },
+
+  image: {
+  width: moderateScale(290),
+  height: moderateScale(290),
+},
+
 });
 
 export default OnboardingScreen1;
-

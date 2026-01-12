@@ -102,15 +102,7 @@ const SelectSignUpMethod = () => {
         </Text>
 
         <View style={styles.methodsContainer}>
-          <TouchableOpacity
-            style={styles.methodButton}
-            onPress={() => handleMethodSelect('email')}
-            activeOpacity={0.8}>
-            <MaterialIcons name="email" size={moderateScale(20)} color={Colors.WHITE} />
-            <Text style={styles.methodButtonText}>
-              Sign up with Email
-            </Text>
-          </TouchableOpacity>
+         
 
           <TouchableOpacity
             style={styles.methodButton}

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Linking,
   Alert,
+  SafeAreaView,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -111,7 +112,7 @@ const HelpCenter = () => {
   };
 
   return (
-    <View style={[styles.container, {backgroundColor}]}>
+    <SafeAreaView style={[styles.container, {backgroundColor}]}>
       {/* Header */}
        <Header
        title="Help Center"
@@ -138,7 +139,7 @@ const HelpCenter = () => {
           </TouchableOpacity>
         ))}
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 

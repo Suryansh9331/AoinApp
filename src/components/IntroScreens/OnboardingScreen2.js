@@ -1,36 +1,38 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { moderateScale, verticalScale, scale } from 'react-native-size-matters';
+import {View, Text, StyleSheet} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
+import {moderateScale, verticalScale, scale} from 'react-native-size-matters';
 import ActionButton from '../reuseable/ActionButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Colors } from '../../utils/Colors';
+import {Colors} from '../../utils/Colors';
 import useAppTheme from '../../theme/useAppTheme';
-import { getThemeColors } from '../../theme/themeColors';
-
+import {getThemeColors} from '../../theme/themeColors';
+import {Image} from 'react-native';
 const OnboardingScreen2 = () => {
   const navigation = useNavigation();
   const theme = useAppTheme();
-  const { backgroundColor, textColor } = getThemeColors(theme);
+  const {backgroundColor, textColor} = getThemeColors(theme);
 
   const handleNext = () => {
     navigation.navigate('Onboarding3');
   };
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
+    <View style={[styles.container, {backgroundColor}]}>
       <View style={styles.iconContainer}>
-        <Ionicons name="briefcase-outline" size={moderateScale(100)} color={Colors.PRIMARY} />
+        <Image
+          source={require('../../../assest/images/Onboarding2.png')}
+          style={styles.image}
+          resizeMode="contain"
+        />
       </View>
-      
+
       <View style={styles.contentContainer}>
-        <Text style={[styles.title, { color: textColor }]}>Find Opportunities</Text>
-        <Text style={[styles.description, { color: textColor, opacity: 0.7 }]}>
-          Explore job opportunities, projects, and collaborations that match your skills and interests.
+        <Text style={[styles.title, {color: textColor}]}>
+          Fast, Easy & Secure
+        </Text>
+        <Text style={[styles.description, {color: textColor, opacity: 0.7}]}>
+          From personalized storefronts to secure checkout
         </Text>
       </View>
 
@@ -78,7 +80,11 @@ const styles = StyleSheet.create({
     paddingBottom: verticalScale(40),
     alignItems: 'center',
   },
+  image: {
+  width: moderateScale(290),
+  height: moderateScale(290),
+},
+
 });
 
 export default OnboardingScreen2;
-

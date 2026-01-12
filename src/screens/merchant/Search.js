@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
   View,
   Text,
@@ -11,23 +11,23 @@ import {
   FlatList,
   StatusBar,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {useNavigation} from '@react-navigation/native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import useAppTheme from '../../theme/useAppTheme';
-import { getThemeColors } from '../../theme/themeColors';
-import { moderateScale, verticalScale, scale } from 'react-native-size-matters';
+import {getThemeColors} from '../../theme/themeColors';
+import {moderateScale, verticalScale, scale} from 'react-native-size-matters';
 import Header from '../../components/Header/Header';
 import VideoReel from '../../components/VideoReel/VideoReel';
-import { getData } from '../../utils/APiCall';
-import { ROUTES } from '../../utils/Routes';
-import { Colors } from '../../utils/Colors';
+import {getData} from '../../utils/APiCall';
+import {ROUTES} from '../../utils/Routes';
+import {Colors} from '../../utils/Colors';
 
 const Search = () => {
   const navigation = useNavigation();
   const theme = useAppTheme();
-  const { backgroundColor, textColor, borderColor } = getThemeColors(theme);
+  const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
 
   const [trendingData, setTrendingData] = useState([]);
   const [recentlyViewedData, setRecentlyViewedData] = useState([]);
@@ -44,10 +44,10 @@ const Search = () => {
 
   // Dummy data for other sections
   const premiumSellers = [
-    { id: 1, image: 'https://via.placeholder.com/80' },
-    { id: 2, image: 'https://via.placeholder.com/80' },
-    { id: 3, image: 'https://via.placeholder.com/80' },
-    { id: 4, image: 'https://via.placeholder.com/80' },
+    {id: 1, image: 'https://via.placeholder.com/80'},
+    {id: 2, image: 'https://via.placeholder.com/80'},
+    {id: 3, image: 'https://via.placeholder.com/80'},
+    {id: 4, image: 'https://via.placeholder.com/80'},
   ];
 
   const premiumPicks = [
@@ -69,10 +69,10 @@ const Search = () => {
   ];
 
   const verifiedSellers = [
-    { id: 1, image: 'https://via.placeholder.com/80', verified: true },
-    { id: 2, image: 'https://via.placeholder.com/80', verified: true },
-    { id: 3, image: 'https://via.placeholder.com/80', verified: true },
-    { id: 4, image: 'https://via.placeholder.com/80', verified: true },
+    {id: 1, image: 'https://via.placeholder.com/80', verified: true},
+    {id: 2, image: 'https://via.placeholder.com/80', verified: true},
+    {id: 3, image: 'https://via.placeholder.com/80', verified: true},
+    {id: 4, image: 'https://via.placeholder.com/80', verified: true},
   ];
 
   const recentProducts = [
@@ -94,7 +94,7 @@ const Search = () => {
   ];
 
   // Search reels functionality
-  const searchReels = useCallback(async (query) => {
+  const searchReels = useCallback(async query => {
     if (!query.trim()) {
       setSearchResults([]);
       setShowSearchResults(false);
@@ -103,18 +103,36 @@ const Search = () => {
 
     try {
       setSearchLoading(true);
-      const response = await getData(`${ROUTES.SEARCH_REELS}?q=${encodeURIComponent(query.trim())}&per_page=20`);
+      const response = await getData(
+        `${ROUTES.SEARCH_REELS}?q=${encodeURIComponent(
+          query.trim(),
+        )}&per_page=20`,
+      );
 
       if (response && response.data) {
         // Map search results to match VideoReelItem expected structure
         const mappedSearchResults = response.data.map((apiReel, index) => {
           return {
-            id: apiReel.reel_id?.toString() || apiReel.id?.toString() || `search-${index}`,
+            id:
+              apiReel.reel_id?.toString() ||
+              apiReel.id?.toString() ||
+              `search-${index}`,
             reel_id: apiReel.reel_id,
             videoUrl: apiReel.video_url,
             thumbnail: apiReel.thumbnail_url,
-            username: apiReel.merchant?.username || apiReel.merchant?.user_name || `merchant_${apiReel.merchant_id}` || 'User',
-            userAvatar: apiReel.merchant?.avatar || apiReel.merchant?.avatar_url || apiReel.product?.thumbnail_url || 'https://i.pravatar.cc/150?img=1',
+            username:
+              apiReel.merchant?.username ||
+              apiReel.merchant?.user_name ||
+              `merchant_${apiReel.merchant_id}` ||
+              'User',
+            userAvatar:
+              apiReel.merchant?.avatar ||
+              apiReel.merchant?.avatar_url ||
+              apiReel.product?.thumbnail_url ||
+              'https://i.pravatar.cc/150?img=1',
+
+            merchant: reel.merchant || null,
+
             caption: apiReel.description || '',
             likes: apiReel.likes_count || 0,
             comments: apiReel.comments_count || 0,
@@ -154,17 +172,28 @@ const Search = () => {
     try {
       setLoading(true);
       const response = await getData(ROUTES.GET_TRENDING_LIST);
-      
+
       if (response && response.status === 'success' && response.data) {
-      
         const mappedTrendingData = response.data.map((apiReel, index) => {
           return {
-            id: apiReel.reel_id?.toString() || apiReel.id?.toString() || `trending-${index}`,
+            id:
+              apiReel.reel_id?.toString() ||
+              apiReel.id?.toString() ||
+              `trending-${index}`,
             reel_id: apiReel.reel_id,
             videoUrl: apiReel.video_url || apiReel.videoUrl,
             thumbnail: apiReel.thumbnail_url || apiReel.thumbnail,
-            username: apiReel.merchant?.username || apiReel.merchant?.user_name || `merchant_${apiReel.merchant_id}` || 'User',
-            userAvatar: apiReel.merchant?.avatar || apiReel.merchant?.avatar_url || apiReel.product?.thumbnail_url || 'https://i.pravatar.cc/150?img=1',
+            username:
+              apiReel.merchant?.username ||
+              apiReel.merchant?.user_name ||
+              `merchant_${apiReel.merchant_id}` ||
+              'User',
+            userAvatar:
+              apiReel.merchant?.avatar ||
+              apiReel.merchant?.avatar_url ||
+              apiReel.product?.thumbnail_url ||
+              'https://i.pravatar.cc/150?img=1',
+            merchant: apiReel.merchant || null,
             caption: apiReel.description || '',
             likes: apiReel.likes_count || 0,
             comments: apiReel.comments_count || 0,
@@ -183,15 +212,22 @@ const Search = () => {
         });
         setTrendingData(mappedTrendingData);
       } else if (Array.isArray(response)) {
-
         const mappedTrendingData = response.map((apiReel, index) => {
           return {
-            id: apiReel.reel_id?.toString() || apiReel.id?.toString() || `trending-${index}`,
+            id:
+              apiReel.reel_id?.toString() ||
+              apiReel.id?.toString() ||
+              `trending-${index}`,
             reel_id: apiReel.reel_id,
             videoUrl: apiReel.video_url || apiReel.videoUrl,
             thumbnail: apiReel.thumbnail_url || apiReel.thumbnail,
-            username: apiReel.merchant?.username || apiReel.merchant?.user_name || `merchant_${apiReel.merchant_id}` || 'User',
-            userAvatar: apiReel.merchant?.avatar || apiReel.merchant?.avatar_url || apiReel.product?.thumbnail_url || 'https://i.pravatar.cc/150?img=1',
+            username:
+              apiReel.merchant?.username ||
+              apiReel.merchant?.user_name ||
+              `merchant_${apiReel.merchant_id}` ||
+              'User',
+            merchant: reel.merchant || null,
+
             caption: apiReel.description || '',
             likes: apiReel.likes_count || 0,
             comments: apiReel.comments_count || 0,
@@ -222,7 +258,12 @@ const Search = () => {
     try {
       setRecentlyViewedLoading(true);
       const response = await getData(ROUTES.RECENTLY_VIEWED);
-      if (response && response.status === 'success' && response.data && response.data.reels) {
+      if (
+        response &&
+        response.status === 'success' &&
+        response.data &&
+        response.data.reels
+      ) {
         setRecentlyViewedData(response.data.reels);
       } else if (Array.isArray(response)) {
         setRecentlyViewedData(response);
@@ -239,8 +280,6 @@ const Search = () => {
     fetchRecentlyViewedData();
   }, []);
 
-  
-
   // Render circular seller thumbnail
   const renderSellerThumbnail = (item, showVerified = false) => (
     <TouchableOpacity
@@ -249,7 +288,7 @@ const Search = () => {
       activeOpacity={0.7}>
       <View style={styles.sellerThumbnailWrapper}>
         <Image
-          source={{ uri: item.image }}
+          source={{uri: item.image}}
           style={styles.sellerThumbnail}
           resizeMode="cover"
         />
@@ -266,13 +305,9 @@ const Search = () => {
     </TouchableOpacity>
   );
 
-
   const renderProductCard = (item, index) => {
-
     const thumbnail = item.thumbnail_url || item.video_url || item.thumbnail;
     const reelId = item.id || item.reel_id;
-
-
 
     return (
       <TouchableOpacity
@@ -292,24 +327,20 @@ const Search = () => {
             navigation.navigate('UserReelsView', {
               initialReelIndex: 0,
               reelsData: searchResults,
-              startIndex: searchResults.findIndex(r => r.id === reelId)
+              startIndex: searchResults.findIndex(r => r.id === reelId),
             });
           } else {
             setShowTrendingReels(true);
           }
         }}>
         <Image
-          source={{ uri: thumbnail || 'https://via.placeholder.com/200x300' }}
+          source={{uri: thumbnail || 'https://via.placeholder.com/200x300'}}
           style={styles.productCardImage}
           resizeMode="cover"
         />
         <View style={styles.playButtonOverlay}>
           <View style={styles.playButton}>
-            <Ionicons
-              name="play"
-              size={moderateScale(16)}
-              color="#FFFFFF"
-            />
+            <Ionicons name="play" size={moderateScale(16)} color="#FFFFFF" />
           </View>
         </View>
         {/* Show product info if available */}
@@ -328,13 +359,8 @@ const Search = () => {
   };
 
   return (
-    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor }]}>
-      <Header
-        title="Trending"
-        leftType="none"
-        
-        
-      />
+    <SafeAreaView edges={['top']} style={[styles.container, {backgroundColor}]}>
+      <Header title="Trending" leftType="none" />
 
       <ScrollView
         style={styles.scrollView}
@@ -342,7 +368,7 @@ const Search = () => {
         contentContainerStyle={styles.scrollContent}
         nestedScrollEnabled={true}>
         {/* Search Bar */}
-        <View style={[styles.searchContainer, { backgroundColor: borderColor }]}>
+        <View style={[styles.searchContainer, {backgroundColor: borderColor}]}>
           <Ionicons
             name="search"
             size={moderateScale(20)}
@@ -350,29 +376,30 @@ const Search = () => {
             style={styles.searchIcon}
           />
           <TextInput
-            style={[styles.searchInput, { color: textColor }]}
+            style={[styles.searchInput, {color: textColor}]}
             placeholder="Search products"
             placeholderTextColor={textColor + '60'}
             value={searchQuery}
-            onChangeText={(text) => {
+            onChangeText={text => {
               setSearchQuery(text);
               searchReels(text);
             }}
             onSubmitEditing={() => searchReels(searchQuery)}
           />
-         
         </View>
 
         {/* Search Results */}
         {showSearchResults && (
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: textColor }]}>
+            <Text style={[styles.sectionTitle, {color: textColor}]}>
               Search Results
             </Text>
             {searchLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={Colors.PRIMARY} />
-                <Text style={[styles.loadingText, { color: textColor }]}>Searching...</Text>
+                <Text style={[styles.loadingText, {color: textColor}]}>
+                  Searching...
+                </Text>
               </View>
             ) : searchResults.length > 0 ? (
               <ScrollView
@@ -380,10 +407,12 @@ const Search = () => {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.horizontalScrollContent}
                 nestedScrollEnabled={true}>
-                {searchResults.map((item, index) => renderProductCard(item, index))}
+                {searchResults.map((item, index) =>
+                  renderProductCard(item, index),
+                )}
               </ScrollView>
             ) : (
-              <Text style={[styles.emptyText, { color: textColor }]}>
+              <Text style={[styles.emptyText, {color: textColor}]}>
                 No results found for "{searchQuery}"
               </Text>
             )}
@@ -396,13 +425,13 @@ const Search = () => {
             style={[
               styles.tab,
               selectedTab === 'All' && styles.tabActive,
-              selectedTab === 'All' && { borderBottomColor: Colors.PRIMARY },
+              selectedTab === 'All' && {borderBottomColor: Colors.PRIMARY},
             ]}
             onPress={() => setSelectedTab('All')}>
             <Text
               style={[
                 styles.tabText,
-                { color: selectedTab === 'All' ? Colors.PRIMARY : textColor },
+                {color: selectedTab === 'All' ? Colors.PRIMARY : textColor},
               ]}>
               All
             </Text>
@@ -411,7 +440,7 @@ const Search = () => {
             style={[
               styles.tab,
               selectedTab === 'Popular' && styles.tabActive,
-              selectedTab === 'Popular' && { borderBottomColor: Colors.PRIMARY },
+              selectedTab === 'Popular' && {borderBottomColor: Colors.PRIMARY},
             ]}
             onPress={() => setSelectedTab('Popular')}>
             <Text
@@ -428,7 +457,7 @@ const Search = () => {
 
         {/* Premium Seller Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: textColor }]}>
+          <Text style={[styles.sectionTitle, {color: textColor}]}>
             Premium Seller
           </Text>
           <ScrollView
@@ -443,7 +472,7 @@ const Search = () => {
         {/* Premium Picks Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: textColor }]}>
+            <Text style={[styles.sectionTitle, {color: textColor}]}>
               Premium Picks
             </Text>
             <TouchableOpacity style={styles.filterButton}>
@@ -452,7 +481,7 @@ const Search = () => {
                 size={moderateScale(20)}
                 color={textColor}
               />
-              <Text style={[styles.filterText, { color: textColor }]}>
+              <Text style={[styles.filterText, {color: textColor}]}>
                 Filter
               </Text>
             </TouchableOpacity>
@@ -468,7 +497,7 @@ const Search = () => {
 
         {/* Verified Seller Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: textColor }]}>
+          <Text style={[styles.sectionTitle, {color: textColor}]}>
             Verified Seller
           </Text>
           <ScrollView
@@ -476,9 +505,7 @@ const Search = () => {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalScrollContent}
             nestedScrollEnabled={true}>
-            {verifiedSellers.map(item =>
-              renderSellerThumbnail(item, true),
-            )}
+            {verifiedSellers.map(item => renderSellerThumbnail(item, true))}
           </ScrollView>
         </View>
 
@@ -492,11 +519,11 @@ const Search = () => {
                 setShowTrendingReels(true);
               }
             }}>
-            <Text style={[styles.sectionTitle, { color: textColor }]}>
+            <Text style={[styles.sectionTitle, {color: textColor}]}>
               Trending Now
             </Text>
             <View style={styles.seeAllContainer}>
-              <Text style={[styles.seeAllText, { color: Colors.PRIMARY }]}>
+              <Text style={[styles.seeAllText, {color: Colors.PRIMARY}]}>
                 See All
               </Text>
               <Ionicons
@@ -517,9 +544,11 @@ const Search = () => {
               contentContainerStyle={styles.horizontalScrollContent}
               nestedScrollEnabled={true}>
               {trendingData.length > 0 ? (
-                trendingData.map((item, index) => renderProductCard(item, index))
+                trendingData.map((item, index) =>
+                  renderProductCard(item, index),
+                )
               ) : (
-                <Text style={[styles.emptyText, { color: textColor }]}>
+                <Text style={[styles.emptyText, {color: textColor}]}>
                   No trending reels found
                 </Text>
               )}
@@ -529,13 +558,15 @@ const Search = () => {
 
         {/* Recents Products Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: textColor }]}>
+          <Text style={[styles.sectionTitle, {color: textColor}]}>
             Recently Viewed
           </Text>
           {recentlyViewedLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={Colors.PRIMARY} />
-              <Text style={[styles.loadingText, { color: textColor }]}>Loading recently viewed...</Text>
+              <Text style={[styles.loadingText, {color: textColor}]}>
+                Loading recently viewed...
+              </Text>
             </View>
           ) : (
             <ScrollView
@@ -544,9 +575,11 @@ const Search = () => {
               contentContainerStyle={styles.horizontalScrollContent}
               nestedScrollEnabled={true}>
               {recentlyViewedData.length > 0 ? (
-                recentlyViewedData.map((item, index) => renderProductCard(item, index))
+                recentlyViewedData.map((item, index) =>
+                  renderProductCard(item, index),
+                )
               ) : (
-                <Text style={[styles.emptyText, { color: textColor }]}>
+                <Text style={[styles.emptyText, {color: textColor}]}>
                   No recently viewed products
                 </Text>
               )}
@@ -563,7 +596,7 @@ const Search = () => {
             backgroundColor="#000000"
             translucent={false}
           />
-          <SafeAreaView style={{ backgroundColor: '#000000' }}>
+          <SafeAreaView style={{backgroundColor: '#000000'}}>
             <Header
               title="Trending Reels"
               leftType="back"
@@ -589,18 +622,22 @@ const Search = () => {
                 backgroundColor: '#000000',
                 borderBottomWidth: 0,
               }}
-              titleStyle={{ color: '#FFFFFF' }}
+              titleStyle={{color: '#FFFFFF'}}
             />
           </SafeAreaView>
           {trendingData.length > 0 ? (
             <VideoReel
               data={trendingData}
               initialReelId={clickedReelId}
-              key={`trending-reels-${clickedReelId || 'first'}-${trendingData.length}`}
+              key={`trending-reels-${clickedReelId || 'first'}-${
+                trendingData.length
+              }`}
             />
           ) : (
             <View style={styles.noReelsContainer}>
-              <Text style={styles.noReelsText}>No trending reels available</Text>
+              <Text style={styles.noReelsText}>
+                No trending reels available
+              </Text>
             </View>
           )}
         </View>
@@ -616,7 +653,7 @@ const styles = StyleSheet.create({
   headerContainer: {
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
- 
+
   scrollView: {
     flex: 1,
   },
@@ -642,7 +679,7 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14),
     padding: 0,
   },
-  
+
   tabsContainer: {
     flexDirection: 'row',
     marginHorizontal: scale(14),

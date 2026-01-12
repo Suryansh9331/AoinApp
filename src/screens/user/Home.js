@@ -110,16 +110,7 @@ const Home = ({ routeParams, initialReels }) => {
         translucent={false}
       />
       <SafeAreaView style={{ backgroundColor: '#000000' }}>
-        <Header
-          title="Reels"
-          leftType="none"
-          rightType="none"
-          containerStyle={{
-            backgroundColor: '#000000',
-            borderBottomWidth: 0,
-          }}
-          titleStyle={{ color: '#FFFFFF' }}
-        />
+       
       </SafeAreaView>
       {showLoading && displayData.length === 0 ? (
         <View style={styles.loadingContainer}>

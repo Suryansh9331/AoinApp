@@ -13,8 +13,12 @@ import {
   PermissionsAndroid,
   Linking,
 } from 'react-native';
-import {useNavigation, useFocusEffect, useRoute} from '@react-navigation/native';
-import { SafeAreaView, StatusBar } from 'react-native';
+import {
+  useNavigation,
+  useFocusEffect,
+  useRoute,
+} from '@react-navigation/native';
+import {SafeAreaView, StatusBar} from 'react-native';
 import Header from '../../components/Header/Header';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
@@ -32,19 +36,29 @@ import Video from 'react-native-video';
 const MAX_VIDEO_SIZE_MB = 100;
 const MAX_VIDEO_DURATION = 60; // seconds
 const MAX_DESCRIPTION_LENGTH = 5000;
-const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska'];
+const ALLOWED_VIDEO_TYPES = [
+  'video/mp4',
+  'video/quicktime',
+  'video/x-msvideo',
+  'video/x-matroska',
+];
 const ALLOWED_VIDEO_EXTENSIONS = ['.mp4', '.mov', '.avi', '.mkv'];
 
-
-const Post = ({ routeParams }) => {
+const Post = ({routeParams}) => {
   const navigation = useNavigation();
   const route = useRoute();
   const theme = useAppTheme();
   const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
 
   // Check if we're editing a reel - memoized
-  const editingReel = useMemo(() => routeParams?.editingReel || route.params?.editingReel, [routeParams, route.params]);
-  const editingReelId = useMemo(() => routeParams?.editingReelId || route.params?.editingReelId, [routeParams, route.params]);
+  const editingReel = useMemo(
+    () => routeParams?.editingReel || route.params?.editingReel,
+    [routeParams, route.params],
+  );
+  const editingReelId = useMemo(
+    () => routeParams?.editingReelId || route.params?.editingReelId,
+    [routeParams, route.params],
+  );
   const isEditingMode = useMemo(() => !!editingReel, [editingReel]);
 
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -58,59 +72,69 @@ const Post = ({ routeParams }) => {
   const [validationError, setValidationError] = useState('');
 
   // Format price to Indian currency format - memoized (must be before fetchProducts)
-  const formatPrice = useCallback((price) => {
+  const formatPrice = useCallback(price => {
     return `₹${parseFloat(price).toLocaleString('en-IN', {
       maximumFractionDigits: 2,
     })}`;
   }, []);
 
   // Handler functions - defined early for use in other callbacks
-  const handleProductSelect = useCallback((product) => {
+  const handleProductSelect = useCallback(product => {
     setSelectedProduct(product);
   }, []);
 
   // Memoize product list rendering
-  const renderProductItem = useCallback((product, index) => {
-    const isSelected = selectedProduct?.product_id === product.product_id;
-    return (
-      <TouchableOpacity
-        key={product.product_id + index}
-        style={[
-          styles.productItem,
-          {borderBottomColor: borderColor},
-          isSelected && {
-            backgroundColor: theme === 'dark' 
-              ? 'rgba(242, 99, 31, 0.15)' 
-              : 'rgba(242, 99, 31, 0.05)'
-          },
-        ]}
-        onPress={() => handleProductSelect(product)}
-        activeOpacity={0.7}>
-        <Image
-          source={{uri: product.primary_image}}
-          style={styles.productImage}
-        />
-        <View style={styles.productDetails}>
-          <Text style={[styles.productName, {color: textColor}]}>
-            {product.product_name}
-          </Text>
-          <Text style={[styles.productCategory, {color: textColor, opacity: 0.7}]}>
-            {product.category_name}
-          </Text>
-          <Text style={[styles.productPrice, {color: Colors.PRIMARY}]}>
-            ₹{product.selling_price}
-          </Text>
-        </View>
-        {isSelected && (
-          <Ionicons
-            name="checkmark-circle"
-            size={24}
-            color={Colors.PRIMARY}
+  const renderProductItem = useCallback(
+    (product, index) => {
+      const isSelected = selectedProduct?.product_id === product.product_id;
+      return (
+        <TouchableOpacity
+          key={product.product_id + index}
+          style={[
+            styles.productItem,
+            {borderBottomColor: borderColor},
+            isSelected && {
+              backgroundColor:
+                theme === 'dark'
+                  ? 'rgba(242, 99, 31, 0.15)'
+                  : 'rgba(242, 99, 31, 0.05)',
+            },
+          ]}
+          onPress={() => handleProductSelect(product)}
+          activeOpacity={0.7}>
+          <Image
+            source={{uri: product.primary_image}}
+            style={styles.productImage}
           />
-        )}
-      </TouchableOpacity>
-    );
-  }, [selectedProduct, borderColor, theme, textColor, handleProductSelect]);
+          <View style={styles.productDetails}>
+            <Text style={[styles.productName, {color: textColor}]}>
+              {product.name}
+            </Text>
+
+            <Text
+              style={[
+                styles.productCategory,
+                {color: textColor, opacity: 0.7},
+              ]}>
+              {product.category}
+            </Text>
+
+            <Text style={[styles.productPrice, {color: Colors.PRIMARY}]}>
+              ₹{product.selling_price}
+            </Text>
+          </View>
+          {isSelected && (
+            <Ionicons
+              name="checkmark-circle"
+              size={24}
+              color={Colors.PRIMARY}
+            />
+          )}
+        </TouchableOpacity>
+      );
+    },
+    [selectedProduct, borderColor, theme, textColor, handleProductSelect],
+  );
 
   // Memoize products list
   const productsList = useMemo(() => {
@@ -132,37 +156,51 @@ const Post = ({ routeParams }) => {
   }, [products, renderProductItem]);
 
   // Memoize styles that depend on theme
-  const videoPlaceholderStyle = useMemo(() => [
-    styles.videoPlaceholder,
-    {
-      borderColor: borderColor,
-      backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
-    }
-  ], [borderColor, theme]);
+  const videoPlaceholderStyle = useMemo(
+    () => [
+      styles.videoPlaceholder,
+      {
+        borderColor: borderColor,
+        backgroundColor:
+          theme === 'dark'
+            ? 'rgba(255, 255, 255, 0.05)'
+            : 'rgba(0, 0, 0, 0.05)',
+      },
+    ],
+    [borderColor, theme],
+  );
 
-  const addDetailsButtonStyle = useMemo(() => [
-    styles.addDetailsButton,
-    {
-      borderColor: borderColor,
-      backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
-    }
-  ], [borderColor, theme]);
+  const addDetailsButtonStyle = useMemo(
+    () => [
+      styles.addDetailsButton,
+      {
+        borderColor: borderColor,
+        backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF',
+      },
+    ],
+    [borderColor, theme],
+  );
 
-  const descriptionInputStyle = useMemo(() => [
-    styles.descriptionInput,
-    {
-      color: textColor,
-      borderColor: borderColor,
-      backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF'
-    }
-  ], [textColor, borderColor, theme]);
+  const descriptionInputStyle = useMemo(
+    () => [
+      styles.descriptionInput,
+      {
+        color: textColor,
+        borderColor: borderColor,
+        backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF',
+      },
+    ],
+    [textColor, borderColor, theme],
+  );
 
   // Memoize upload button disabled state
   const isUploadDisabled = useMemo(() => {
     if (isEditingMode) {
       return !description.trim() || uploading;
     }
-    return !selectedVideo || !selectedProduct || !description.trim() || uploading;
+    return (
+      !selectedVideo || !selectedProduct || !description.trim() || uploading
+    );
   }, [isEditingMode, description, uploading, selectedVideo, selectedProduct]);
 
   // Validation function - memoized
@@ -174,9 +212,15 @@ const Post = ({ routeParams }) => {
       }
 
       // 2. Check video file extension
-      const fileExtension = video.name ? '.' + video.name.split('.').pop().toLowerCase() : '';
+      const fileExtension = video.name
+        ? '.' + video.name.split('.').pop().toLowerCase()
+        : '';
       if (!ALLOWED_VIDEO_EXTENSIONS.includes(fileExtension)) {
-        throw new Error(`Invalid video format. Allowed formats: ${ALLOWED_VIDEO_EXTENSIONS.join(', ')}`);
+        throw new Error(
+          `Invalid video format. Allowed formats: ${ALLOWED_VIDEO_EXTENSIONS.join(
+            ', ',
+          )}`,
+        );
       }
 
       // 3. Check video file size (100MB max)
@@ -187,12 +231,18 @@ const Post = ({ routeParams }) => {
 
       // 4. Check video duration (60 seconds max)
       if (video.duration > MAX_VIDEO_DURATION) {
-        throw new Error(`Video duration must be less than ${MAX_VIDEO_DURATION} seconds`);
+        throw new Error(
+          `Video duration must be less than ${MAX_VIDEO_DURATION} seconds`,
+        );
       }
 
       // 5. MIME type validation
       if (!ALLOWED_VIDEO_TYPES.includes(video.type?.toLowerCase())) {
-        throw new Error(`Invalid video type. Allowed types: ${ALLOWED_VIDEO_TYPES.join(', ')}`);
+        throw new Error(
+          `Invalid video type. Allowed types: ${ALLOWED_VIDEO_TYPES.join(
+            ', ',
+          )}`,
+        );
       }
 
       // 6. Product validation
@@ -207,7 +257,9 @@ const Post = ({ routeParams }) => {
 
       // 8. Description length validation
       if (desc.length > MAX_DESCRIPTION_LENGTH) {
-        throw new Error(`Description must be less than ${MAX_DESCRIPTION_LENGTH} characters`);
+        throw new Error(
+          `Description must be less than ${MAX_DESCRIPTION_LENGTH} characters`,
+        );
       }
 
       return true;
@@ -221,7 +273,8 @@ const Post = ({ routeParams }) => {
   useEffect(() => {
     if (isEditingMode && editingReel) {
       // Use caption or description field (API might return either)
-      const existingDescription = editingReel.description || editingReel.caption || '';
+      const existingDescription =
+        editingReel.description || editingReel.caption || '';
       setDescription(existingDescription);
       // Video already exists, so user can only edit description
     }
@@ -231,7 +284,7 @@ const Post = ({ routeParams }) => {
     try {
       setLoadingProducts(true);
       const response = await getData(ROUTES.PRODUCTS_AVAILABLE);
-      
+
       if (response && response.status === 'success' && response.data) {
         // Map API response to UI format
         const mappedProducts = response.data.map(item => ({
@@ -246,7 +299,7 @@ const Post = ({ routeParams }) => {
           primary_image: item.primary_image,
           image: item.primary_image, // Use real image instead of dummy
         }));
-        
+
         setProducts(mappedProducts);
         setHasFetched(true);
       } else {
@@ -271,7 +324,7 @@ const Post = ({ routeParams }) => {
         fetchProducts();
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [hasFetched, fetchProducts])
+    }, [hasFetched, fetchProducts]),
   );
 
   // Permission handling - react-native-image-picker handles it automatically
@@ -330,13 +383,11 @@ const Post = ({ routeParams }) => {
     };
 
     launchImageLibrary(options, response => {
-      
       if (response.didCancel) {
         return;
       }
-      
+
       if (response.errorCode) {
-        
         let errorTitle = 'Error';
         let errorMessage = 'Failed to select video';
         let showSettingsButton = false;
@@ -344,19 +395,22 @@ const Post = ({ routeParams }) => {
         switch (response.errorCode) {
           case 'permission':
             errorTitle = 'Permission Required';
-            errorMessage = 'Please allow access to your videos in app settings to upload content.';
+            errorMessage =
+              'Please allow access to your videos in app settings to upload content.';
             showSettingsButton = true;
             break;
           case 'others':
-            errorMessage = response.errorMessage || 'An error occurred while selecting video';
+            errorMessage =
+              response.errorMessage ||
+              'An error occurred while selecting video';
             break;
           default:
-            errorMessage = response.errorMessage || 'Failed to select video. Please try again.';
+            errorMessage =
+              response.errorMessage ||
+              'Failed to select video. Please try again.';
         }
 
-        const buttons = [
-          { text: 'Cancel', style: 'cancel' },
-        ];
+        const buttons = [{text: 'Cancel', style: 'cancel'}];
 
         if (showSettingsButton && Platform.OS === 'android') {
           buttons.push({
@@ -383,12 +437,14 @@ const Post = ({ routeParams }) => {
         const videoData = {
           uri: video.uri,
           type: video.type || 'video/mp4',
-          name: video.fileName || video.uri.split('/').pop() || `video_${Date.now()}.mp4`,
+          name:
+            video.fileName ||
+            video.uri.split('/').pop() ||
+            `video_${Date.now()}.mp4`,
           fileSize: video.fileSize,
           duration: video.duration,
         };
         setSelectedVideo(videoData);
-        
       }
     });
   }, []);
@@ -405,42 +461,42 @@ const Post = ({ routeParams }) => {
   const handleUpload = useCallback(async () => {
     try {
       setValidationError('');
-      
+
       // For editing, only description is required
       if (isEditingMode) {
         if (!description.trim()) {
           throw new Error('Please add a description');
         }
 
-      setUploading(true);
-      try {
-        // Update reel with new description
-        const result = await updateReel(editingReelId, {
-          description: description.trim(),
-        });
+        setUploading(true);
+        try {
+          // Update reel with new description
+          const result = await updateReel(editingReelId, {
+            description: description.trim(),
+          });
 
-        Alert.alert('Success', 'Reel updated successfully!', [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Navigate back to MerchantBottomTab and show Profile tab
-              navigation.navigate('MerchantBottomTab', {
-                navigateToTab: 'Profile',
-              });
+          Alert.alert('Success', 'Reel updated successfully!', [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Navigate back to MerchantBottomTab and show Profile tab
+                navigation.navigate('MerchantBottomTab', {
+                  navigateToTab: 'Profile',
+                });
+              },
             },
-          },
-        ]);
-      } catch (error) {
-        console.log('Update error:', error);
-        Alert.alert(
-          'Update Failed',
-          error?.message || 'Failed to update reel. Please try again.',
-        );
-      } finally {
-        setUploading(false);
+          ]);
+        } catch (error) {
+          console.log('Update error:', error);
+          Alert.alert(
+            'Update Failed',
+            error?.message || 'Failed to update reel. Please try again.',
+          );
+        } finally {
+          setUploading(false);
+        }
+        return;
       }
-      return;
-    }
 
       // For new upload, run all validations
       try {
@@ -455,7 +511,7 @@ const Post = ({ routeParams }) => {
 
       setUploading(true);
       setUploadProgress(0);
-      
+
       try {
         // React Native FormData
         const formData = new FormData();
@@ -468,18 +524,15 @@ const Post = ({ routeParams }) => {
         formData.append('product_id', selectedProduct.product_id.toString());
         formData.append('description', description.trim());
 
-
-
         // Upload with progress tracking
         const response = await uploadFormData(
-          ROUTES.UPLOAD_REEL, 
+          ROUTES.UPLOAD_REEL,
           formData,
-          (progress) => {
+          progress => {
             setUploadProgress(progress);
-          }
+          },
         );
-        
-        
+
         Alert.alert('Success', 'Video uploaded successfully!', [
           {
             text: 'OK',
@@ -489,7 +542,7 @@ const Post = ({ routeParams }) => {
               setSelectedProduct(null);
               setDescription('');
               setUploadProgress(0);
-              
+
               // Navigate back if possible
               if (navigation.canGoBack()) {
                 navigation.goBack();
@@ -515,7 +568,15 @@ const Post = ({ routeParams }) => {
       console.log('Validation error:', error);
       Alert.alert('Validation Error', error.message);
     }
-  }, [isEditingMode, description, editingReelId, selectedVideo, selectedProduct, validateUpload, navigation]);
+  }, [
+    isEditingMode,
+    description,
+    editingReelId,
+    selectedVideo,
+    selectedProduct,
+    validateUpload,
+    navigation,
+  ]);
 
   return (
     <View style={[styles.container, {backgroundColor}]}>
@@ -524,7 +585,7 @@ const Post = ({ routeParams }) => {
         backgroundColor={backgroundColor}
         translucent={false}
       /> */}
-      <SafeAreaView style={{ flex: 1, backgroundColor }}>
+      <SafeAreaView style={{flex: 1, backgroundColor}}>
         <Header
           title={isEditingMode ? 'Edit Reel' : 'Create Reel'}
           leftType={false}
@@ -544,7 +605,9 @@ const Post = ({ routeParams }) => {
                   <ActivityIndicator size="small" color={Colors.PRIMARY} />
                   <View style={styles.uploadProgressOverlay}>
                     <Text style={styles.uploadProgressText}>
-                      {uploadProgress > 0 ? `${uploadProgress}%` : 'Uploading...'}
+                      {uploadProgress > 0
+                        ? `${uploadProgress}%`
+                        : 'Uploading...'}
                     </Text>
                   </View>
                 </View>
@@ -559,7 +622,7 @@ const Post = ({ routeParams }) => {
             backgroundColor,
             borderBottomWidth: 0,
           }}
-          titleStyle={{ color: textColor }}
+          titleStyle={{color: textColor}}
         />
 
         <ScrollView
@@ -584,8 +647,7 @@ const Post = ({ routeParams }) => {
                       paused={true}
                       muted={true}
                       repeat={false}
-                      
-                      onError={(error) => {
+                      onError={error => {
                         console.log('Video thumbnail error:', error);
                       }}
                     />
@@ -595,7 +657,11 @@ const Post = ({ routeParams }) => {
                   </View>
                 ) : (
                   <View style={videoPlaceholderStyle}>
-                    <Ionicons name="videocam-outline" size={48} color={textColor} />
+                    <Ionicons
+                      name="videocam-outline"
+                      size={48}
+                      color={textColor}
+                    />
                     <Text style={[styles.placeholderText, {color: textColor}]}>
                       Tap to select video
                     </Text>
@@ -610,33 +676,43 @@ const Post = ({ routeParams }) => {
                     {/* Product Image */}
                     <View style={styles.productImageContainer}>
                       <Image
-                        source={{ uri: selectedProduct.primary_image }}
+                        source={{uri: selectedProduct.primary_image}}
                         style={styles.productImage}
                         resizeMode="cover"
                       />
                     </View>
-                    <Text style={[styles.productDescription, {color: textColor}]}>
-                      {selectedProduct.product_name}
+                    <Text
+                      style={[styles.productDescription, {color: textColor}]}>
+                      {selectedProduct.name}
                     </Text>
-                    <Text style={[styles.productAttributes, {color: textColor}]}>
-                      Category: {selectedProduct.category_name}
+
+                    <Text
+                      style={[styles.productAttributes, {color: textColor}]}>
+                      Category: {selectedProduct.category}
                     </Text>
-                    <Text style={[styles.productAttributes, {color: textColor}]}>
+
+                    <Text
+                      style={[styles.productAttributes, {color: textColor}]}>
                       Price: ₹{selectedProduct.selling_price}
                     </Text>
                   </>
                 ) : (
                   <>
-                    <Text style={[styles.productDescription, {color: textColor}]}>
-                      Crafted from premium silk, this kurta combines comfort with luxury.
+                    <Text
+                      style={[styles.productDescription, {color: textColor}]}>
+                      Crafted from premium silk, this kurta combines comfort
+                      with luxury.
                     </Text>
-                    <Text style={[styles.productAttributes, {color: textColor}]}>
+                    <Text
+                      style={[styles.productAttributes, {color: textColor}]}>
                       Fabric: 100% Silk
                     </Text>
-                    <Text style={[styles.productAttributes, {color: textColor}]}>
+                    <Text
+                      style={[styles.productAttributes, {color: textColor}]}>
                       Color: Royal Red
                     </Text>
-                    <Text style={[styles.productAttributes, {color: textColor}]}>
+                    <Text
+                      style={[styles.productAttributes, {color: textColor}]}>
                       Fit: Regular, Comfortable
                     </Text>
                   </>
@@ -676,7 +752,7 @@ const Post = ({ routeParams }) => {
             <Text style={[styles.productsListTitle, {color: textColor}]}>
               Products List
             </Text>
-            
+
             {loadingProducts ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color={Colors.PRIMARY} />
@@ -685,9 +761,7 @@ const Post = ({ routeParams }) => {
                 </Text>
               </View>
             ) : (
-              <View style={styles.productsList}>
-                {productsList}
-              </View>
+              <View style={styles.productsList}>{productsList}</View>
             )}
           </View>
         </ScrollView>
@@ -927,5 +1001,3 @@ const styles = StyleSheet.create({
     marginTop: verticalScale(12),
   },
 });
-
-

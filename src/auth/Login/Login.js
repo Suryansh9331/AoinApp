@@ -1,42 +1,53 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Alert, Image, TouchableOpacity, StyleSheet } from 'react-native';
-import { useDispatch } from 'react-redux';
+import React, {useState, useEffect} from 'react';
+import {
+  View,
+  Text,
+  Alert,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  Linking,
+} from 'react-native';
+import {useDispatch} from 'react-redux';
 import Input from '../../components/reuseable/Input';
 import ActionButton from '../../components/reuseable/ActionButton';
-import { ImageData } from '../../utils/resources';
-import { moderateScale, verticalScale } from 'react-native-size-matters';
+import {ImageData} from '../../utils/resources';
+import {moderateScale, verticalScale} from 'react-native-size-matters';
 import FONTS from '../../utils/Font';
-import { Colors } from '../../utils/Colors';
-import { useNavigation, useRoute, CommonActions } from '@react-navigation/native';
+import {Colors} from '../../utils/Colors';
+import {useNavigation, useRoute, CommonActions} from '@react-navigation/native';
 import useAppTheme from '../../theme/useAppTheme';
-import { getThemeColors } from '../../theme/themeColors';
-import { ROUTES } from '../../utils/Routes';
-import { postData, setAuthToken } from '../../utils/APiCall';
-import { login_Success } from '../../redux/slices/authSlice';
-import { setObject, AUTH_STORAGE_KEY, calculateTokenExpiry, DEFAULT_TOKEN_EXPIRY_DAYS } from '../../utils/MMKVStorage';
-
+import {getThemeColors} from '../../theme/themeColors';
+import {ROUTES} from '../../utils/Routes';
+import {postData, setAuthToken} from '../../utils/APiCall';
+import {login_Success} from '../../redux/slices/authSlice';
+import {
+  setObject,
+  AUTH_STORAGE_KEY,
+  calculateTokenExpiry,
+  DEFAULT_TOKEN_EXPIRY_DAYS,
+} from '../../utils/MMKVStorage';
 
 const Login = () => {
   const dispatch = useDispatch();
   const theme = useAppTheme();
-  const { backgroundColor, textColor, borderColor, iconColor } = getThemeColors(theme);
+  const {backgroundColor, textColor, borderColor, iconColor} =
+    getThemeColors(theme);
   const navigation = useNavigation();
   const route = useRoute();
   const [phoneNumber, setPhoneNumber] = useState('');
   const [businessEmail, setBusinessEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   const [role, setRole] = useState(route?.params?.role || 'user');
   const isMerchant = role === 'merchant';
-  
+
   useEffect(() => {
     const currentRole = route?.params?.role || 'user';
-   
+
     setRole(currentRole);
   }, [route?.params?.role]);
-  
- 
 
   const handleMerchantLogin = async () => {
     if (!businessEmail) {
@@ -56,23 +67,26 @@ const Login = () => {
     }
 
     setLoading(true);
-   
+
     try {
       const response = await postData(ROUTES.MERCHANT_LOGIN, {
         business_email: businessEmail.trim(),
         password: password,
       });
-      
+
       setLoading(false);
-      
+
       if (response) {
-        const accessToken = response?.access_token || response?.data?.access_token;
-        const refreshToken = response?.refresh_token || response?.data?.refresh_token;
-        const userData = response?.user || response?.data?.user || response?.data;
-        
+        const accessToken =
+          response?.access_token || response?.data?.access_token;
+        const refreshToken =
+          response?.refresh_token || response?.data?.refresh_token;
+        const userData =
+          response?.user || response?.data?.user || response?.data;
+
         if (accessToken) {
-              setAuthToken(accessToken);
-          const expiresIn = response?.expires_in || response?.data?.expires_in; 
+          setAuthToken(accessToken);
+          const expiresIn = response?.expires_in || response?.data?.expires_in;
           const expiresAt = calculateTokenExpiry(expiresIn);
           const authData = {
             token: accessToken,
@@ -80,7 +94,7 @@ const Login = () => {
             userData: userData,
             timestamp: Date.now(),
             expiresAt: expiresAt,
-            expiresIn: expiresIn || (DEFAULT_TOKEN_EXPIRY_DAYS * 24 * 60 * 60), 
+            expiresIn: expiresIn || DEFAULT_TOKEN_EXPIRY_DAYS * 24 * 60 * 60,
           };
           setObject(AUTH_STORAGE_KEY, authData);
 
@@ -89,15 +103,15 @@ const Login = () => {
               data: userData,
               token: accessToken,
               refreshToken: refreshToken,
-            })
+            }),
           );
 
           const targetRoute = 'MerchantBottomTab';
           navigation.dispatch(
             CommonActions.reset({
               index: 0,
-              routes: [{ name: targetRoute }],
-            })
+              routes: [{name: targetRoute}],
+            }),
           );
         } else {
           Alert.alert('Error', 'Failed to login. Please try again.');
@@ -108,17 +122,20 @@ const Login = () => {
     } catch (error) {
       setLoading(false);
       console.log('Merchant login error:', error);
-      
+
       let errorMessage = 'Failed to login. Please try again.';
       let errorTitle = 'Error';
-      
+
       if (error?.status === 401) {
-        errorMessage = 'Invalid email or password. Please check your credentials.';
+        errorMessage =
+          'Invalid email or password. Please check your credentials.';
       } else if (error?.status === 400) {
-        errorMessage = error?.message || 'Invalid credentials. Please check and try again.';
+        errorMessage =
+          error?.message || 'Invalid credentials. Please check and try again.';
       } else if (error?.status === 500) {
         errorTitle = 'Server Error';
-        errorMessage = 'Server error occurred. Please try again.\n\nIf the issue persists, please contact support.';
+        errorMessage =
+          'Server error occurred. Please try again.\n\nIf the issue persists, please contact support.';
       } else if (error?.status === 404) {
         errorMessage = 'Service not found. Please contact support.';
       } else if (error?.type === 'network') {
@@ -126,7 +143,7 @@ const Login = () => {
       } else if (error?.message) {
         errorMessage = error.message;
       }
-      
+
       Alert.alert(errorTitle, errorMessage);
     }
   };
@@ -138,53 +155,60 @@ const Login = () => {
     }
 
     const cleanPhone = phoneNumber.replace(/[\s\-\(\)]/g, '');
-    
+
     if (cleanPhone.length < 10) {
       Alert.alert('Error', 'Please enter a valid phone number');
       return;
     }
 
-    const formattedPhone = cleanPhone.startsWith('+') 
-      ? cleanPhone 
+    const formattedPhone = cleanPhone.startsWith('+')
+      ? cleanPhone
       : `+91${cleanPhone}`;
 
     setLoading(true);
     try {
-      
-
       const response = await postData(ROUTES.SEND_OTP, {
         phone: formattedPhone,
       });
-      
+
       setLoading(false);
-      
+
       if (response) {
-        const expiresIn = response?.expires_in || 600; 
-        navigation.navigate('VerifyOTPLogin', { phone: formattedPhone, expiresIn });
+        const expiresIn = response?.expires_in || 600;
+        navigation.navigate('VerifyOTPLogin', {
+          phone: formattedPhone,
+          expiresIn,
+        });
       } else {
         Alert.alert('Error', 'Failed to send OTP. Please try again.');
       }
     } catch (error) {
       setLoading(false);
       console.log('OTP send error:', error);
-      
-      
+
       let errorMessage = 'Failed to send OTP. Please try again.';
       let errorTitle = 'Error';
-      
+
       if (error?.status === 500) {
         const errorData = error?.data || {};
         const backendError = errorData?.error || errorData?.message || '';
-        
-        if (backendError.includes('user_id') || backendError.includes('database') || backendError.includes('SQL')) {
+
+        if (
+          backendError.includes('user_id') ||
+          backendError.includes('database') ||
+          backendError.includes('SQL')
+        ) {
           errorTitle = 'Service Temporarily Unavailable';
-          errorMessage = 'We are experiencing a technical issue. Please try again in a few moments.\n\nIf the problem continues, please contact support.';
+          errorMessage =
+            'We are experiencing a technical issue. Please try again in a few moments.\n\nIf the problem continues, please contact support.';
         } else {
           errorTitle = 'Server Error';
-          errorMessage = 'Server error occurred. Please try again.\n\nIf the issue persists, please contact support.';
+          errorMessage =
+            'Server error occurred. Please try again.\n\nIf the issue persists, please contact support.';
         }
       } else if (error?.status === 400) {
-        errorMessage = error?.message || 'Invalid phone number. Please check and try again.';
+        errorMessage =
+          error?.message || 'Invalid phone number. Please check and try again.';
       } else if (error?.status === 404) {
         errorMessage = 'Service not found. Please contact support.';
       } else if (error?.type === 'network') {
@@ -192,32 +216,29 @@ const Login = () => {
       } else if (error?.message) {
         errorMessage = error.message;
       }
-      
+
       Alert.alert(errorTitle, errorMessage);
     }
   };
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
+    <View style={[styles.container, {backgroundColor}]}>
       <View style={styles.logoContainer}>
-        <Image 
-          source={ImageData.AOIN_LOGO} 
+        <Image
+          source={ImageData.AOIN_LOGO}
           style={styles.logoImage}
           resizeMode="contain"
         />
       </View>
-      
-      <Text style={[styles.title, { color: textColor }]}>
-        Welcome Back!
-      </Text>
-      
-      <Text style={[styles.description, { color: textColor }]}>
-        {isMerchant 
+
+      <Text style={[styles.title, {color: textColor}]}>Welcome Back!</Text>
+
+      <Text style={[styles.description, {color: textColor}]}>
+        {isMerchant
           ? 'Enter your business email and password to login'
-          : 'Enter your phone number to receive OTP'
-        }
+          : 'Enter your phone number to receive OTP'}
       </Text>
-      
+
       {isMerchant ? (
         <>
           <Input
@@ -228,7 +249,7 @@ const Login = () => {
             autoCapitalize="none"
             type="text"
           />
-          
+
           <Input
             placeholder="Password"
             value={password}
@@ -278,13 +299,18 @@ const Login = () => {
       )}
 
       <View style={styles.signupContainer}>
-        <Text style={[styles.signupText, { color: textColor }]}>
-          Don't have an account?{' '}
+        <Text style={[styles.signupText, {color: textColor}]}>
+          Don't have an account{' '}
         </Text>
-        <TouchableOpacity onPress={() => {
-          navigation.navigate('SelectSignUpMethod');
-        }}>
-          <Text style={[styles.signupLink, { color: Colors.PRIMARY }]}>
+        <TouchableOpacity
+          onPress={() => {
+            if (isMerchant) {
+              Linking.openURL('https://aoinstore.com/register-business');
+            } else {
+              navigation.navigate('SelectSignUpMethod');
+            }
+          }}>
+          <Text style={[styles.signupLink, {color: Colors.PRIMARY}]}>
             Sign up
           </Text>
         </TouchableOpacity>
@@ -351,9 +377,7 @@ const styles = StyleSheet.create({
   },
   button: {
     height: verticalScale(42),
-
   },
 });
 
 export default Login;
-

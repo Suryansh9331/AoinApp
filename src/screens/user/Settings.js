@@ -15,6 +15,7 @@ import { getThemeColors } from '../../theme/themeColors';
 import { Colors } from '../../utils/Colors';
 import { setThemeMode } from '../../redux/slices/themeSlice';
 import Header from '../../components/Header/Header';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const Settings = () => {
   const theme = useAppTheme();
@@ -60,7 +61,7 @@ const Settings = () => {
   ];
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor }]}>
       {/* Header */}
      <Header
        title="Account Settings"
@@ -93,7 +94,7 @@ const Settings = () => {
           </View>
         ))}
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -143,26 +144,4 @@ const styles = StyleSheet.create({
 });
 
 export default Settings;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
