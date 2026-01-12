@@ -226,6 +226,11 @@ const Search = () => {
               apiReel.merchant?.user_name ||
               `merchant_${apiReel.merchant_id}` ||
               'User',
+            userAvatar:
+              apiReel.merchant?.avatar ||
+              apiReel.merchant?.avatar_url ||
+              apiReel.product?.thumbnail_url ||
+              'https://i.pravatar.cc/150?img=1',
             merchant: reel.merchant || null,
 
             caption: apiReel.description || '',

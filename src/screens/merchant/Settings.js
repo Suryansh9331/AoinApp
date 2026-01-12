@@ -218,6 +218,7 @@ import {
   Alert,
   SafeAreaView,
   Animated,
+  Easing,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -237,115 +238,121 @@ const MerchantSettings = () => {
   const theme = useAppTheme();
   const { backgroundColor, textColor, borderColor } = getThemeColors(theme);
 
-  /** ---------------- Animations (UI ONLY) ---------------- */
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const translateAnim = useRef(new Animated.Value(10)).current;
+  /** ---------- Entrance Animation ---------- */
+  const sectionAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    Animated.timing(sectionAnim, {
+      toValue: 1,
+      duration: 420,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
   }, []);
 
+  /** ---------- Subtle Row Colors ---------- */
+  const ROW_BG =
+    theme === 'dark'
+      ? 'rgba(255,255,255,0.04)'
+      : 'rgba(0,0,0,0.03)';
+
+  const ROW_BG_PRESSED =
+    theme === 'dark'
+      ? 'rgba(255,255,255,0.08)'
+      : 'rgba(0,0,0,0.06)';
+
   const rows = [
-    {
-      title: 'Edit Account',
-      onPress: () => navigation.navigate('EditProfile'),
-    },
-    {
-      title: 'Change Password',
-      disabled: true,
-    },
-    {
-      title: 'General Settings',
-      onPress: () => navigation.navigate('Settings'),
-    },
+    { title: 'Edit Account', onPress: () => navigation.navigate('EditProfile') },
+    { title: 'Change Password', disabled: true },
+    { title: 'General Settings', onPress: () => navigation.navigate('Settings') },
   ];
 
   const supportRows = [
-    {
-      title: '24*7 Support',
-      onPress: () => navigation.navigate('HelpCenter'),
-    },
+    { title: '24*7 Support', onPress: () => navigation.navigate('HelpCenter') },
   ];
 
   const handleLogout = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: () => {
-            dispatch(clearCredentials());
-            clearAuthToken();
-            removeItem(AUTH_STORAGE_KEY);
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Splash' }],
-            });
-          },
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: () => {
+          dispatch(clearCredentials());
+          clearAuthToken();
+          removeItem(AUTH_STORAGE_KEY);
+          navigation.reset({ index: 0, routes: [{ name: 'Splash' }] });
         },
-      ],
-    );
+      },
+    ]);
   };
 
-  const renderRow = (item, isLast = false) => {
-    const scaleAnim = new Animated.Value(1);
+  /** ---------- Animated Row ---------- */
+  const AnimatedRow = ({ item, isLast }) => {
+    const scale = useRef(new Animated.Value(1)).current;
+    const lift = useRef(new Animated.Value(0)).current;
+    const arrow = useRef(new Animated.Value(0)).current;
+    const bgAnim = useRef(new Animated.Value(0)).current;
 
-    const onPressIn = () => {
-      Animated.spring(scaleAnim, {
-        toValue: 0.97,
-        useNativeDriver: true,
-      }).start();
+    const pressIn = () => {
+      Animated.parallel([
+        Animated.spring(scale, { toValue: 0.97, useNativeDriver: true }),
+        Animated.timing(lift, { toValue: -2, duration: 120, useNativeDriver: true }),
+        Animated.timing(arrow, { toValue: 4, duration: 120, useNativeDriver: true }),
+        Animated.timing(bgAnim, { toValue: 1, duration: 120, useNativeDriver: false }),
+      ]).start();
     };
 
-    const onPressOut = () => {
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        useNativeDriver: true,
-      }).start();
+    const pressOut = () => {
+      Animated.parallel([
+        Animated.spring(scale, { toValue: 1, useNativeDriver: true }),
+        Animated.timing(lift, { toValue: 0, duration: 120, useNativeDriver: true }),
+        Animated.timing(arrow, { toValue: 0, duration: 120, useNativeDriver: true }),
+        Animated.timing(bgAnim, { toValue: 0, duration: 120, useNativeDriver: false }),
+      ]).start();
     };
+
+    const rowBgColor = bgAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [ROW_BG, ROW_BG_PRESSED],
+    });
 
     return (
-      <Animated.View key={item.title} style={{ transform: [{ scale: scaleAnim }] }}>
-        <TouchableOpacity
-          style={[
-            styles.row,
-            { borderBottomColor: isLast ? 'transparent' : borderColor },
-            item.disabled && styles.rowDisabled,
-          ]}
-          activeOpacity={0.9}
-          onPress={!item.disabled ? item.onPress : undefined}
-          onPressIn={!item.disabled ? onPressIn : undefined}
-          onPressOut={!item.disabled ? onPressOut : undefined}
-        >
-          <Text
+      <Animated.View style={{ transform: [{ scale }, { translateY: lift }] }}>
+        <Animated.View style={{ backgroundColor: rowBgColor }}>
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={!item.disabled ? item.onPress : undefined}
+            onPressIn={!item.disabled ? pressIn : undefined}
+            onPressOut={!item.disabled ? pressOut : undefined}
             style={[
-              styles.rowText,
-              { color: textColor, opacity: item.disabled ? 0.5 : 1 },
+              styles.row,
+              { borderBottomColor: isLast ? 'transparent' : borderColor },
+              item.disabled && styles.rowDisabled,
             ]}
           >
-            {item.title}
-          </Text>
-          {!item.disabled && (
-            <Ionicons name="chevron-forward" size={18} color={textColor} />
-          )}
-        </TouchableOpacity>
+            <Text
+              style={[
+                styles.rowText,
+                { color: textColor, opacity: item.disabled ? 0.5 : 1 },
+              ]}
+            >
+              {item.title}
+            </Text>
+
+            {!item.disabled && (
+              <Animated.View style={{ transform: [{ translateX: arrow }] }}>
+                <Ionicons name="chevron-forward" size={18} color={textColor} />
+              </Animated.View>
+            )}
+          </TouchableOpacity>
+        </Animated.View>
       </Animated.View>
     );
   };
+
+  /** ---------- Button ---------- */
+  const btnScale = useRef(new Animated.Value(1)).current;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
@@ -353,8 +360,15 @@ const MerchantSettings = () => {
 
       <Animated.View
         style={{
-          opacity: fadeAnim,
-          transform: [{ translateY: translateAnim }],
+          opacity: sectionAnim,
+          transform: [
+            {
+              translateY: sectionAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [12, 0],
+              }),
+            },
+          ],
         }}
       >
         <View style={styles.section}>
@@ -370,9 +384,9 @@ const MerchantSettings = () => {
               },
             ]}
           >
-            {rows.map((item, idx) =>
-              renderRow(item, idx === rows.length - 1),
-            )}
+            {rows.map((item, idx) => (
+              <AnimatedRow key={item.title} item={item} isLast={idx === rows.length - 1} />
+            ))}
           </View>
         </View>
 
@@ -389,20 +403,16 @@ const MerchantSettings = () => {
               },
             ]}
           >
-            {supportRows.map((item, idx) =>
-              renderRow(item, idx === supportRows.length - 1),
-            )}
+            {supportRows.map((item) => (
+              <AnimatedRow key={item.title} item={item} isLast />
+            ))}
           </View>
         </View>
       </Animated.View>
 
       <View style={styles.footer}>
-        <Animated.View>
-          <TouchableOpacity
-            style={styles.signOutButton}
-            onPress={handleLogout}
-            activeOpacity={0.9}
-          >
+        <Animated.View style={{ transform: [{ scale: btnScale }] }}>
+          <TouchableOpacity style={styles.signOutButton} onPress={handleLogout}>
             <Text style={styles.signOutText}>Sign Out</Text>
           </TouchableOpacity>
         </Animated.View>
@@ -425,7 +435,7 @@ const styles = StyleSheet.create({
   },
   card: {
     borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: moderateScale(10),
+    borderRadius: moderateScale(12),
     overflow: 'hidden',
   },
   row: {
@@ -433,16 +443,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: scale(14),
-    paddingVertical: verticalScale(14),
+    paddingVertical: verticalScale(15),
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   rowText: {
     fontSize: moderateScale(14),
     fontWeight: '500',
   },
-  rowDisabled: {
-    opacity: 0.5,
-  },
+  rowDisabled: { opacity: 0.5 },
+
   footer: {
     marginTop: 'auto',
     paddingHorizontal: scale(24),
@@ -451,11 +460,11 @@ const styles = StyleSheet.create({
   signOutButton: {
     backgroundColor: Colors.PRIMARY,
     paddingVertical: verticalScale(14),
-    borderRadius: moderateScale(24),
+    borderRadius: moderateScale(28),
     alignItems: 'center',
   },
   signOutText: {
-    color: '#FFFFFF',
+    color: '#FFF',
     fontSize: moderateScale(15),
     fontWeight: '700',
   },
