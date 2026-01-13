@@ -87,8 +87,21 @@ const Profile = () => {
       },
       showArrow: true,
     },
+    {
+      id: '2',
+      title: 'Followers',
+      icon: 'people-outline',
+      onPress: () => {
+        // Get current user ID from auth data
+        const currentUserId = userData?.data?.id || userData?.id || userData?.user_id;
+        if (currentUserId) {
+          navigation.navigate('FollowerList', { merchantId: currentUserId });
+        }
+      },
+      showArrow: true,
+    },
     // {
-    //   id: '2',
+    //   id: '3',
     //   title: 'Settings',
     //   icon: 'settings-outline',
     //   onPress: () => {
@@ -97,7 +110,7 @@ const Profile = () => {
     //   showArrow: true,
     // },
     {
-      id: '3',
+      id: '4',
       title: 'Help Center',
       icon: 'help-circle-outline',
       onPress: () => {
@@ -106,14 +119,14 @@ const Profile = () => {
       showArrow: true,
     },
     {
-      id: '4',
+      id: '5',
       title: 'Invite Friends',
       icon: 'person-add-outline',
       
       showArrow: true,
     },
     {
-      id: '5',
+      id: '6',
       title: 'Log Out',
       icon: 'log-out-outline',
       onPress: handleLogout,

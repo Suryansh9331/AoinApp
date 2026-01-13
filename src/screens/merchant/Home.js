@@ -417,7 +417,8 @@ const Home = ({routeParams, initialReels}) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await getData(`${ROUTES.PUBLIC_REELS}?page=${page}&per_page=20`);
+      // Reduced per_page from 20 to 10 for better performance
+      const response = await getData(`${ROUTES.PUBLIC_REELS}?page=${page}&per_page=10`);
 
       if (response?.data) {
         const mappedReels = response.data.map((apiReel, index) => ({
@@ -485,9 +486,14 @@ const Home = ({routeParams, initialReels}) => {
   }, [publicReels]);
 
   const fetchMoreReels = useCallback(() => {
+    // Added debounce to prevent rapid API calls
     if (hasMore && !loading) {
       const nextPage = currentPage + 1;
-      fetchPublicReels(nextPage, true);
+      setCurrentPage(nextPage);
+      // Add small delay to prevent rapid scrolling from triggering multiple requests
+      setTimeout(() => {
+        fetchPublicReels(nextPage, true);
+      }, 300);
     }
   }, [hasMore, loading, currentPage, fetchPublicReels]);
 

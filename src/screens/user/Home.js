@@ -95,15 +95,20 @@ const Home = ({ routeParams, initialReels }) => {
         setHasFetched(true);
         setCurrentPage(1);
       }
-      dispatch(fetchPublicReels_Request({ page, per_page: 20, append }));
+      // Reduced per_page from 20 to 10 for better performance
+      dispatch(fetchPublicReels_Request({ page, per_page: 10, append }));
     }
   }, [dispatch, publicReelsLoading, hasFetched]);
 
   const fetchMoreReels = useCallback(() => {
+    // Added debounce to prevent rapid API calls
     if (hasMore && !publicReelsLoading && publicReelsPagination.page < publicReelsPagination.pages) {
       const nextPage = currentPage + 1;
       setCurrentPage(nextPage);
-      fetchReels(nextPage, true);
+      // Add small delay to prevent rapid scrolling from triggering multiple requests
+      setTimeout(() => {
+        fetchReels(nextPage, true);
+      }, 300);
     }
   }, [hasMore, publicReelsLoading, publicReelsPagination, currentPage, fetchReels]);
 

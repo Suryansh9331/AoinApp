@@ -10,6 +10,7 @@ import {
   Share,
   Platform,
   Linking,
+  ActivityIndicator,
 } from 'react-native';
 import Video from 'react-native-video';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -26,7 +27,7 @@ import {
 } from '../../redux/slices/reelSlice';
 const {width: SCREEN_WIDTH, height: SCREEN_HEIGHT} = Dimensions.get('window');
 
-const VideoReelItem = ({item, isActive, onLike, onShare, itemHeight}) => {
+const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight}) => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const userData = useSelector(state => state.auth.data);
@@ -52,21 +53,54 @@ const VideoReelItem = ({item, isActive, onLike, onShare, itemHeight}) => {
   const [likes, setLikes] = useState(item.likes || 0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showPlayPauseIcon, setShowPlayPauseIcon] = useState(false);
+  const [videoLoaded, setVideoLoaded] = useState(false);
+  const [shouldLoadVideo, setShouldLoadVideo] = useState(false);
+  const [showControls, setShowControls] = useState(false);
 
   const likeScale = useRef(new Animated.Value(1)).current;
   const likeOpacity = useRef(new Animated.Value(0)).current;
   const doubleTapOpacity = useRef(new Animated.Value(0)).current;
   const buyPulse = useRef(new Animated.Value(1)).current;
   const lastTap = useRef(null);
+  const controlsTimeoutRef = useRef(null);
 
   useEffect(() => {
+    // Only load video when item is visible
+    if (isVisible) {
+      setShouldLoadVideo(true);
+    }
     
-    if (isActive) {
+    if (isActive && shouldLoadVideo && videoLoaded) {
       setIsPlaying(true);
+      setShowControls(false); // Hide controls when playing
     } else {
       setIsPlaying(false);
     }
-  }, [isActive]);
+  }, [isActive, isVisible, shouldLoadVideo, videoLoaded]);
+
+  // Cleanup video when not visible to free memory
+  useEffect(() => {
+    if (!isVisible && shouldLoadVideo) {
+      // Reduced delay to prevent videos staying loaded too long
+      const cleanupTimer = setTimeout(() => {
+        if (!isVisible) {
+          setShouldLoadVideo(false);
+          setVideoLoaded(false);
+        }
+      }, 1000); // Reduced from 2000ms to 1000ms
+      
+      return () => clearTimeout(cleanupTimer);
+    }
+  }, [isVisible, shouldLoadVideo]);
+
+  // Cleanup controls timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Sync local state with item props (from Redux)
   // Use item.id or item.reel_id to detect when item changes
@@ -181,6 +215,20 @@ const VideoReelItem = ({item, isActive, onLike, onShare, itemHeight}) => {
     const now = Date.now();
     const DOUBLE_PRESS_DELAY = 300;
 
+    // Clear any existing controls timeout
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+    }
+
+    // Show controls when user interacts
+    setShowControls(true);
+    
+    // Hide controls after 2 seconds of inactivity
+    controlsTimeoutRef.current = setTimeout(() => {
+      setShowControls(false);
+      controlsTimeoutRef.current = null;
+    }, 2000);
+
     if (lastTap.current && now - lastTap.current < DOUBLE_PRESS_DELAY) {
       handleDoubleTap();
       lastTap.current = null;
@@ -209,27 +257,53 @@ const VideoReelItem = ({item, isActive, onLike, onShare, itemHeight}) => {
         activeOpacity={1}
         style={styles.videoContainer}
         onPress={handleVideoPress}>
-        <Video
-          source={{uri: item.videoUrl}}
-          style={styles.video}
-          resizeMode="cover"
-          paused={!isPlaying}
-          repeat
-          muted={false}
-          playInBackground={false}
-          playWhenInactive={false}
-          ignoreSilentSwitch="ignore"
-          pointerEvents="none"
-          onPlaybackStatusUpdate={(status) => {
-           
-          }}
-          onError={error => {
-            console.error('Video error:', error);
-          }}
-          onLoad={() => {
-            // console.log(`Video ${item.id || item.reel_id} loaded successfully`);
-          }}
-        />
+        {shouldLoadVideo && (
+          <Video
+            source={{uri: item.videoUrl}}
+            style={styles.video}
+            resizeMode="cover"
+            paused={!isPlaying}
+            repeat
+            muted={false}
+            playInBackground={false}
+            playWhenInactive={false}
+            ignoreSilentSwitch="ignore"
+            pointerEvents="none"
+            onPlaybackStatusUpdate={(status) => {
+              
+            }}
+            onError={error => {
+              console.error('Video error:', error);
+              setVideoLoaded(false);
+            }}
+            onLoad={() => {
+              setVideoLoaded(true);
+            }}
+            onReadyForDisplay={() => {
+              // Video is ready and displayed
+            }}
+            // Performance optimizations
+            poster={item.thumbnail}
+            bufferConfig={{
+              minBufferMs: 1000, // Reduced for faster start
+              maxBufferMs: 5000, // Reduced buffer
+              bufferForPlaybackMs: 500, // Reduced
+              bufferForPlaybackAfterRebufferMs: 1000, // Reduced
+            }}
+            // Network optimizations
+            preventsDisplaySleepDuringVideoPlayback={false}
+            preferredForwardBufferDuration={3} // Reduced from 5
+          />
+        )}
+        
+        {/* Show thumbnail when video is not loaded */}
+        {!shouldLoadVideo && (
+          <Image
+            source={{uri: item.thumbnail || 'https://via.placeholder.com/400x800/000000/FFFFFF?text=Loading...'}}
+            style={styles.video}
+            resizeMode="cover"
+          />
+        )}
 
         {/* Invisible touch overlay to handle taps */}
         <TouchableOpacity
@@ -252,14 +326,21 @@ const VideoReelItem = ({item, isActive, onLike, onShare, itemHeight}) => {
           <Ionicons name="heart" size={80} color="#FF3040" />
         </Animated.View>
 
-        {/* Play/Pause icon overlay */}
-        {showPlayPauseIcon && (
+        {/* Play/Pause icon overlay - only show when video is loaded and user taps */}
+        {showPlayPauseIcon && videoLoaded && showControls && (
           <View style={styles.playPauseIcon} pointerEvents="none">
             <Ionicons
               name={isPlaying ? 'pause' : 'play'}
               size={40}
               color="#FFFFFF"
             />
+          </View>
+        )}
+        
+        {/* Loading indicator for video - only show if not loaded and visible */}
+        {shouldLoadVideo && !videoLoaded && isVisible && (
+          <View style={styles.videoLoadingIndicator} pointerEvents="none">
+            <ActivityIndicator size="small" color="#F2631F" />
           </View>
         )}
       </TouchableOpacity>
@@ -421,6 +502,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 11,
+  },
+  videoLoadingIndicator: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    marginLeft: -15,
+    marginTop: -15,
+    zIndex: 10,
   },
   rightActions: {
     position: 'absolute',

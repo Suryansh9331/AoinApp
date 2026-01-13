@@ -354,19 +354,14 @@ const PerticularReelProfile = () => {
                   Reels
                 </Text>
               </View>
-              <TouchableOpacity
-                style={styles.statItem}
-                onPress={() =>
-                  navigation.navigate('FollowerList', {merchantId})
-                }
-                activeOpacity={0.7}>
+              <View style={styles.statItem}>
                 <Text style={[styles.statNumber, {color: textColor}]}>
                   {followersCount}
                 </Text>
                 <Text style={[styles.statLabel, {color: textColor}]}>
                   Followers
                 </Text>
-              </TouchableOpacity>
+              </View>
               <View style={styles.statItem}>
                 <Text style={[styles.statNumber, {color: textColor}]}>
                   {merchantStats?.total_likes ||

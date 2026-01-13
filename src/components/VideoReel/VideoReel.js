@@ -24,6 +24,10 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
   const lastInitialReelId = useRef(null);
   const previousDataIdsRef = useRef([]);
   const isDataStructureChanged = useRef(false);
+  
+  // Performance optimization: Track visible items for video management
+  const visibleItemsRef = useRef(new Set());
+  const lastVisibleIndex = useRef(-1);
 
   // Get current IDs for comparison
   const currentIds = data.map(r => (r.id || r.reel_id)?.toString()).filter(Boolean);
@@ -134,17 +138,27 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
     }
   }, [reelsData, currentIndex]);
 
-  const onViewableItemsChanged = useCallback(({ viewableItems }) => {
+  const onViewableItemsChanged = useCallback(({ viewableItems, changed }) => {
+    // Update visible items immediately
+    const newVisibleItems = new Set();
+    viewableItems.forEach(item => {
+      if (item.isViewable && item.index !== null) {
+        newVisibleItems.add(item.index);
+      }
+    });
+    visibleItemsRef.current = newVisibleItems;
+    
     if (viewableItems.length > 0) {
       const fullyVisibleItem = viewableItems.find(
         item => item.isViewable && item.index !== null
       );
+      
       if (fullyVisibleItem && fullyVisibleItem.index !== currentIndex) {
         setCurrentIndex(fullyVisibleItem.index);
         
         // Check if we're near the end and should load more
         if (onEndReached && hasMore && !isLoading) {
-          const threshold = 3; // Load more when 3 items from end
+          const threshold = 2; // Reduced threshold for better performance
           if (fullyVisibleItem.index >= reelsData.length - threshold) {
             onEndReached();
           }
@@ -154,8 +168,8 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
   }, [currentIndex, reelsData.length, onEndReached, hasMore, isLoading]);
 
   const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 80,
-    minimumViewTime: 100,
+    itemVisiblePercentThreshold: 50, // Reduced to ensure videos load earlier
+    minimumViewTime: 100, // Reduced for faster response
   }).current;
 
   
@@ -168,10 +182,14 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
   }, []);
 
   const renderItem = useCallback(({ item, index }) => {
+    const isVisible = visibleItemsRef.current.has(index);
+    const isActive = index === currentIndex;
+    
     return (
       <VideoReelItem
         item={item}
-        isActive={index === currentIndex}
+        isActive={isActive}
+        isVisible={isVisible}
         onLike={handleLike}
         onShare={handleShare}
         itemHeight={containerHeight}
@@ -243,10 +261,10 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
         viewabilityConfig={viewabilityConfig}
         getItemLayout={containerHeight > 0 ? getItemLayout : undefined}
         removeClippedSubviews={true}
-        maxToRenderPerBatch={3}
-        windowSize={5}
-        initialNumToRender={2}
-        scrollEventThrottle={16}
+        maxToRenderPerBatch={2} // Reduced from 3
+        windowSize={3} // Reduced from 5
+        initialNumToRender={1} // Reduced from 2
+        scrollEventThrottle={32} // Increased from 16 for better performance
         bounces={false}
         onMomentumScrollEnd={onMomentumScrollEnd}
         onScrollToIndexFailed={(info) => {

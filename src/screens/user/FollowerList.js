@@ -41,7 +41,9 @@ const FollowerList = ({ route }) => {
       setLoading(true);
       setError(null);
       
-      const response = await getData(ROUTES.MERCHANT_FOLLOW_LIST);
+      // Use merchantId in the API endpoint
+      const endpoint = `${ROUTES.MERCHANT_FOLLOW_LIST}${merchantId}/followers`;
+      const response = await getData(endpoint);
      
       
       if (response?.status === 'success' && response?.data && Array.isArray(response.data)) {
@@ -65,29 +67,39 @@ const FollowerList = ({ route }) => {
   }, [fetchFollowers]);
 
   const renderFollowerItem = ({ item }) => {
+    // Handle different data structures for follower information
     const followerName = item.business_name || 
+                       item.merchant?.business_name ||
                        item.merchant?.username || 
                        item.merchant?.user_name || 
                        item.merchant?.first_name || 
                        item.username || 
                        item.user_name || 
+                       item.first_name || 
                        'Unknown User';
     
-    const followerAvatar = item.merchant?.avatar || 
+    const followerAvatar = item.merchant?.profile_img || 
+                          item.merchant?.avatar || 
                           item.merchant?.avatar_url || 
+                          item.profile_img ||
                           item.avatar || 
                           item.avatar_url || 
                           'https://i.pravatar.cc/150?img=1';
+    
+    const followerId = item.merchant_id || item.merchant?.id || item.id;
 
     return (
       <TouchableOpacity
         style={[styles.followerItem, { borderColor, backgroundColor }]}
         activeOpacity={0.7}
         onPress={() => {
-          // Navigate to follower's profile if needed
-          navigation.navigate('PerticularReelProfile', {
-            merchantId: item.merchant_id || item.id,
-          });
+          // Navigate to follower's profile if we have a valid ID
+          if (followerId) {
+            navigation.navigate('PerticularReelProfile', {
+              merchantId: followerId,
+              profileImage: followerAvatar,
+            });
+          }
         }}>
         <Image
           source={{ uri: followerAvatar }}
@@ -97,7 +109,11 @@ const FollowerList = ({ route }) => {
           <Text style={[styles.followerName, { color: textColor }]}>
             {followerName}
           </Text>
-          
+          {item.merchant?.business_name && (
+            <Text style={[styles.followerHandle, { color: textColor }]}>
+              @{item.merchant.business_name.toLowerCase().replace(/\s+/g, '_')}
+            </Text>
+          )}
         </View>
         <Ionicons
           name="chevron-forward"
@@ -147,7 +163,8 @@ const FollowerList = ({ route }) => {
       <SafeAreaView style={{ backgroundColor }}>
        <Header
         title="Followers"
-        
+        leftType="back"
+        onLeftPress={() => navigation.goBack()}
        />
       </SafeAreaView>
       
@@ -244,6 +261,11 @@ const styles = StyleSheet.create({
   followerName: {
     fontSize: moderateScale(16),
     fontWeight: '500',
+  },
+  followerHandle: {
+    fontSize: moderateScale(14),
+    marginTop: verticalScale(2),
+    opacity: 0.6,
   },
   followerBio: {
     fontSize: moderateScale(14),
