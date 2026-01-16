@@ -9,6 +9,7 @@ export const ROUTES = Object.freeze({
   PRODUCTS_AVAILABLE: '/api/reels/products/available',
   MERCHANT_MY_REELS: '/api/reels/merchant/my',
   PUBLIC_REELS: '/api/reels/public',
+  REELS: '/api/reels', // Added for view tracking
   LIKE_REEL: '/api/reels',
   UNLIKE_REEL: '/api/reels',
   SHARE_REEL: '/api/reels',

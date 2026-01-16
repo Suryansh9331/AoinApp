@@ -25,6 +25,8 @@ import {
   unlikeReel_Request,
   shareReel_Request,
 } from '../../redux/slices/reelSlice';
+import {postData} from '../../utils/APiCall';
+import {ROUTES} from '../../utils/Routes';
 const {width: SCREEN_WIDTH, height: SCREEN_HEIGHT} = Dimensions.get('window');
 
 const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight}) => {
@@ -35,20 +37,18 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
   const theme = useAppTheme();
   const {backgroundColor, textColor} = getThemeColors(theme);
   const merchantProfileImage =
-  item?.profile_img ||               // ← THIS IS THE REAL FIELD
-  item?.merchant?.profile_img ||     // fallback if nested
+  item?.profile_img ||               
+  item?.merchant?.profile_img ||     
   null;
-
-
-
-
-  // Convert isLiked to boolean (handle string "true"/"false" from API)
+  const [viewStartTime, setViewStartTime] = useState(null);
+  const [totalViewDuration, setTotalViewDuration] = useState(0);
+  const [hasTrackedView, setHasTrackedView] = useState(false);
+  const viewTrackingRef = useRef(null);
   const getIsLiked = value => {
     if (typeof value === 'boolean') return value;
     if (typeof value === 'string') return value.toLowerCase() === 'true';
     return false;
   };
-
   const [isLiked, setIsLiked] = useState(() => getIsLiked(item.isLiked));
   const [likes, setLikes] = useState(item.likes || 0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -56,7 +56,6 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [shouldLoadVideo, setShouldLoadVideo] = useState(false);
   const [showControls, setShowControls] = useState(false);
-
   const likeScale = useRef(new Animated.Value(1)).current;
   const likeOpacity = useRef(new Animated.Value(0)).current;
   const doubleTapOpacity = useRef(new Animated.Value(0)).current;
@@ -65,33 +64,90 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
   const controlsTimeoutRef = useRef(null);
 
   useEffect(() => {
-    // Only load video when item is visible
-    if (isVisible) {
+    if (isVisible && !videoLoaded) {
       setShouldLoadVideo(true);
     }
     
     if (isActive && shouldLoadVideo && videoLoaded) {
       setIsPlaying(true);
-      setShowControls(false); // Hide controls when playing
+      setShowControls(true);
+      controlsTimeoutRef.current = setTimeout(() => {
+        setShowControls(false);
+        controlsTimeoutRef.current = null;
+      }, 1000);
     } else {
       setIsPlaying(false);
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+        controlsTimeoutRef.current = null;
+      }
     }
   }, [isActive, isVisible, shouldLoadVideo, videoLoaded]);
 
-  // Cleanup video when not visible to free memory
   useEffect(() => {
-    if (!isVisible && shouldLoadVideo) {
-      // Reduced delay to prevent videos staying loaded too long
-      const cleanupTimer = setTimeout(() => {
-        if (!isVisible) {
-          setShouldLoadVideo(false);
-          setVideoLoaded(false);
-        }
-      }, 1000); // Reduced from 2000ms to 1000ms
+    if (isActive && isPlaying && videoLoaded) {
+      if (!viewStartTime) {
+        setViewStartTime(Date.now());
+      }
       
-      return () => clearTimeout(cleanupTimer);
+      viewTrackingRef.current = setInterval(() => {
+        setTotalViewDuration(prev => prev + 1);
+      }, 1000);
+    } else {
+   
+      if (viewTrackingRef.current) {
+        clearInterval(viewTrackingRef.current);
+        viewTrackingRef.current = null;
+      }
+      
+     
     }
-  }, [isVisible, shouldLoadVideo]);
+    
+    return () => {
+      if (viewTrackingRef.current) {
+        clearInterval(viewTrackingRef.current);
+      }
+    };
+  }, [isActive, isPlaying, videoLoaded, viewStartTime]);
+
+  useEffect(() => {
+    return () => {
+      if (totalViewDuration > 0 && !hasTrackedView) {
+        trackReelView();
+      }
+    };
+  }, [totalViewDuration, hasTrackedView]);
+
+  useEffect(() => {
+    if (!isActive && totalViewDuration >= 3 && !hasTrackedView) {
+      trackReelView();
+    }
+  }, [isActive, totalViewDuration, hasTrackedView]);
+
+    useEffect(() => {
+    if (!isPlaying && totalViewDuration >= 3 && !hasTrackedView) {
+      trackReelView();
+    }
+  }, [isPlaying, totalViewDuration, hasTrackedView]);
+
+  
+  const trackReelView = useCallback(async () => {
+    try {
+      const reelId = item.reel_id || item.id;
+      const viewDuration = Math.max(totalViewDuration, 1); // Minimum 1 second
+      
+      if (viewDuration >= 3 && reelId && !hasTrackedView) {
+        const response = await postData(`${ROUTES.REELS}/${reelId}/view`, {
+          view_duration: viewDuration
+        });
+        
+        console.log('View tracked:', { reelId, viewDuration, response });
+        setHasTrackedView(true);
+      }
+    } catch (error) {
+      console.error('Error tracking reel view:', error);
+    }
+  }, [item.reel_id, item.id, totalViewDuration, hasTrackedView]);
 
   // Cleanup controls timeout on unmount
   useEffect(() => {
@@ -285,14 +341,14 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
             // Performance optimizations
             poster={item.thumbnail}
             bufferConfig={{
-              minBufferMs: 1000, // Reduced for faster start
-              maxBufferMs: 5000, // Reduced buffer
-              bufferForPlaybackMs: 500, // Reduced
-              bufferForPlaybackAfterRebufferMs: 1000, // Reduced
+              minBufferMs: 500, // Further reduced for faster start
+              maxBufferMs: 3000, // Further reduced buffer
+              bufferForPlaybackMs: 200, // Further reduced
+              bufferForPlaybackAfterRebufferMs: 500, // Further reduced
             }}
             // Network optimizations
             preventsDisplaySleepDuringVideoPlayback={false}
-            preferredForwardBufferDuration={3} // Reduced from 5
+            preferredForwardBufferDuration={2} // Further reduced
           />
         )}
         
@@ -326,7 +382,7 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
           <Ionicons name="heart" size={80} color="#FF3040" />
         </Animated.View>
 
-        {/* Play/Pause icon overlay - only show when video is loaded and user taps */}
+        {/* Play/Pause icon overlay - show briefly when controls are visible */}
         {showPlayPauseIcon && videoLoaded && showControls && (
           <View style={styles.playPauseIcon} pointerEvents="none">
             <Ionicons
@@ -337,12 +393,12 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
           </View>
         )}
         
-        {/* Loading indicator for video - only show if not loaded and visible */}
-        {shouldLoadVideo && !videoLoaded && isVisible && (
+        {/* Loading indicator - completely removed to prevent showing during scroll */}
+        {/* {shouldLoadVideo && !videoLoaded && isVisible && !isPlaying && (
           <View style={styles.videoLoadingIndicator} pointerEvents="none">
             <ActivityIndicator size="small" color="#F2631F" />
           </View>
-        )}
+        )} */}
       </TouchableOpacity>
 
       {/* Right side action buttons */}

@@ -168,8 +168,8 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
   }, [currentIndex, reelsData.length, onEndReached, hasMore, isLoading]);
 
   const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 50, // Reduced to ensure videos load earlier
-    minimumViewTime: 100, // Reduced for faster response
+    itemVisiblePercentThreshold: 40, // Even lower threshold for earlier loading
+    minimumViewTime: 0, // Immediate response for smooth scrolling
   }).current;
 
   
@@ -261,12 +261,22 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
         viewabilityConfig={viewabilityConfig}
         getItemLayout={containerHeight > 0 ? getItemLayout : undefined}
         removeClippedSubviews={true}
-        maxToRenderPerBatch={2} // Reduced from 3
-        windowSize={3} // Reduced from 5
-        initialNumToRender={1} // Reduced from 2
-        scrollEventThrottle={32} // Increased from 16 for better performance
+        maxToRenderPerBatch={1} // Render one at a time for smoother scrolling
+        windowSize={1} // Minimal window for best performance
+        initialNumToRender={1}
+        scrollEventThrottle={16} // Standard throttle for smooth scrolling
         bounces={false}
         onMomentumScrollEnd={onMomentumScrollEnd}
+        // Additional optimizations for smooth scrolling
+        key={reelsData.length} // Force re-render when data changes
+        maintainVisibleContentPosition={{
+          minIndexForVisible: 0,
+          autoscrollToTopThreshold: 1000,
+        }}
+        // Prevent jumping during scroll
+        scrollEnabled={true}
+        nestedScrollEnabled={false}
+        overScrollMode="never"
         onScrollToIndexFailed={(info) => {
           // Handle scroll to index failure
           const wait = new Promise(resolve => setTimeout(resolve, 500));

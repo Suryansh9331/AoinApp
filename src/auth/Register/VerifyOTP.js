@@ -21,9 +21,9 @@ const VerifyOTP = ({ route }) => {
   const navigation = useNavigation();
 
   const phoneNumber = route?.params?.phone || '';
-  const expiresIn = route?.params?.expiresIn || 600; // Default 600 seconds
-  const firstName = route?.params?.firstName || ''; // Get from route params
-  const lastName = route?.params?.lastName || ''; // Get from route params
+  const expiresIn = route?.params?.expiresIn || 600; 
+  const firstName = route?.params?.firstName || ''; 
+  const lastName = route?.params?.lastName || ''; 
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(expiresIn);
@@ -121,8 +121,8 @@ const VerifyOTP = ({ route }) => {
             {
               text: 'Continue',
               onPress: () => {
-                // Navigate to home screen
-                navigation.replace('MerchantBottomTab', {
+               
+                navigation.replace('UserBottomTab', {
                   screen: 'Home',
                 });
               },

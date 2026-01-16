@@ -24,9 +24,9 @@ const FollowerList = ({ route }) => {
   const theme = useAppTheme();
   const { backgroundColor, textColor, borderColor } = getThemeColors(theme);
   const navigation = useNavigation();
-  
+
   const { merchantId } = route.params || {};
-  
+
   const [followers, setFollowers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -40,12 +40,12 @@ const FollowerList = ({ route }) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Use merchantId in the API endpoint
-      const endpoint = `${ROUTES.MERCHANT_FOLLOW_LIST}${merchantId}/followers`;
+      const endpoint = `${ROUTES.MERCHANT_FOLLOW_LIST}`;
       const response = await getData(endpoint);
-     
       
+
       if (response?.status === 'success' && response?.data && Array.isArray(response.data)) {
         setFollowers(response.data);
       } else if (response && Array.isArray(response)) {
@@ -68,24 +68,24 @@ const FollowerList = ({ route }) => {
 
   const renderFollowerItem = ({ item }) => {
     // Handle different data structures for follower information
-    const followerName = item.business_name || 
-                       item.merchant?.business_name ||
-                       item.merchant?.username || 
-                       item.merchant?.user_name || 
-                       item.merchant?.first_name || 
-                       item.username || 
-                       item.user_name || 
-                       item.first_name || 
-                       'Unknown User';
-    
-    const followerAvatar = item.merchant?.profile_img || 
-                          item.merchant?.avatar || 
-                          item.merchant?.avatar_url || 
-                          item.profile_img ||
-                          item.avatar || 
-                          item.avatar_url || 
-                          'https://i.pravatar.cc/150?img=1';
-    
+    const followerName = item.business_name ||
+      item.merchant?.business_name ||
+      item.merchant?.username ||
+      item.merchant?.user_name ||
+      item.merchant?.first_name ||
+      item.username ||
+      item.user_name ||
+      item.first_name ||
+      'Unknown User';
+
+    const followerAvatar = item.merchant?.profile_img ||
+      item.merchant?.avatar ||
+      item.merchant?.avatar_url ||
+      item.profile_img ||
+      item.avatar ||
+      item.avatar_url ||
+      'https://i.pravatar.cc/150?img=1';
+
     const followerId = item.merchant_id || item.merchant?.id || item.id;
 
     return (
@@ -125,7 +125,7 @@ const FollowerList = ({ route }) => {
     );
   };
 
- 
+
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
@@ -161,13 +161,13 @@ const FollowerList = ({ route }) => {
         translucent={false}
       />
       <SafeAreaView style={{ backgroundColor }}>
-       <Header
-        title="Followers"
-        leftType="back"
-        onLeftPress={() => navigation.goBack()}
-       />
+        <Header
+          title="Followers"
+          leftType="back"
+          onLeftPress={() => navigation.goBack()}
+        />
       </SafeAreaView>
-      
+
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.PRIMARY} />
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  
+
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',

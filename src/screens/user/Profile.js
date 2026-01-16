@@ -28,14 +28,8 @@ const Profile = () => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
-  
-  // Get user data from Redux
   const userData = useSelector(state => state.auth.data);
   const userProfile = userData?.data || userData || {};
-  
-  
-  
-  // Format user name - handle different data structures
   const userName = userProfile?.first_name && userProfile?.last_name 
     ? `${userProfile.first_name} ${userProfile.last_name}`.trim()
     : userProfile?.first_name 
@@ -62,9 +56,9 @@ const Profile = () => {
           onPress: () => {
             dispatch(clearCredentials());
             clearAuthToken();
-            // Clear auth data from MMKV storage
+           
             removeItem(AUTH_STORAGE_KEY);
-            // Immediately navigate to Splash screen to start from beginning
+            
             navigation.dispatch(
               CommonActions.reset({
                 index: 0,
@@ -92,7 +86,7 @@ const Profile = () => {
       title: 'Followers',
       icon: 'people-outline',
       onPress: () => {
-        // Get current user ID from auth data
+        
         const currentUserId = userData?.data?.id || userData?.id || userData?.user_id;
         if (currentUserId) {
           navigation.navigate('FollowerList', { merchantId: currentUserId });

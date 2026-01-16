@@ -1,151 +1,255 @@
-import React, { useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
   StatusBar,
   Text,
   ActivityIndicator,
-  SafeAreaView,
+  TouchableOpacity,
+  Animated,
 } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import VideoReel from '../../components/VideoReel/VideoReel';
 import useAppTheme from '../../theme/useAppTheme';
 import { getThemeColors } from '../../theme/themeColors';
 import { moderateScale, verticalScale } from 'react-native-size-matters';
-import { fetchPublicReels_Request } from '../../redux/slices/reelSlice';
-import Header from '../../components/Header/Header';
+import { getData } from '../../utils/APiCall';
+import { ROUTES } from '../../utils/Routes';
+import { Colors } from '../../utils/Colors';
 
 const Home = ({ routeParams, initialReels }) => {
   const theme = useAppTheme();
   const { backgroundColor } = getThemeColors(theme);
-  const dispatch = useDispatch();
   const route = useRoute();
-  const [hasFetched, setHasFetched] = React.useState(false);
-  const [currentPage, setCurrentPage] = React.useState(1);
-  const [hasMore, setHasMore] = React.useState(true);
-  const [videoReelKey, setVideoReelKey] = React.useState(`video-reel-home-${Date.now()}`);
+  const navigation = useNavigation();
 
-  const { publicReels, publicReelsLoading, publicReelsError, publicReelsPagination } = useSelector(
-    state => state.reels,
-  );
-
-  const [currentReelId, setCurrentReelId] = React.useState(
+  // -------------------- STATE --------------------
+  const [publicReels, setPublicReels] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [videoReelKey, setVideoReelKey] = useState(`video-reel-user-${Date.now()}`);
+  const [currentReelId, setCurrentReelId] = useState(
     routeParams?.reelId || route.params?.reelId,
   );
-  const [preloadedReels, setPreloadedReels] = React.useState(
+  const [preloadedReels, setPreloadedReels] = useState(
     initialReels ||
     routeParams?.preloadedReels ||
     route.params?.preloadedReels ||
     [],
   );
 
-  const previousReelsRef = useRef([]);
-  const previousPreloadedRef = useRef([]);
+  // -------------------- ANIMATION (UI ONLY) --------------------
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
 
-  React.useEffect(() => {
-    const newReelId = routeParams?.reelId || route.params?.reelId;
-    const newPreloadedReels =
-      initialReels ||
-      routeParams?.preloadedReels ||
-      route.params?.preloadedReels ||
-      [];
+  useEffect(() => {
+    Animated.sequence([
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: unreadCount > 0 ? 1.08 : 1,
+        friction: 4,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 4,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [unreadCount]);
 
-    if (newReelId !== currentReelId) {
-      setCurrentReelId(newReelId);
-    }
-
-    const currentIds = previousPreloadedRef.current
-      .map(r => r.id || r.reel_id)
-      .sort()
-      .join(',');
-    const newIds = newPreloadedReels
-      .map(r => r.id || r.reel_id)
-      .sort()
-      .join(',');
-    const preloadedChanged = currentIds !== newIds;
-
-    if (preloadedChanged) {
-      setPreloadedReels(newPreloadedReels);
-      previousPreloadedRef.current = newPreloadedReels;
-    }
-  }, [routeParams, route.params, initialReels, currentReelId]);
-
-  const displayData = useMemo(() => {
-    if (preloadedReels.length > 0) {
-      const preloadedIds = new Set(
-        preloadedReels
-          .map(r => (r.id || r.reel_id)?.toString())
-          .filter(Boolean),
-      );
-
-      const additionalReels = publicReels.filter(r => {
-        const reelId = (r.id || r.reel_id)?.toString();
-        return reelId && !preloadedIds.has(reelId);
-      });
-
-      return [...preloadedReels, ...additionalReels];
-    }
-    return publicReels;
-  }, [preloadedReels, publicReels]);
-
-  const fetchReels = useCallback((page = 1, append = false) => {
-    if (!publicReelsLoading && (!hasFetched || append)) {
-      if (!append) {
-        setHasFetched(true);
-        setCurrentPage(1);
-      }
+  // -------------------- API LOGIC --------------------
+  const fetchPublicReels = useCallback(async (page = 1, append = false) => {
+    try {
+      setLoading(true);
+      setError(null);
       // Reduced per_page from 20 to 10 for better performance
-      dispatch(fetchPublicReels_Request({ page, per_page: 10, append }));
+      const response = await getData(`${ROUTES.PUBLIC_REELS}?page=${page}&per_page=10`);
+
+      if (response?.data) {
+        const mappedReels = response.data.map((apiReel, index) => ({
+          id:
+            apiReel.reel_id?.toString() ||
+            apiReel.id?.toString() ||
+            `public-${index}`,
+          reel_id: apiReel.reel_id,
+          videoUrl: apiReel.video_url,
+          thumbnail: apiReel.thumbnail_url,
+          username:
+            apiReel.merchant?.username ||
+            apiReel.merchant?.user_name ||
+            `merchant_${apiReel.merchant_id}` ||
+            'User',
+          userAvatar:
+            apiReel.merchant?.avatar ||
+            apiReel.merchant?.avatar_url ||
+            apiReel.product?.thumbnail_url ||
+            'https://i.pravatar.cc/150?img=1',
+          merchant: apiReel.merchant || null,
+          caption: apiReel.description || '',
+          likes: apiReel.likes_count || 0,
+          comments: apiReel.comments_count || 0,
+          shares: apiReel.shares_count || 0,
+          views: apiReel.views_count || 0,
+          isLiked: apiReel.is_liked || false,
+          duration: apiReel.duration_seconds || 0,
+          product: apiReel.product || null,
+          product_id: apiReel.product_id,
+          merchant_id: apiReel.merchant_id,
+          approval_status: apiReel.approval_status,
+          is_active: apiReel.is_active,
+          created_at: apiReel.created_at,
+          updated_at: apiReel.updated_at,
+          video_format: apiReel.video_format,
+          file_size_bytes: apiReel.file_size_bytes,
+          resolution: apiReel.resolution,
+        }));
+
+        if (append) {
+          // Avoid duplicates when appending
+          const existingIds = new Set(publicReels.map(r => r.id || r.reel_id));
+          const newReels = mappedReels.filter(r => !existingIds.has(r.id || r.reel_id));
+          setPublicReels([...publicReels, ...newReels]);
+        } else {
+          setPublicReels(mappedReels);
+        }
+
+        // Update pagination state
+        setCurrentPage(page);
+        setHasMore(response.pagination ? page < response.pagination.pages : false);
+      } else {
+        setPublicReels(append ? publicReels : []);
+        setHasMore(false);
+      }
+    } catch (err) {
+      setError(err?.message || 'Failed to fetch reels');
+      if (!append) {
+        setPublicReels([]);
+      }
+    } finally {
+      setLoading(false);
     }
-  }, [dispatch, publicReelsLoading, hasFetched]);
+  }, [publicReels]);
 
   const fetchMoreReels = useCallback(() => {
     // Added debounce to prevent rapid API calls
-    if (hasMore && !publicReelsLoading && publicReelsPagination.page < publicReelsPagination.pages) {
+    if (hasMore && !loading) {
       const nextPage = currentPage + 1;
       setCurrentPage(nextPage);
       // Add small delay to prevent rapid scrolling from triggering multiple requests
       setTimeout(() => {
-        fetchReels(nextPage, true);
+        fetchPublicReels(nextPage, true);
       }, 300);
     }
-  }, [hasMore, publicReelsLoading, publicReelsPagination, currentPage, fetchReels]);
+  }, [hasMore, loading, currentPage, fetchPublicReels]);
 
-  useEffect(() => {
-    fetchReels();
-  }, [fetchReels]);
-
-  // Update hasMore based on pagination
-  useEffect(() => {
-    if (publicReelsPagination) {
-      setHasMore(publicReelsPagination.page < publicReelsPagination.pages);
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const response = await getData(ROUTES.NOTIFICATIONS_UNREAD_COUNT);
+      const count =
+        typeof response?.data === 'number'
+          ? response.data
+          : response?.data?.count ||
+            response?.data?.unread_count ||
+            response?.count ||
+            response?.unread_count ||
+            0;
+      setUnreadCount(count);
+    } catch {
+      setUnreadCount(0);
     }
-  }, [publicReelsPagination]);
+  }, []);
 
-  const showLoading = useMemo(
-    () => displayData.length === 0 && (publicReelsLoading || !hasFetched),
-    [displayData.length, publicReelsLoading, hasFetched],
+  const displayData = useMemo(() => {
+    if (preloadedReels.length) {
+      const ids = new Set(
+        preloadedReels.map(r => (r.id || r.reel_id)?.toString()),
+      );
+      return [
+        ...preloadedReels,
+        ...publicReels.filter(
+          r => !ids.has((r.id || r.reel_id)?.toString()),
+        ),
+      ];
+    }
+    return publicReels;
+  }, [preloadedReels, publicReels]);
+
+  React.useLayoutEffect(() => {
+    fetchPublicReels();
+    fetchUnreadCount();
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchUnreadCount();
+      // Refresh data when screen comes into focus
+      if (publicReels.length === 0) {
+        fetchPublicReels();
+      }
+    }, []),
   );
 
+  const handleNotificationPress = useCallback(() => {
+    navigation.navigate('Massages');
+  }, [navigation]);
+
+  // -------------------- NOTIFICATION UI --------------------
+  const NotificationButton = useMemo(
+    () => (
+      <Animated.View
+        style={[
+          styles.floatingNotification,
+          {
+            transform: [{scale: scaleAnim}],
+            opacity: opacityAnim,
+          },
+        ]}>
+        <TouchableOpacity
+          onPress={handleNotificationPress}
+          activeOpacity={0.75}
+          style={styles.notificationButton}>
+          <Ionicons
+            name="notifications-outline"
+            size={moderateScale(22)}
+            color="#FFFFFF"
+          />
+          {unreadCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </Animated.View>
+    ),
+    [handleNotificationPress, unreadCount],
+  );
+
+  // -------------------- RENDER --------------------
   return (
     <View style={[styles.container, { backgroundColor }]}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor="#000000"
-        translucent={false}
-      />
-      <SafeAreaView style={{ backgroundColor: '#000000' }}>
-       
-      </SafeAreaView>
-      {showLoading && displayData.length === 0 ? (
+      <StatusBar barStyle="light-content" backgroundColor="#000000" />
+
+      {NotificationButton}
+
+      {loading && displayData.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#F2631F" />
           <Text style={styles.loadingText}>Loading reels...</Text>
         </View>
-      ) : publicReelsError ? (
+      ) : error ? (
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{publicReelsError}</Text>
+          <Text style={styles.errorText}>{error}</Text>
         </View>
       ) : displayData.length > 0 ? (
         <VideoReel
@@ -154,7 +258,7 @@ const Home = ({ routeParams, initialReels }) => {
           key={videoReelKey}
           onEndReached={fetchMoreReels}
           hasMore={hasMore}
-          isLoading={publicReelsLoading}
+          isLoading={loading}
         />
       ) : (
         <View style={styles.loadingContainer}>
@@ -166,83 +270,56 @@ const Home = ({ routeParams, initialReels }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000000',
-  },
-  headerContainer: {
+  container: {flex: 1, backgroundColor: '#000000'},
+
+  floatingNotification: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-    backgroundColor: 'transparent',
+    top: moderateScale(52), // safely below status bar
+    right: moderateScale(14),
+    zIndex: 999,
+    backgroundColor: 'rgba(20,20,20,0.65)',
+    borderRadius: moderateScale(22),
+    padding: moderateScale(2),
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 6,
   },
-  headerContent: {
-    flexDirection: 'row',
+
+  notificationButton: {
+    width: moderateScale(48),
+    height: moderateScale(48),
+    borderRadius: moderateScale(23),
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 8,
-    backgroundColor: 'transparent',
   },
-  headerLeft: {
-    width: 44,
-    height: 44,
+
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: Colors.PRIMARY || '#F2631F',
+    borderRadius: moderateScale(12),
+    minWidth: moderateScale(20),
+    height: moderateScale(20),
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: moderateScale(6),
+    borderWidth: 2,
+    borderColor: '#000000',
   },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: moderateScale(18),
-    fontWeight: '700',
+
+  badgeText: {
     color: '#FFFFFF',
-  },
-  headerRight: {
-    width: 36,
-    height: 36,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#000000',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: moderateScale(14),
-    color: '#FFFFFF',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#000000',
-    paddingHorizontal: 20,
-  },
-  errorText: {
-    fontSize: moderateScale(14),
-    color: '#FF3040',
-    textAlign: 'center',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#000000',
-    paddingHorizontal: 20,
-  },
-  emptyText: {
-    fontSize: moderateScale(18),
+    fontSize: moderateScale(12),
     fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: verticalScale(8),
   },
-  emptySubText: {
-    fontSize: moderateScale(14),
-    textAlign: 'center',
-    opacity: 0.7,
-  },
+
+  loadingContainer: {flex: 1, justifyContent: 'center', alignItems: 'center'},
+  loadingText: {marginTop: 12, color: '#FFFFFF'},
+  errorContainer: {flex: 1, justifyContent: 'center', alignItems: 'center'},
+  errorText: {color: '#FF3040'},
 });
 
 export default Home;
