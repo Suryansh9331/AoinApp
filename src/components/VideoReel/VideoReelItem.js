@@ -1,4 +1,4 @@
-import React, {useState, useRef, useEffect, useCallback} from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,36 +14,37 @@ import {
 } from 'react-native';
 import Video from 'react-native-video';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
-import {Colors} from '../../utils/Colors';
+import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
+import { Colors } from '../../utils/Colors';
 import useAppTheme from '../../theme/useAppTheme';
-import {getThemeColors} from '../../theme/themeColors';
-import {useNavigation} from '@react-navigation/native';
-import {useSelector, useDispatch} from 'react-redux';
+import { getThemeColors } from '../../theme/themeColors';
+import { useNavigation } from '@react-navigation/native';
+import { useSelector, useDispatch } from 'react-redux';
 import {
   likeReel_Request,
   unlikeReel_Request,
   shareReel_Request,
 } from '../../redux/slices/reelSlice';
-import {postData} from '../../utils/APiCall';
-import {ROUTES} from '../../utils/Routes';
-const {width: SCREEN_WIDTH, height: SCREEN_HEIGHT} = Dimensions.get('window');
+import { postData } from '../../utils/APiCall';
+import { ROUTES } from '../../utils/Routes';
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight}) => {
+const VideoReelItem = ({ item, isActive, isVisible, onLike, onShare, itemHeight }) => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const userData = useSelector(state => state.auth.data);
   const userRole = userData?.data?.role || userData?.role || 'user';
   const theme = useAppTheme();
-  const {backgroundColor, textColor} = getThemeColors(theme);
+  const { backgroundColor, textColor } = getThemeColors(theme);
   const merchantProfileImage =
-  item?.profile_img ||               
-  item?.merchant?.profile_img ||     
-  null;
+    item?.profile_img ||
+    item?.merchant?.profile_img ||
+    null;
   const [viewStartTime, setViewStartTime] = useState(null);
   const [totalViewDuration, setTotalViewDuration] = useState(0);
   const [hasTrackedView, setHasTrackedView] = useState(false);
   const viewTrackingRef = useRef(null);
+  const trackedReelIdsRef = useRef(new Set());
   const getIsLiked = value => {
     if (typeof value === 'boolean') return value;
     if (typeof value === 'string') return value.toLowerCase() === 'true';
@@ -67,7 +68,7 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
     if (isVisible && !videoLoaded) {
       setShouldLoadVideo(true);
     }
-    
+
     if (isActive && shouldLoadVideo && videoLoaded) {
       setIsPlaying(true);
       setShowControls(true);
@@ -85,24 +86,27 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
   }, [isActive, isVisible, shouldLoadVideo, videoLoaded]);
 
   useEffect(() => {
+    if (isActive && isVisible && !shouldLoadVideo) {
+      setShouldLoadVideo(true);
+    }
+  }, [isActive, isVisible]);
+
+  useEffect(() => {
     if (isActive && isPlaying && videoLoaded) {
       if (!viewStartTime) {
         setViewStartTime(Date.now());
       }
-      
+
       viewTrackingRef.current = setInterval(() => {
         setTotalViewDuration(prev => prev + 1);
       }, 1000);
     } else {
-   
       if (viewTrackingRef.current) {
         clearInterval(viewTrackingRef.current);
         viewTrackingRef.current = null;
       }
-      
-     
     }
-    
+
     return () => {
       if (viewTrackingRef.current) {
         clearInterval(viewTrackingRef.current);
@@ -111,45 +115,49 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
   }, [isActive, isPlaying, videoLoaded, viewStartTime]);
 
   useEffect(() => {
-    return () => {
-      if (totalViewDuration > 0 && !hasTrackedView) {
-        trackReelView();
+    console.log(`Tracking check - reelId: ${item.reel_id || item.id}, isActive: ${isActive}, isPlaying: ${isPlaying}, duration: ${totalViewDuration}, hasTracked: ${hasTrackedView}, role: ${userRole}`);
+
+    if ((!isActive || !isPlaying) && totalViewDuration >= 5 && !hasTrackedView) {
+      const reelId = item.reel_id || item.id;
+
+      if (!trackedReelIdsRef.current.has(reelId)) {
+        const delayTimer = setTimeout(() => {
+          trackReelView(); // Send total accumulated duration
+          trackedReelIdsRef.current.add(reelId);
+        }, 200);
+
+        return () => clearTimeout(delayTimer);
       }
-    };
-  }, [totalViewDuration, hasTrackedView]);
-
+    }
+  }, [isActive, isPlaying, hasTrackedView]);
   useEffect(() => {
-    if (!isActive && totalViewDuration >= 3 && !hasTrackedView) {
-      trackReelView();
-    }
-  }, [isActive, totalViewDuration, hasTrackedView]);
+    const reelId = item.reel_id || item.id;
+    setTotalViewDuration(0);
+    setHasTrackedView(false);
+    setViewStartTime(null);
+  }, [item.reel_id, item.id]);
 
-    useEffect(() => {
-    if (!isPlaying && totalViewDuration >= 3 && !hasTrackedView) {
-      trackReelView();
-    }
-  }, [isPlaying, totalViewDuration, hasTrackedView]);
-
-  
   const trackReelView = useCallback(async () => {
     try {
       const reelId = item.reel_id || item.id;
       const viewDuration = Math.max(totalViewDuration, 1); // Minimum 1 second
-      
-      if (viewDuration >= 3 && reelId && !hasTrackedView) {
+
+      if (viewDuration >= 5 && reelId && !trackedReelIdsRef.current.has(reelId)) {
+
         const response = await postData(`${ROUTES.REELS}/${reelId}/view`, {
           view_duration: viewDuration
         });
-        
-        console.log('View tracked:', { reelId, viewDuration, response });
+
         setHasTrackedView(true);
+        trackedReelIdsRef.current.add(reelId);
+      } else {
+        // console.log(`Skipping track for reel ${reelId} - duration: ${viewDuration}, already tracked: ${trackedReelIdsRef.current.has(reelId)}`);
       }
     } catch (error) {
       console.error('Error tracking reel view:', error);
     }
-  }, [item.reel_id, item.id, totalViewDuration, hasTrackedView]);
+  }, [item.reel_id, item.id, totalViewDuration]);
 
-  // Cleanup controls timeout on unmount
   useEffect(() => {
     return () => {
       if (controlsTimeoutRef.current) {
@@ -158,8 +166,7 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
     };
   }, []);
 
-  // Sync local state with item props (from Redux)
-  // Use item.id or item.reel_id to detect when item changes
+
   useEffect(() => {
     const itemIsLiked = getIsLiked(item.isLiked);
     setIsLiked(itemIsLiked);
@@ -170,11 +177,9 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
     const newLikedState = !isLiked;
     const reelId = item.reel_id || item.id;
 
-    // Optimistically update UI
     setIsLiked(newLikedState);
     setLikes(prev => (newLikedState ? prev + 1 : prev - 1));
 
-    // Animate like button
     Animated.sequence([
       Animated.parallel([
         Animated.spring(likeScale, {
@@ -202,9 +207,9 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
 
     // Dispatch Redux action
     if (newLikedState) {
-      dispatch(likeReel_Request({reelId}));
+      dispatch(likeReel_Request({ reelId }));
     } else {
-      dispatch(unlikeReel_Request({reelId}));
+      dispatch(unlikeReel_Request({ reelId }));
     }
 
     // Callback for parent component
@@ -240,7 +245,7 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
 
     try {
       // Dispatch share action to API
-      dispatch(shareReel_Request({reelId}));
+      dispatch(shareReel_Request({ reelId }));
 
       // Native share functionality
       const result = await Share.share({
@@ -271,15 +276,12 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
     const now = Date.now();
     const DOUBLE_PRESS_DELAY = 300;
 
-    // Clear any existing controls timeout
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current);
     }
 
-    // Show controls when user interacts
     setShowControls(true);
-    
-    // Hide controls after 2 seconds of inactivity
+
     controlsTimeoutRef.current = setTimeout(() => {
       setShowControls(false);
       controlsTimeoutRef.current = null;
@@ -292,10 +294,8 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
       lastTap.current = now;
       setTimeout(() => {
         if (lastTap.current === now) {
-          // Single tap - toggle play/pause
           setIsPlaying(prev => !prev);
           setShowPlayPauseIcon(true);
-          // Hide icon after 1 second
           setTimeout(() => setShowPlayPauseIcon(false), 1000);
           lastTap.current = null;
         }
@@ -307,7 +307,7 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
     <View
       style={[
         styles.container,
-        {backgroundColor: '#000', height: itemHeight || SCREEN_HEIGHT},
+        { backgroundColor: '#000', height: itemHeight || SCREEN_HEIGHT },
       ]}>
       <TouchableOpacity
         activeOpacity={1}
@@ -315,7 +315,7 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
         onPress={handleVideoPress}>
         {shouldLoadVideo && (
           <Video
-            source={{uri: item.videoUrl}}
+            source={{ uri: item.videoUrl }}
             style={styles.video}
             resizeMode="cover"
             paused={!isPlaying}
@@ -326,7 +326,7 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
             ignoreSilentSwitch="ignore"
             pointerEvents="none"
             onPlaybackStatusUpdate={(status) => {
-              
+
             }}
             onError={error => {
               console.error('Video error:', error);
@@ -336,26 +336,25 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
               setVideoLoaded(true);
             }}
             onReadyForDisplay={() => {
-              // Video is ready and displayed
+
             }}
-            // Performance optimizations
+
             poster={item.thumbnail}
             bufferConfig={{
-              minBufferMs: 500, // Further reduced for faster start
-              maxBufferMs: 3000, // Further reduced buffer
-              bufferForPlaybackMs: 200, // Further reduced
-              bufferForPlaybackAfterRebufferMs: 500, // Further reduced
+              minBufferMs: 500,
+              maxBufferMs: 3000,
+              bufferForPlaybackMs: 200,
+              bufferForPlaybackAfterRebufferMs: 500,
             }}
-            // Network optimizations
             preventsDisplaySleepDuringVideoPlayback={false}
-            preferredForwardBufferDuration={2} // Further reduced
+            preferredForwardBufferDuration={2}
           />
         )}
-        
+
         {/* Show thumbnail when video is not loaded */}
         {!shouldLoadVideo && (
           <Image
-            source={{uri: item.thumbnail || 'https://via.placeholder.com/400x800/000000/FFFFFF?text=Loading...'}}
+            source={{ uri: item.thumbnail || 'https://via.placeholder.com/400x800/000000/FFFFFF?text=Loading...' }}
             style={styles.video}
             resizeMode="cover"
           />
@@ -366,7 +365,7 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
           style={styles.touchOverlay}
           activeOpacity={1}
           onPress={handleVideoPress}>
-          <View style={{flex: 1}} />
+          <View style={{ flex: 1 }} />
         </TouchableOpacity>
 
         {/* Double tap heart animation */}
@@ -375,7 +374,7 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
             styles.doubleTapHeart,
             {
               opacity: doubleTapOpacity,
-              transform: [{scale: doubleTapOpacity}],
+              transform: [{ scale: doubleTapOpacity }],
             },
           ]}
           pointerEvents="none">
@@ -392,13 +391,8 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
             />
           </View>
         )}
-        
-        {/* Loading indicator - completely removed to prevent showing during scroll */}
-        {/* {shouldLoadVideo && !videoLoaded && isVisible && !isPlaying && (
-          <View style={styles.videoLoadingIndicator} pointerEvents="none">
-            <ActivityIndicator size="small" color="#F2631F" />
-          </View>
-        )} */}
+
+
       </TouchableOpacity>
 
       {/* Right side action buttons */}
@@ -427,7 +421,7 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
             key={merchantProfileImage} // 🔥 forces correct image render
             source={
               merchantProfileImage
-                ? {uri: merchantProfileImage}
+                ? { uri: merchantProfileImage }
                 : require('../../../assest/images/AppLogo.png') // local fallback
             }
             style={styles.avatar}
@@ -447,7 +441,7 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
             style={[
               styles.actionIconContainer,
               {
-                transform: [{scale: likeScale}],
+                transform: [{ scale: likeScale }],
               },
             ]}>
             <Ionicons
@@ -456,7 +450,7 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
               color={isLiked ? '#FF3040' : '#FFFFFF'}
             />
             <Animated.View
-              style={[styles.likeAnimation, {opacity: likeOpacity}]}
+              style={[styles.likeAnimation, { opacity: likeOpacity }]}
               pointerEvents="none">
               <Ionicons name="heart" size={moderateScale(40)} color="#FF3040" />
             </Animated.View>
@@ -489,7 +483,7 @@ const VideoReelItem = ({item, isActive, isVisible, onLike, onShare, itemHeight})
         {item?.product_id && (
           <Animated.View
             style={{
-              transform: [{scale: buyPulse}],
+              transform: [{ scale: buyPulse }],
               marginTop: verticalScale(10),
               alignSelf: 'flex-start',
             }}>
@@ -655,7 +649,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale(22),
     borderRadius: scale(24),
     shadowColor: '#F2631F',
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 6,

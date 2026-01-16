@@ -81,44 +81,18 @@ const Notification = () => {
     }
   }, []);
 
-  // Fetch trending reels data
+  // Fetch trending data
   const fetchTrendingData = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await getData(`${ROUTES.PUBLIC_REELS}?per_page=20`);
-      
-      if (response && response.data) {
-        // Map trending reels to match expected structure
-        const mappedTrendingData = response.data.map((apiReel, index) => ({
-          id: apiReel.reel_id?.toString() || apiReel.id?.toString() || `trending-${index}`,
-          reel_id: apiReel.reel_id,
-          videoUrl: apiReel.video_url,
-          thumbnail: apiReel.thumbnail_url,
-          username: apiReel.merchant?.username || apiReel.merchant?.user_name || `merchant_${apiReel.merchant_id}` || 'User',
-          merchant: apiReel.merchant || null,
-          caption: apiReel.description || '',
-          likes: apiReel.likes_count || 0,
-          comments: apiReel.comments_count || 0,
-          shares: apiReel.shares_count || 0,
-          views: apiReel.views_count || 0,
-          isLiked: apiReel.is_liked || false,
-          duration: apiReel.duration_seconds || 0,
-          product: apiReel.product || null,
-          product_id: apiReel.product_id,
-          merchant_id: apiReel.merchant_id,
-          approval_status: apiReel.approval_status,
-          is_active: apiReel.is_active,
-          created_at: apiReel.created_at,
-          updated_at: apiReel.updated_at,
-        }));
-        
-        setTrendingData(mappedTrendingData);
-      } else {
-        setTrendingData([]);
+      const response = await getData(ROUTES.GET_TRENDING_LIST);
+      if (response && response.status === 'success' && response.data) {
+        setTrendingData(response.data);
+      } else if (Array.isArray(response)) {
+        setTrendingData(response);
       }
     } catch (error) {
       console.error('Error fetching trending data:', error);
-      setTrendingData([]);
     } finally {
       setLoading(false);
     }

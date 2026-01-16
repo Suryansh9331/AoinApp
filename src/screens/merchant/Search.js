@@ -131,7 +131,7 @@ const Search = () => {
               apiReel.product?.thumbnail_url ||
               'https://i.pravatar.cc/150?img=1',
 
-            merchant: reel.merchant || null,
+            merchant: apiReel.merchant || null,
 
             caption: apiReel.description || '',
             likes: apiReel.likes_count || 0,
@@ -231,7 +231,7 @@ const Search = () => {
               apiReel.merchant?.avatar_url ||
               apiReel.product?.thumbnail_url ||
               'https://i.pravatar.cc/150?img=1',
-            merchant: reel.merchant || null,
+            merchant: apiReel.merchant || null,
 
             caption: apiReel.description || '',
             likes: apiReel.likes_count || 0,

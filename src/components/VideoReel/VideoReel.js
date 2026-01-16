@@ -29,6 +29,15 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
   const visibleItemsRef = useRef(new Set());
   const lastVisibleIndex = useRef(-1);
 
+  // Initialize first reel as visible and active when component mounts
+  useEffect(() => {
+    if (reelsData && reelsData.length > 0 && containerHeight > 0) {
+      // Mark the first item as visible immediately
+      visibleItemsRef.current.add(0);
+      lastVisibleIndex.current = 0;
+    }
+  }, [reelsData, containerHeight]);
+
   // Get current IDs for comparison
   const currentIds = data.map(r => (r.id || r.reel_id)?.toString()).filter(Boolean);
   const currentIdsString = currentIds.join(',');
@@ -45,8 +54,8 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
   
   // Memoize reels data - always return latest data, but track structure changes
   const reelsData = useMemo(() => {
-    return data;
-  }, [data.length, currentIdsString]);
+    return data || [];
+  }, [data, currentIdsString]);
 
   // Reset scroll flag when initialReelId changes
   useEffect(() => {
@@ -60,7 +69,7 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
   useEffect(() => {
     
     
-    if (initialReelId && reelsData.length > 0 && containerHeight > 0 && !hasScrolledToInitialReel.current) {
+    if (initialReelId && reelsData && reelsData.length > 0 && containerHeight > 0 && !hasScrolledToInitialReel.current) {
       const reelIndex = reelsData.findIndex(reel => {
         // Check all possible ID fields and handle both string and number comparisons
         const reelId = reel.id || reel.reel_id;
@@ -129,7 +138,7 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
   
   useEffect(() => {
     
-    if (isDataStructureChanged.current && reelsData.length > 0) {
+    if (isDataStructureChanged.current && reelsData && reelsData.length > 0) {
       
       if (currentIndex >= reelsData.length) {
         setCurrentIndex(reelsData.length - 1);
@@ -159,13 +168,13 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
         // Check if we're near the end and should load more
         if (onEndReached && hasMore && !isLoading) {
           const threshold = 2; // Reduced threshold for better performance
-          if (fullyVisibleItem.index >= reelsData.length - threshold) {
+          if (fullyVisibleItem.index >= (reelsData?.length || 0) - threshold) {
             onEndReached();
           }
         }
       }
     }
-  }, [currentIndex, reelsData.length, onEndReached, hasMore, isLoading]);
+  }, [currentIndex, reelsData?.length, onEndReached, hasMore, isLoading]);
 
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 40, // Even lower threshold for earlier loading
@@ -218,13 +227,13 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
     if (containerHeight > 0) {
       const offsetY = event.nativeEvent.contentOffset.y;
       const index = Math.round(offsetY / containerHeight);
-      if (index >= 0 && index < reelsData.length && index !== currentIndex) {
+      if (index >= 0 && index < (reelsData?.length || 0) && index !== currentIndex) {
         setCurrentIndex(index);
         
         // Check if we're near the end and should load more
         if (onEndReached && hasMore && !isLoading) {
           const threshold = 3; // Load more when 3 items from end
-          if (index >= reelsData.length - threshold) {
+          if (index >= (reelsData?.length || 0) - threshold) {
             onEndReached();
           }
         }
@@ -232,7 +241,7 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
     }
   };
 
-  if (reelsData.length === 0) {
+  if (!reelsData || reelsData.length === 0) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: '#000000' }]}>
         <ActivityIndicator size="large" color="#F2631F" />
@@ -268,7 +277,7 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
         bounces={false}
         onMomentumScrollEnd={onMomentumScrollEnd}
         // Additional optimizations for smooth scrolling
-        key={reelsData.length} // Force re-render when data changes
+        key={reelsData?.length || 0} // Force re-render when data changes
         maintainVisibleContentPosition={{
           minIndexForVisible: 0,
           autoscrollToTopThreshold: 1000,

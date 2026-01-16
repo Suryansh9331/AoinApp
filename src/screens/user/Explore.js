@@ -32,6 +32,9 @@ const Explore = () => {
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
   const [showTrendingReels, setShowTrendingReels] = useState(false);
   const [clickedReelId, setClickedReelId] = useState(null);
   const [showVideoReel, setShowVideoReel] = useState(false);
@@ -86,6 +89,80 @@ const Explore = () => {
       videoUrl: '',
     },
   ];
+
+  // Search reels functionality
+  const searchReels = useCallback(async query => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    try {
+      setSearchLoading(true);
+      const response = await getData(
+        `${ROUTES.SEARCH_REELS}?q=${encodeURIComponent(
+          query.trim(),
+        )}&per_page=20`,
+      );
+
+      if (response && response.data) {
+        // Map search results to match VideoReelItem expected structure
+        const mappedSearchResults = response.data.map((apiReel, index) => {
+          return {
+            id:
+              apiReel.reel_id?.toString() ||
+              apiReel.id?.toString() ||
+              `search-${index}`,
+            reel_id: apiReel.reel_id,
+            videoUrl: apiReel.video_url,
+            thumbnail: apiReel.thumbnail_url,
+            username:
+              apiReel.merchant?.username ||
+              apiReel.merchant?.user_name ||
+              `merchant_${apiReel.merchant_id}` ||
+              'User',
+            userAvatar:
+              apiReel.merchant?.avatar ||
+              apiReel.merchant?.avatar_url ||
+              apiReel.product?.thumbnail_url ||
+              'https://i.pravatar.cc/150?img=1',
+
+            merchant: apiReel.merchant || null,
+
+            caption: apiReel.description || '',
+            likes: apiReel.likes_count || 0,
+            comments: apiReel.comments_count || 0,
+            shares: apiReel.shares_count || 0,
+            views: apiReel.views_count || 0,
+            isLiked: apiReel.is_liked || false,
+            duration: apiReel.duration_seconds || 0,
+            product: apiReel.product || null,
+            product_id: apiReel.product_id,
+            merchant_id: apiReel.merchant_id,
+            approval_status: apiReel.approval_status,
+            is_active: apiReel.is_active,
+            created_at: apiReel.created_at,
+            updated_at: apiReel.updated_at,
+            video_format: apiReel.video_format,
+            file_size_bytes: apiReel.file_size_bytes,
+            resolution: apiReel.resolution,
+          };
+        });
+        setSearchResults(mappedSearchResults);
+        setShowSearchResults(true);
+      } else {
+        setSearchResults([]);
+        setShowSearchResults(false);
+      }
+    } catch (error) {
+      console.error('Error searching reels:', error);
+      setSearchResults([]);
+      setShowSearchResults(false);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, []);
 
   // Fetch trending data
   const fetchTrendingData = useCallback(async () => {
@@ -234,9 +311,22 @@ const Explore = () => {
         activeOpacity={0.8}
         onPress={() => {
           const reelId = item.id || item.reel_id;
-        
           setClickedReelId(reelId?.toString());
-          setShowTrendingReels(true);
+
+          // If this is a search result, show search results in full screen
+          if (showSearchResults) {
+            // Create a temporary array with search results for full screen view
+            const tempSearchData = [...searchResults];
+            // We'll need to modify the VideoReel component to handle dynamic data
+            // For now, let's just show the individual reel
+            navigation.navigate('UserReelsView', {
+              initialReelIndex: 0,
+              reelsData: searchResults,
+              startIndex: searchResults.findIndex(r => r.id === reelId),
+            });
+          } else {
+            setShowTrendingReels(true);
+          }
         }}>
         <Image
           source={{uri: thumbnail || 'https://via.placeholder.com/200x300'}}
@@ -292,7 +382,11 @@ const Explore = () => {
             placeholder="Search products"
             placeholderTextColor={textColor + '60'}
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={text => {
+              setSearchQuery(text);
+              searchReels(text);
+            }}
+            onSubmitEditing={() => searchReels(searchQuery)}
           />
           <TouchableOpacity style={styles.micButton}>
             <Ionicons
@@ -302,6 +396,37 @@ const Explore = () => {
             />
           </TouchableOpacity>
         </View>
+
+        {/* Search Results */}
+        {showSearchResults && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, {color: textColor}]}>
+              Search Results
+            </Text>
+            {searchLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={Colors.PRIMARY} />
+                <Text style={[styles.loadingText, {color: textColor}]}>
+                  Searching...
+                </Text>
+              </View>
+            ) : searchResults.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalScrollContent}
+                nestedScrollEnabled={true}>
+                {searchResults.map((item, index) =>
+                  renderProductCard(item, index),
+                )}
+              </ScrollView>
+            ) : (
+              <Text style={[styles.emptyText, {color: textColor}]}>
+                No results found for "{searchQuery}"
+              </Text>
+            )}
+          </View>
+        )}
 
         {/* Navigation Tabs */}
         <View style={styles.tabsContainer}>
@@ -667,6 +792,11 @@ const styles = StyleSheet.create({
   loadingContainer: {
     paddingVertical: verticalScale(40),
     alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: moderateScale(14),
+    marginTop: verticalScale(8),
+    textAlign: 'center',
   },
   emptyText: {
     fontSize: moderateScale(14),
