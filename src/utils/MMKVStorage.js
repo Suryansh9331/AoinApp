@@ -1,4 +1,4 @@
-import {MMKV} from 'react-native-mmkv';
+import { MMKV } from 'react-native-mmkv';
 
 export const AUTH_STORAGE_KEY = 'auth_data';
 
@@ -40,14 +40,14 @@ export const getValidAuthData = () => {
   if (!authData || !authData.token) {
     return null;
   }
-  
+
   // Check expiration
   if (authData.expiresAt && isTokenExpired(authData.expiresAt)) {
     console.log('Token expired, clearing auth data');
     removeItem(AUTH_STORAGE_KEY);
     return null;
   }
-  
+
   return authData;
 };
 
@@ -59,10 +59,10 @@ try {
 } catch (error) {
   // Check if error is due to remote debugging
   const errorMessage = error?.message || String(error);
-  isRemoteDebugging = errorMessage.includes('React Native is not running on-device') || 
-                      errorMessage.includes('JSI') ||
-                      errorMessage.includes('remote debugger');
-  
+  isRemoteDebugging = errorMessage.includes('React Native is not running on-device') ||
+    errorMessage.includes('JSI') ||
+    errorMessage.includes('remote debugger');
+
   // Only warn if it's not a remote debugging issue
   if (!isRemoteDebugging) {
     console.warn(
@@ -76,7 +76,7 @@ try {
 
 const ensureStorage = () => {
   if (!storage) {
-    
+
     return false;
   }
   return true;

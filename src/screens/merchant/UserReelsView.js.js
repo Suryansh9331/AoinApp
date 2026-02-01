@@ -30,7 +30,7 @@ const UserReelsView = () => {
      const reelsDataFromRedux = useSelector(state => state.reels?.reels || []);
 
      // Get params from navigation
-     const { initialReelId = null, reels: passedReels = null } = route.params || {};
+     const { initialReelId = null, reels: passedReels = null, reelsData: passedReelsData = null } = route.params || {};
 
      const fetchMerchantReelsDirect = async (pageNum = 1, perPage = 20) => {
           try {
@@ -110,11 +110,11 @@ const UserReelsView = () => {
                     setUnreadCount(response.unread_count);
                }
           } catch (error) {
-               if (error?.status === 401 || (error?.type === 'response' && error?.status === 401)) {
+               if (error?.status === 401 || error?.status === 403 || (error?.type === 'response' && (error?.status === 401 || error?.status === 403))) {
                     setUnreadCount(0);
                     return;
                }
-               if (error?.status !== 401) {
+               if (error?.status !== 401 && error?.status !== 403) {
                     console.error('Error fetching unread count:', error);
                }
                setUnreadCount(0);
@@ -122,33 +122,41 @@ const UserReelsView = () => {
      }, [userData]);
 
      useEffect(() => {
-          // Use reels from Redux if available, otherwise use passed reels
-          const reelsToUse = reelsDataFromRedux.length > 0 ? reelsDataFromRedux : (passedReels || []);
+          // Use reelsData from Search.js if available, otherwise use Redux or passed reels
+          const reelsToUse = passedReelsData || (reelsDataFromRedux.length > 0 ? reelsDataFromRedux : (passedReels || []));
+          
+          console.log('UserReelsView - passedReelsData:', passedReelsData);
+          console.log('UserReelsView - reelsToUse length:', reelsToUse.length);
+          console.log('UserReelsView - initialReelId:', initialReelId);
           
           if (reelsToUse.length > 0) {
-               const formattedReels = reelsToUse.map(reel => ({
-                    id: reel.reel_id,
-                    reel_id: reel.reel_id,
-                    videoUrl: reel.video_url,
-                    thumbnailUrl: reel.thumbnail_url || 'https://i.pravatar.cc/150?img=1', // Handle null thumbnails
-                    caption: reel.description || '',
-                    username: userData?.username || 'merchant',
-                    merchant: reel.merchant || null,
+               const formattedReels = reelsToUse.map(reel => {
+                    console.log('Processing reel:', reel);
+                    const formattedReel = {
+                         id: reel.reel_id || reel.id,
+                         reel_id: reel.reel_id || reel.id,
+                         videoUrl: reel.video_url || reel.videoUrl || reel.url || reel.video || reel.file_url,
+                         thumbnailUrl: reel.thumbnail_url || reel.thumbnail || 'https://i.pravatar.cc/150?img=1',
+                         caption: reel.description || reel.caption || '',
+                         username: reel.username || userData?.username || 'merchant',
+                         merchant: reel.merchant || null,
 
-
-                    likes: reel.likes_count || 0,
-                    shares: reel.shares_count || 0,
-                    views: reel.views_count || 0,
-                    isLiked: reel.is_liked || false,
-                    merchant_id: reel.merchant_id,
-                    product: reel.product,
-                    duration: reel.duration_seconds,
-                    createdAt: reel.created_at,
-                    updatedAt: reel.updated_at,
-                    approval_status: reel.approval_status,
-                    is_active: reel.is_active,
-                    is_visible: reel.is_visible
-               }));
+                         likes: reel.likes_count || reel.likes || 0,
+                         shares: reel.shares_count || reel.shares || 0,
+                         views: reel.views_count || reel.views || 0,
+                         isLiked: reel.is_liked || reel.isLiked || false,
+                         merchant_id: reel.merchant_id,
+                         product: reel.product,
+                         duration: reel.duration_seconds || reel.duration,
+                         createdAt: reel.created_at,
+                         updatedAt: reel.updated_at,
+                         approval_status: reel.approval_status,
+                         is_active: reel.is_active,
+                         is_visible: reel.is_visible
+                    };
+                    console.log('Formatted reel:', formattedReel);
+                    return formattedReel;
+               });
                setReels(formattedReels);
                setHasFetched(true);
           } else {
@@ -156,7 +164,7 @@ const UserReelsView = () => {
                loadReels();
           }
           fetchUnreadCount();
-     }, [reelsDataFromRedux, passedReels, userData]);
+     }, [reelsDataFromRedux, passedReels, passedReelsData, userData]);
 
      useFocusEffect(
           useCallback(() => {

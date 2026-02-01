@@ -115,7 +115,7 @@ const VideoReelItem = ({ item, isActive, isVisible, onLike, onShare, itemHeight 
   }, [isActive, isPlaying, videoLoaded, viewStartTime]);
 
   useEffect(() => {
-    console.log(`Tracking check - reelId: ${item.reel_id || item.id}, isActive: ${isActive}, isPlaying: ${isPlaying}, duration: ${totalViewDuration}, hasTracked: ${hasTrackedView}, role: ${userRole}`);
+    // console.log(`Tracking check - reelId: ${item.reel_id || item.id}, isActive: ${isActive}, isPlaying: ${isPlaying}, duration: ${totalViewDuration}, hasTracked: ${hasTrackedView}, role: ${userRole}`);
 
     if ((!isActive || !isPlaying) && totalViewDuration >= 5 && !hasTrackedView) {
       const reelId = item.reel_id || item.id;
@@ -264,6 +264,9 @@ const VideoReelItem = ({ item, isActive, isVisible, onLike, onShare, itemHeight 
   };
 
   const formatNumber = num => {
+    if (num === undefined || num === null || num === 0) {
+      return '0';
+    }
     if (num >= 1000000) {
       return (num / 1000000).toFixed(1) + 'M';
     } else if (num >= 1000) {

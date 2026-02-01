@@ -38,9 +38,6 @@ const Search = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const [showTrendingReels, setShowTrendingReels] = useState(false);
-  const [selectedReelId, setSelectedReelId] = useState(null);
-  const [clickedReelId, setClickedReelId] = useState(null);
 
   // Dummy data for other sections
   const premiumSellers = [
@@ -110,16 +107,19 @@ const Search = () => {
       );
 
       if (response && response.data) {
+        console.log('Search API response:', response);
+        console.log('Search data length:', response.data.length);
         // Map search results to match VideoReelItem expected structure
         const mappedSearchResults = response.data.map((apiReel, index) => {
-          return {
+          console.log(`Search result ${index}:`, apiReel);
+          const mappedResult = {
             id:
               apiReel.reel_id?.toString() ||
               apiReel.id?.toString() ||
               `search-${index}`,
             reel_id: apiReel.reel_id,
-            videoUrl: apiReel.video_url,
-            thumbnail: apiReel.thumbnail_url,
+            videoUrl: apiReel.video_url || apiReel.videoUrl || apiReel.url || apiReel.video || apiReel.file_url,
+            thumbnail: apiReel.thumbnail_url || apiReel.thumbnailUrl || apiReel.thumbnail || apiReel.poster_url || apiReel.image,
             username:
               apiReel.merchant?.username ||
               apiReel.merchant?.user_name ||
@@ -151,6 +151,16 @@ const Search = () => {
             file_size_bytes: apiReel.file_size_bytes,
             resolution: apiReel.resolution,
           };
+          
+          // Log if videoUrl is missing
+          if (!mappedResult.videoUrl) {
+            console.warn(`Search result ${index} has no videoUrl!`, apiReel);
+          } else {
+            console.log(`Search result ${index} videoUrl:`, mappedResult.videoUrl);
+          }
+          
+          console.log(`Mapped search result ${index}:`, mappedResult);
+          return mappedResult;
         });
         setSearchResults(mappedSearchResults);
         setShowSearchResults(true);
@@ -263,15 +273,95 @@ const Search = () => {
     try {
       setRecentlyViewedLoading(true);
       const response = await getData(ROUTES.RECENTLY_VIEWED);
+      console.log('Recently viewed API response:', response);
+      
       if (
         response &&
         response.status === 'success' &&
         response.data &&
         response.data.reels
       ) {
-        setRecentlyViewedData(response.data.reels);
+        console.log('Recently viewed raw data:', response.data.reels);
+        // Map recently viewed data to match VideoReelItem expected structure
+        const mappedRecentlyViewedData = response.data.reels.map((apiReel, index) => {
+          console.log(`Mapping recently viewed reel ${index}:`, apiReel);
+          return {
+            id:
+              apiReel.reel_id?.toString() ||
+              apiReel.id?.toString() ||
+              `recent-${index}`,
+            reel_id: apiReel.reel_id,
+            videoUrl: apiReel.video_url || apiReel.videoUrl,
+            thumbnail: apiReel.thumbnail_url || apiReel.thumbnail,
+            username:
+              apiReel.merchant?.username ||
+              apiReel.merchant?.user_name ||
+              `merchant_${apiReel.merchant_id}` ||
+              'User',
+            userAvatar:
+              apiReel.merchant?.avatar ||
+              apiReel.merchant?.avatar_url ||
+              apiReel.product?.thumbnail_url ||
+              'https://i.pravatar.cc/150?img=1',
+            merchant: apiReel.merchant || null,
+            caption: apiReel.description || '',
+            likes: apiReel.likes_count || 0,
+            comments: apiReel.comments_count || 0,
+            shares: apiReel.shares_count || 0,
+            views: apiReel.views_count || 0,
+            isLiked: apiReel.is_liked || false,
+            duration: apiReel.duration_seconds || 0,
+            product: apiReel.product || null,
+            product_id: apiReel.product_id,
+            merchant_id: apiReel.merchant_id,
+            approval_status: apiReel.approval_status,
+            is_active: apiReel.is_active,
+            created_at: apiReel.created_at,
+            updated_at: apiReel.updated_at,
+          };
+        });
+        console.log('Mapped recently viewed data:', mappedRecentlyViewedData);
+        setRecentlyViewedData(mappedRecentlyViewedData);
       } else if (Array.isArray(response)) {
-        setRecentlyViewedData(response);
+        console.log('Recently viewed array response:', response);
+        // Map array response to ensure consistent structure
+        const mappedRecentlyViewedData = response.map((apiReel, index) => {
+          return {
+            id:
+              apiReel.reel_id?.toString() ||
+              apiReel.id?.toString() ||
+              `recent-${index}`,
+            reel_id: apiReel.reel_id,
+            videoUrl: apiReel.video_url || apiReel.videoUrl,
+            thumbnail: apiReel.thumbnail_url || apiReel.thumbnail,
+            username:
+              apiReel.merchant?.username ||
+              apiReel.merchant?.user_name ||
+              `merchant_${apiReel.merchant_id}` ||
+              'User',
+            userAvatar:
+              apiReel.merchant?.avatar ||
+              apiReel.merchant?.avatar_url ||
+              apiReel.product?.thumbnail_url ||
+              'https://i.pravatar.cc/150?img=1',
+            merchant: apiReel.merchant || null,
+            caption: apiReel.description || '',
+            likes: apiReel.likes_count || 0,
+            comments: apiReel.comments_count || 0,
+            shares: apiReel.shares_count || 0,
+            views: apiReel.views_count || 0,
+            isLiked: apiReel.is_liked || false,
+            duration: apiReel.duration_seconds || 0,
+            product: apiReel.product || null,
+            product_id: apiReel.product_id,
+            merchant_id: apiReel.merchant_id,
+            approval_status: apiReel.approval_status,
+            is_active: apiReel.is_active,
+            created_at: apiReel.created_at,
+            updated_at: apiReel.updated_at,
+          };
+        });
+        setRecentlyViewedData(mappedRecentlyViewedData);
       }
     } catch (error) {
       console.error('Error fetching recently viewed data:', error);
@@ -310,7 +400,7 @@ const Search = () => {
     </TouchableOpacity>
   );
 
-  const renderProductCard = (item, index) => {
+  const renderProductCard = (item, index, source = 'trending') => {
     const thumbnail = item.thumbnail_url || item.video_url || item.thumbnail;
     const reelId = item.id || item.reel_id;
 
@@ -321,21 +411,27 @@ const Search = () => {
         activeOpacity={0.8}
         onPress={() => {
           const reelId = item.id || item.reel_id;
-          setClickedReelId(reelId);
-
-          // If this is a search result, show search results in full screen
-          if (showSearchResults) {
-            // Create a temporary array with search results for full screen view
-            const tempSearchData = [...searchResults];
-            // We'll need to modify the VideoReel component to handle dynamic data
-            // For now, let's just show the individual reel
+          console.log('ProductCard clicked - source:', source);
+          console.log('ProductCard clicked - item:', item);
+          console.log('ProductCard clicked - reelId:', reelId);
+          
+          // Navigate to UserReelsView for all reel types
+          if (source === 'search') {
             navigation.navigate('UserReelsView', {
-              initialReelIndex: 0,
+              initialReelId: reelId,
               reelsData: searchResults,
-              startIndex: searchResults.findIndex(r => r.id === reelId),
+            });
+          } else if (source === 'recentlyViewed') {
+            navigation.navigate('UserReelsView', {
+              initialReelId: reelId,
+              reelsData: recentlyViewedData,
             });
           } else {
-            setShowTrendingReels(true);
+            // trending
+            navigation.navigate('UserReelsView', {
+              initialReelId: reelId,
+              reelsData: trendingData,
+            });
           }
         }}>
         <Image
@@ -413,7 +509,7 @@ const Search = () => {
                 contentContainerStyle={styles.horizontalScrollContent}
                 nestedScrollEnabled={true}>
                 {searchResults.map((item, index) =>
-                  renderProductCard(item, index),
+                  renderProductCard(item, index, 'search'),
                 )}
               </ScrollView>
             ) : (
@@ -496,7 +592,7 @@ const Search = () => {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalScrollContent}
             nestedScrollEnabled={true}>
-            {premiumPicks.map((item, index) => renderProductCard(item, index))}
+            {premiumPicks.map((item, index) => renderProductCard(item, index, 'trending'))}
           </ScrollView>
         </View>
 
@@ -550,7 +646,7 @@ const Search = () => {
               nestedScrollEnabled={true}>
               {trendingData.length > 0 ? (
                 trendingData.map((item, index) =>
-                  renderProductCard(item, index),
+                  renderProductCard(item, index, 'trending'),
                 )
               ) : (
                 <Text style={[styles.emptyText, {color: textColor}]}>
@@ -581,7 +677,7 @@ const Search = () => {
               nestedScrollEnabled={true}>
               {recentlyViewedData.length > 0 ? (
                 recentlyViewedData.map((item, index) =>
-                  renderProductCard(item, index),
+                  renderProductCard(item, index, 'recentlyViewed'),
                 )
               ) : (
                 <Text style={[styles.emptyText, {color: textColor}]}>
@@ -592,61 +688,6 @@ const Search = () => {
           )}
         </View>
       </ScrollView>
-
-      {/* Trending Reels Full Screen View */}
-      {showTrendingReels && (
-        <View style={styles.fullScreenReelsContainer}>
-          <StatusBar
-            barStyle="light-content"
-            backgroundColor="#000000"
-            translucent={false}
-          />
-          <SafeAreaView style={{backgroundColor: '#000000'}}>
-            <Header
-              title="Trending Reels"
-              leftType="back"
-              onLeftPress={() => {
-                setClickedReelId(null); // Reset when closing
-                setShowTrendingReels(false);
-              }}
-              leftContent={
-                <TouchableOpacity
-                  onPress={() => {
-                    setClickedReelId(null); // Reset when closing
-                    setShowTrendingReels(false);
-                  }}
-                  style={styles.backButton}>
-                  <Ionicons
-                    name="arrow-back"
-                    size={moderateScale(24)}
-                    color="#FFFFFF"
-                  />
-                </TouchableOpacity>
-              }
-              containerStyle={{
-                backgroundColor: '#000000',
-                borderBottomWidth: 0,
-              }}
-              titleStyle={{color: '#FFFFFF'}}
-            />
-          </SafeAreaView>
-          {trendingData.length > 0 ? (
-            <VideoReel
-              data={trendingData}
-              initialReelId={clickedReelId}
-              key={`trending-reels-${clickedReelId || 'first'}-${
-                trendingData.length
-              }`}
-            />
-          ) : (
-            <View style={styles.noReelsContainer}>
-              <Text style={styles.noReelsText}>
-                No trending reels available
-              </Text>
-            </View>
-          )}
-        </View>
-      )}
     </SafeAreaView>
   );
 };
@@ -827,34 +868,6 @@ const styles = StyleSheet.create({
     color: Colors.PRIMARY,
     fontSize: moderateScale(11),
     fontWeight: '700',
-  },
-  fullScreenReelsContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#000000',
-    zIndex: 1000,
-    flex: 1,
-  },
-  backButton: {
-    width: moderateScale(44),
-    height: moderateScale(44),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  noReelsContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#000000',
-  },
-  noReelsText: {
-    color: '#FFFFFF',
-    fontSize: moderateScale(16),
-    textAlign: 'center',
   },
 });
 

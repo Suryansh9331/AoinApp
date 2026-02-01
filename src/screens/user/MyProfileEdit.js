@@ -116,9 +116,7 @@ const MyProfileEdit = ({ route }) => {
         if (!isNaN(constructedDate.getTime())) {
           const formattedDate = formatDate(constructedDate);
           setDateOfBirth(formattedDate);
-        } else {
-          console.log('Invalid date constructed:', dateString);
-        }
+        } 
       }
     }
   }, [selectedDay, selectedMonth, selectedYear]);

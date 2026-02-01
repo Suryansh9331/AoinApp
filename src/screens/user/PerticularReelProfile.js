@@ -84,7 +84,6 @@ const PerticularReelProfile = () => {
     try {
       const endpoint = `${ROUTES.MERCHANT_PUBLIC_PROFILE}${merchantId}/public-profile`;
       const response = await getData(endpoint);
-     
       const profile =
         response?.merchant ||
         response?.data?.merchant ||
@@ -166,18 +165,22 @@ const PerticularReelProfile = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [merchantId]);
 
+  useEffect(() => {
+    // Ensure isFollowing state is updated correctly
+    if (merchantProfile && typeof merchantProfile.is_following === 'boolean') {
+      setIsFollowing(merchantProfile.is_following);
+    }
+  }, [merchantProfile]);
+
   useFocusEffect(
     useCallback(() => {
-      if (merchantId) {
-        if (!merchantProfile) {
-          fetchMerchantProfile();
-        }
+      if (merchantId && !merchantProfile) {
+        fetchMerchantProfile();
         fetchMerchantStats();
         fetchFollowersCount();
         fetchMerchantReels();
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [merchantId]),
+    }, [merchantId, merchantProfile])
   );
   // ✅ SINGLE SOURCE OF TRUTH FOR PROFILE IMAGE
   const profileImage = useMemo(() => {
@@ -400,7 +403,7 @@ const PerticularReelProfile = () => {
                       styles.followButtonText,
                       {color: isFollowing ? textColor : Colors.PRIMARY},
                     ]}>
-                    {isFollowing ? 'Following' : 'Follow'}
+                    {isFollowing ? 'UnFollow' : 'Follow'}
                   </Text>
                 )}
               </TouchableOpacity>
