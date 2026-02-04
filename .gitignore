@@ -72,3 +72,41 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+# Keystore
+*.keystore
+
+# Gradle
+android/.gradle/
+android/build/
+android/app/build/
+
+# Secrets
+android/gradle.properties
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+# Release keystore (CRITICAL)
+*.keystore
+
+# Gradle build outputs
+android/app/build/
+android/build/
+android/.gradle/
+
+# Secrets
+android/gradle.properties
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
