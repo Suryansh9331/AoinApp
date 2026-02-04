@@ -4,7 +4,7 @@ export const AUTH_STORAGE_KEY = 'auth_data';
 
 // Token expiration constants (in milliseconds)
 export const DEFAULT_TOKEN_EXPIRY_DAYS = 30; // Default 30 days if not provided by API
-const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000; // 5 minutes buffer before actual expiry
+const TOKEN_EXPIRY_BUFFER_MS = 1 * 60 * 1000; // 1 minute buffer before actual expiry
 
 /**
  * Calculate token expiration timestamp
@@ -27,8 +27,20 @@ export const calculateTokenExpiry = (expiresIn = null) => {
  */
 export const isTokenExpired = (expiresAt) => {
   if (!expiresAt) return true;
-  // Check if token expires within buffer time (5 minutes)
-  return Date.now() >= (expiresAt - TOKEN_EXPIRY_BUFFER_MS);
+  
+  const now = Date.now();
+  const timeRemaining = expiresAt - now;
+  const daysRemaining = Math.floor(timeRemaining / (24 * 60 * 60 * 1000));
+  const hoursRemaining = Math.floor((timeRemaining % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+  const minutesRemaining = Math.floor((timeRemaining % (60 * 60 * 1000)) / (60 * 1000));
+  
+  console.log(`Token expiry check - Time remaining: ${daysRemaining} days, ${hoursRemaining} hours, ${minutesRemaining} minutes`);
+  
+  // Check if token expires within buffer time (1 minute)
+  const isExpired = now >= (expiresAt - TOKEN_EXPIRY_BUFFER_MS);
+  console.log(`Token expired: ${isExpired}`);
+  
+  return isExpired;
 };
 
 /**
@@ -37,7 +49,10 @@ export const isTokenExpired = (expiresAt) => {
  */
 export const getValidAuthData = () => {
   const authData = getObject(AUTH_STORAGE_KEY);
+  console.log('Retrieved auth data from storage:', authData);
+  
   if (!authData || !authData.token) {
+    console.log('No auth data or token found in storage');
     return null;
   }
 
@@ -48,6 +63,7 @@ export const getValidAuthData = () => {
     return null;
   }
 
+  console.log('Valid auth data found, returning:', { token: authData.token ? 'present' : 'missing', userData: authData.userData ? 'present' : 'missing' });
   return authData;
 };
 

@@ -18,8 +18,9 @@ import useAppTheme from '../../theme/useAppTheme';
 import {getThemeColors} from '../../theme/themeColors';
 import {Colors} from '../../utils/Colors';
 import {clearCredentials} from '../../redux/slices/authSlice';
-import {clearAuthToken} from '../../utils/APiCall';
+import {clearAuthToken, deleteData, postData} from '../../utils/APiCall';
 import {removeItem, AUTH_STORAGE_KEY} from '../../utils/MMKVStorage';
+import {ROUTES} from '../../utils/Routes';
 import Header from '../../components/Header/Header';
 
 const Profile = () => {
@@ -65,6 +66,59 @@ const Profile = () => {
                 routes: [{ name: 'Splash' }],
               })
             );
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteProfile = () => {
+    Alert.alert(
+      'Delete Profile',
+      'Are you sure you want to delete your profile? This action cannot be undone and all your data will be permanently deleted.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Call delete profile API with token in headers
+              const response = await deleteData(`${ROUTES.DELETE_USER_PROFILE}`);
+              
+              if (response?.status === 'success') {
+                // Clear local data and logout
+                dispatch(clearCredentials());
+                clearAuthToken();
+                removeItem(AUTH_STORAGE_KEY);
+                
+                Alert.alert(
+                  'Profile Deleted',
+                  'Your profile has been successfully deleted.',
+                  [
+                    {
+                      text: 'OK',
+                      onPress: () => {
+                        navigation.dispatch(
+                          CommonActions.reset({
+                            index: 0,
+                            routes: [{ name: 'Login' }],
+                          })
+                        );
+                      },
+                    },
+                  ]
+                );
+              } else {
+                Alert.alert('Error', 'Failed to delete profile. Please try again.');
+              }
+            } catch (error) {
+              console.error('Delete profile error:', error);
+              Alert.alert('Error', 'Failed to delete profile. Please try again.');
+            }
           },
         },
       ]
@@ -127,6 +181,14 @@ const Profile = () => {
       showArrow: false,
       isLogout: true,
     },
+    {
+      id: '7',
+      title: 'Delete Profile',
+      icon: 'trash-outline',
+      onPress: handleDeleteProfile,
+      showArrow: false,
+      isDelete: true,
+    },
   ];
 
   return (
@@ -178,13 +240,13 @@ const Profile = () => {
                 <Ionicons
                   name={item.icon}
                   size={moderateScale(24)}
-                  color={item.isLogout ? Colors.PRIMARY : textColor}
+                  color={item.isLogout || item.isDelete ? '#FF3B30' : textColor}
                 />
                 <Text
                   style={[
                     styles.menuItemText,
                     {
-                      color: item.isLogout ? Colors.PRIMARY : textColor,
+                      color: item.isLogout || item.isDelete ? '#FF3B30' : textColor,
                     },
                   ]}>
                   {item.title}
