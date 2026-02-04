@@ -39,13 +39,6 @@ const Explore = () => {
   const [showSearchResults, setShowSearchResults] = useState(false);
 
   // Dummy data for other sections
-  const premiumSellers = [
-    {id: 1, image: 'https://via.placeholder.com/80'},
-    {id: 2, image: 'https://via.placeholder.com/80'},
-    {id: 3, image: 'https://via.placeholder.com/80'},
-    {id: 4, image: 'https://via.placeholder.com/80'},
-  ];
-
   const premiumPicks = [
     {
       id: 1,
@@ -65,29 +58,15 @@ const Explore = () => {
   ];
 
   const verifiedSellers = [
-    {id: 1, image: 'https://via.placeholder.com/80', verified: true},
-    {id: 2, image: 'https://via.placeholder.com/80', verified: true},
-    {id: 3, image: 'https://via.placeholder.com/80', verified: true},
-    {id: 4, image: 'https://via.placeholder.com/80', verified: true},
+    {id: 1, image: 'https://images.pexels.com/photos/27941502/pexels-photo-27941502.jpeg', verified: true},
+    {id: 2, image: 'https://images.pexels.com/photos/31451028/pexels-photo-31451028.jpeg', verified: true},
+    {id: 3, image: 'https://images.pexels.com/photos/13155691/pexels-photo-13155691.jpeg', verified: true},
+    {id: 4, image: 'https://images.pexels.com/photos/28953735/pexels-photo-28953735.jpeg', verified: true},
+    {id: 5, image: 'https://images.pexels.com/photos/7617893/pexels-photo-7617893.jpeg', verified: true},
+    {id: 6, image: 'https://images.pexels.com/photos/28953736/pexels-photo-28953736.jpeg', verified: true},
   ];
 
-  const recentProducts = [
-    {
-      id: 1,
-      thumbnail: 'https://via.placeholder.com/200x300',
-      videoUrl: '',
-    },
-    {
-      id: 2,
-      thumbnail: 'https://via.placeholder.com/200x300',
-      videoUrl: '',
-    },
-    {
-      id: 3,
-      thumbnail: 'https://via.placeholder.com/200x300',
-      videoUrl: '',
-    },
-  ];
+  
 
   // Search reels functionality
   const searchReels = useCallback(async query => {
@@ -282,10 +261,9 @@ const Explore = () => {
         response.data &&
         response.data.reels
       ) {
-        console.log('Recently viewed raw data:', response.data.reels);
-        // Map recently viewed data to match VideoReelItem expected structure
+        
         const mappedRecentlyViewedData = response.data.reels.map((apiReel, index) => {
-          console.log(`Mapping recently viewed reel ${index}:`, apiReel);
+        
           return {
             id:
               apiReel.reel_id?.toString() ||
@@ -573,20 +551,6 @@ const Explore = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Premium Seller Section */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, {color: textColor}]}>
-            Premium Seller
-          </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalScrollContent}
-            nestedScrollEnabled={true}>
-            {premiumSellers.map(item => renderSellerThumbnail(item))}
-          </ScrollView>
-        </View>
-
         {/* Premium Picks Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -824,9 +788,11 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   sellerThumbnail: {
-    width: moderateScale(80),
-    height: moderateScale(80),
+    gap: scale(14),
+    width: moderateScale(60),
+    height: moderateScale(60),
     borderRadius: moderateScale(40),
+    
   },
   verifiedBadge: {
     position: 'absolute',
