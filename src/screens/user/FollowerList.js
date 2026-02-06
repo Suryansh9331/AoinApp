@@ -172,7 +172,7 @@ const FollowerList = ({ route }) => {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.PRIMARY} />
           <Text style={[styles.loadingText, { color: textColor }]}>
-            Loading followers...
+            Loading following merchants...
           </Text>
         </View>
       ) : error ? (
