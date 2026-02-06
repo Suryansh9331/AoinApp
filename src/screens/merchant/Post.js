@@ -13,12 +13,13 @@ import {
   PermissionsAndroid,
   Linking,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   useNavigation,
   useFocusEffect,
   useRoute,
 } from '@react-navigation/native';
-import {SafeAreaView, StatusBar} from 'react-native';
+import { StatusBar} from 'react-native';
 import Header from '../../components/Header/Header';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
@@ -579,13 +580,13 @@ const Post = ({routeParams}) => {
   ]);
 
   return (
-    <View style={[styles.container, {backgroundColor}]}>
-      {/* <StatusBar
+    <SafeAreaView style={[styles.container, {backgroundColor}]}>
+      <StatusBar
         barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundColor}
         translucent={false}
-      /> */}
-      <SafeAreaView style={{flex: 1, backgroundColor}}>
+      />
+      <View style={{flex: 1, backgroundColor}}>
         <Header
           title={isEditingMode ? 'Edit Reel' : 'Create Reel'}
           leftType={false}
@@ -765,8 +766,8 @@ const Post = ({routeParams}) => {
             )}
           </View>
         </ScrollView>
-      </SafeAreaView>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 };
 

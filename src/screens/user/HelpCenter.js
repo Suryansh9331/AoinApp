@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   Linking,
   Alert,
-  SafeAreaView,
+  
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -17,7 +17,7 @@ import useAppTheme from '../../theme/useAppTheme';
 import {getThemeColors} from '../../theme/themeColors';
 import {Colors} from '../../utils/Colors';
 import Header from '../../components/Header/Header';
-
+import {SafeAreaView} from 'react-native-safe-area-context';
 const HelpCenter = () => {
   const theme = useAppTheme();
   const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
@@ -114,11 +114,13 @@ const HelpCenter = () => {
   return (
     <SafeAreaView style={[styles.container, {backgroundColor}]}>
       {/* Header */}
+       <View style={{ backgroundColor }}>
        <Header
        title="Help Center"
        
        onLeftPress={() => navigation.goBack()}
       />
+      </View>
 
       {/* Help Options List */}
       <View style={styles.optionsContainer}>

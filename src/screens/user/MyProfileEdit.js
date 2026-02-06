@@ -22,6 +22,7 @@ import FONTS from '../../utils/Font';
 import Header from '../../components/Header/Header';
 import { putData } from '../../utils/APiCall';
 import { BASE_URL, ROUTES } from '../../utils/Routes';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const MyProfileEdit = ({ route }) => {
   const theme = useAppTheme();
@@ -170,7 +171,7 @@ const MyProfileEdit = ({ route }) => {
   }, [firstName, lastName, dateOfBirth, gender, navigation]);
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor }]}>
       {/* Header */}
       <Header
         title="Edit Profile"
@@ -353,7 +354,7 @@ const MyProfileEdit = ({ route }) => {
           disabled={loading}
         />
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 

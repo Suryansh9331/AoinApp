@@ -40,36 +40,86 @@ const Search = () => {
   const [showSearchResults, setShowSearchResults] = useState(false);
 
   // Dummy data for other sections
-  const premiumSellers = [
-    {id: 1, image: 'https://via.placeholder.com/80'},
-    {id: 2, image: 'https://via.placeholder.com/80'},
-    {id: 3, image: 'https://via.placeholder.com/80'},
-    {id: 4, image: 'https://via.placeholder.com/80'},
+ const premiumSellers = [
+    {
+      id: 1,
+      image:
+        'https://images.pexels.com/photos/5658856/pexels-photo-5658856.jpeg',
+      verified: true,
+    },
+    {
+      id: 2,
+      image:
+        'https://images.pexels.com/photos/7618832/pexels-photo-7618832.jpeg',
+      verified: true,
+    },
+    {
+      id: 3,
+      image:
+        'https://images.pexels.com/photos/29045063/pexels-photo-29045063.jpeg',
+      verified: true,
+    },
+    {
+      id: 4,
+      image:
+        'https://images.pexels.com/photos/322207/pexels-photo-322207.jpeg',
+      verified: true,
+    },
+    {
+      id: 5,
+      image:
+        'https://images.pexels.com/photos/12753881/pexels-photo-12753881.jpeg',
+      verified: true,
+    },
+    {
+      id: 6,
+      image:
+        'https://images.pexels.com/photos/28953736/pexels-photo-28953736.jpeg',
+      verified: true,
+    },
+    
   ];
 
   const premiumPicks = [
     {
       id: 1,
-      thumbnail: 'https://via.placeholder.com/200x300',
+      thumbnail: 'https://images.pexels.com/photos/27703654/pexels-photo-27703654.jpeg',
       videoUrl: '',
     },
     {
       id: 2,
-      thumbnail: 'https://via.placeholder.com/200x300',
+      thumbnail: 'https://images.pexels.com/photos/29285934/pexels-photo-29285934.jpeg',
       videoUrl: '',
     },
     {
       id: 3,
-      thumbnail: 'https://via.placeholder.com/200x300',
+      thumbnail: 'https://images.pexels.com/photos/27503507/pexels-photo-27503507.png',
+      videoUrl: '',
+    },
+    {
+      id: 4,
+      thumbnail: 'https://images.pexels.com/photos/27876805/pexels-photo-27876805.jpeg',
+      videoUrl: '',
+    },
+    {
+      id: 5,
+      thumbnail: 'https://images.pexels.com/photos/190819/pexels-photo-190819.jpeg',
+      videoUrl: '',
+    },
+    {
+      id: 6,
+      thumbnail: 'https://images.pexels.com/photos/12031204/pexels-photo-12031204.jpeg',
       videoUrl: '',
     },
   ];
 
   const verifiedSellers = [
-    {id: 1, image: 'https://via.placeholder.com/80', verified: true},
-    {id: 2, image: 'https://via.placeholder.com/80', verified: true},
-    {id: 3, image: 'https://via.placeholder.com/80', verified: true},
-    {id: 4, image: 'https://via.placeholder.com/80', verified: true},
+    {id: 1, image: 'https://images.pexels.com/photos/27941502/pexels-photo-27941502.jpeg', verified: true},
+    {id: 2, image: 'https://images.pexels.com/photos/31451028/pexels-photo-31451028.jpeg', verified: true},
+    {id: 3, image: 'https://images.pexels.com/photos/13155691/pexels-photo-13155691.jpeg', verified: true},
+    {id: 4, image: 'https://images.pexels.com/photos/28953735/pexels-photo-28953735.jpeg', verified: true},
+    {id: 5, image: 'https://images.pexels.com/photos/7617893/pexels-photo-7617893.jpeg', verified: true},
+    {id: 6, image: 'https://images.pexels.com/photos/28953736/pexels-photo-28953736.jpeg', verified: true},
   ];
 
   const recentProducts = [

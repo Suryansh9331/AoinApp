@@ -9,7 +9,7 @@ import {
   StatusBar,
   Image,
 } from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation, CommonActions} from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
@@ -137,7 +137,7 @@ const Profile = () => {
     },
     {
       id: '2',
-      title: 'Followers',
+      title: 'Following',
       icon: 'people-outline',
       onPress: () => {
         
@@ -192,7 +192,7 @@ const Profile = () => {
   ];
 
   return (
-    <View style={[styles.container, {backgroundColor}]}>
+    <SafeAreaView style={[styles.container, {backgroundColor}]}>
       {/* <StatusBar
         barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundColor}
@@ -266,7 +266,7 @@ const Profile = () => {
           </View>
         ))}
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
   },
   
   profileSection: {
-    paddingVertical: verticalScale(20),
+    paddingVertical: verticalScale(10),
     paddingHorizontal: scale(16),
     borderBottomWidth: StyleSheet.hairlineWidth,
   },

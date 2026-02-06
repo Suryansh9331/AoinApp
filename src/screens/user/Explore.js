@@ -1,4 +1,6 @@
 import React, {useState, useEffect, useCallback} from 'react';
+import {Animated} from 'react-native';
+
 import {
   View,
   Text,
@@ -23,6 +25,39 @@ import {getData} from '../../utils/APiCall';
 import {ROUTES} from '../../utils/Routes';
 import {Colors} from '../../utils/Colors';
 
+
+//external additional component for overlay of coming soon for premium picks 
+const ComingSoonOverlay = () => {
+  const opacity = React.useRef(new Animated.Value(0.6)).current;
+
+  React.useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 0.6,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+  }, []);
+
+  return (
+    <View style={styles.lockOverlay}>
+      <Animated.Text style={[styles.lockText, {opacity}]}>
+        COMING SOON
+      </Animated.Text>
+    </View>
+  );
+};
+
+
+
 const Explore = () => {
   const navigation = useNavigation();
   const theme = useAppTheme();
@@ -38,35 +73,117 @@ const Explore = () => {
   const [searchLoading, setSearchLoading] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
 
+  const premiumSellers = [
+    {
+      id: 1,
+      image:
+        'https://images.pexels.com/photos/5658856/pexels-photo-5658856.jpeg',
+      verified: true,
+    },
+    {
+      id: 2,
+      image:
+        'https://images.pexels.com/photos/7618832/pexels-photo-7618832.jpeg',
+      verified: true,
+    },
+    {
+      id: 3,
+      image:
+        'https://images.pexels.com/photos/29045063/pexels-photo-29045063.jpeg',
+      verified: true,
+    },
+    {
+      id: 4,
+      image:
+        'https://images.pexels.com/photos/322207/pexels-photo-322207.jpeg',
+      verified: true,
+    },
+    {
+      id: 5,
+      image:
+        'https://images.pexels.com/photos/12753881/pexels-photo-12753881.jpeg',
+      verified: true,
+    },
+    {
+      id: 6,
+      image:
+        'https://images.pexels.com/photos/28953736/pexels-photo-28953736.jpeg',
+      verified: true,
+    },
+    
+  ];
   // Dummy data for other sections
   const premiumPicks = [
     {
       id: 1,
-      thumbnail: 'https://via.placeholder.com/200x300',
+      thumbnail: 'https://images.pexels.com/photos/27703654/pexels-photo-27703654.jpeg',
       videoUrl: '',
     },
     {
       id: 2,
-      thumbnail: 'https://via.placeholder.com/200x300',
+      thumbnail: 'https://images.pexels.com/photos/29285934/pexels-photo-29285934.jpeg',
       videoUrl: '',
     },
     {
       id: 3,
-      thumbnail: 'https://via.placeholder.com/200x300',
+      thumbnail: 'https://images.pexels.com/photos/27503507/pexels-photo-27503507.png',
+      videoUrl: '',
+    },
+    {
+      id: 4,
+      thumbnail: 'https://images.pexels.com/photos/27876805/pexels-photo-27876805.jpeg',
+      videoUrl: '',
+    },
+    {
+      id: 5,
+      thumbnail: 'https://images.pexels.com/photos/190819/pexels-photo-190819.jpeg',
+      videoUrl: '',
+    },
+    {
+      id: 6,
+      thumbnail: 'https://images.pexels.com/photos/12031204/pexels-photo-12031204.jpeg',
       videoUrl: '',
     },
   ];
 
   const verifiedSellers = [
-    {id: 1, image: 'https://images.pexels.com/photos/27941502/pexels-photo-27941502.jpeg', verified: true},
-    {id: 2, image: 'https://images.pexels.com/photos/31451028/pexels-photo-31451028.jpeg', verified: true},
-    {id: 3, image: 'https://images.pexels.com/photos/13155691/pexels-photo-13155691.jpeg', verified: true},
-    {id: 4, image: 'https://images.pexels.com/photos/28953735/pexels-photo-28953735.jpeg', verified: true},
-    {id: 5, image: 'https://images.pexels.com/photos/7617893/pexels-photo-7617893.jpeg', verified: true},
-    {id: 6, image: 'https://images.pexels.com/photos/28953736/pexels-photo-28953736.jpeg', verified: true},
+    {
+      id: 1,
+      image:
+        'https://images.pexels.com/photos/27941502/pexels-photo-27941502.jpeg',
+      verified: true,
+    },
+    {
+      id: 2,
+      image:
+        'https://images.pexels.com/photos/31451028/pexels-photo-31451028.jpeg',
+      verified: true,
+    },
+    {
+      id: 3,
+      image:
+        'https://images.pexels.com/photos/13155691/pexels-photo-13155691.jpeg',
+      verified: true,
+    },
+    {
+      id: 4,
+      image:
+        'https://images.pexels.com/photos/28953735/pexels-photo-28953735.jpeg',
+      verified: true,
+    },
+    {
+      id: 5,
+      image:
+        'https://images.pexels.com/photos/7617893/pexels-photo-7617893.jpeg',
+      verified: true,
+    },
+    {
+      id: 6,
+      image:
+        'https://images.pexels.com/photos/28953736/pexels-photo-28953736.jpeg',
+      verified: true,
+    },
   ];
-
-  
 
   // Search reels functionality
   const searchReels = useCallback(async query => {
@@ -96,8 +213,18 @@ const Explore = () => {
               apiReel.id?.toString() ||
               `search-${index}`,
             reel_id: apiReel.reel_id,
-            videoUrl: apiReel.video_url || apiReel.videoUrl || apiReel.url || apiReel.video || apiReel.file_url,
-            thumbnail: apiReel.thumbnail_url || apiReel.thumbnailUrl || apiReel.thumbnail || apiReel.poster_url || apiReel.image,
+            videoUrl:
+              apiReel.video_url ||
+              apiReel.videoUrl ||
+              apiReel.url ||
+              apiReel.video ||
+              apiReel.file_url,
+            thumbnail:
+              apiReel.thumbnail_url ||
+              apiReel.thumbnailUrl ||
+              apiReel.thumbnail ||
+              apiReel.poster_url ||
+              apiReel.image,
             username:
               apiReel.merchant?.username ||
               apiReel.merchant?.user_name ||
@@ -129,14 +256,17 @@ const Explore = () => {
             file_size_bytes: apiReel.file_size_bytes,
             resolution: apiReel.resolution,
           };
-          
+
           // Log if videoUrl is missing
           if (!mappedResult.videoUrl) {
             console.warn(`Search result ${index} has no videoUrl!`, apiReel);
           } else {
-            console.log(`Search result ${index} videoUrl:`, mappedResult.videoUrl);
+            console.log(
+              `Search result ${index} videoUrl:`,
+              mappedResult.videoUrl,
+            );
           }
-          
+
           console.log(`Mapped search result ${index}:`, mappedResult);
           return mappedResult;
         });
@@ -160,7 +290,7 @@ const Explore = () => {
     try {
       setLoading(true);
       const response = await getData(ROUTES.GET_TRENDING_LIST);
-    
+
       if (response && response.status === 'success' && response.data) {
         const mappedTrendingData = response.data.map((apiReel, index) => {
           const mappedItem = {
@@ -197,10 +327,10 @@ const Explore = () => {
             created_at: apiReel.created_at,
             updated_at: apiReel.updated_at,
           };
-         
+
           return mappedItem;
         });
-       
+
         setTrendingData(mappedTrendingData);
       } else if (Array.isArray(response)) {
         const mappedTrendingData = response.map((apiReel, index) => {
@@ -254,51 +384,61 @@ const Explore = () => {
       setRecentlyViewedLoading(true);
       const response = await getData(ROUTES.RECENTLY_VIEWED);
       console.log('Recently viewed API response:', response);
-      
+
       if (
         response &&
         response.status === 'success' &&
         response.data &&
         response.data.reels
       ) {
-        
-        const mappedRecentlyViewedData = response.data.reels.map((apiReel, index) => {
-        
-          return {
-            id:
-              apiReel.reel_id?.toString() ||
-              apiReel.id?.toString() ||
-              `recent-${index}`,
-            reel_id: apiReel.reel_id,
-            videoUrl: apiReel.video_url || apiReel.videoUrl || apiReel.url || apiReel.video || apiReel.file_url,
-            thumbnail: apiReel.thumbnail_url || apiReel.thumbnailUrl || apiReel.thumbnail || apiReel.poster_url || apiReel.image,
-            username:
-              apiReel.merchant?.username ||
-              apiReel.merchant?.user_name ||
-              `merchant_${apiReel.merchant_id}` ||
-              'User',
-            userAvatar:
-              apiReel.merchant?.avatar ||
-              apiReel.merchant?.avatar_url ||
-              apiReel.product?.thumbnail_url ||
-              'https://i.pravatar.cc/150?img=1',
-            merchant: apiReel.merchant || null,
-            caption: apiReel.description || '',
-            likes: apiReel.likes_count || 0,
-            comments: apiReel.comments_count || 0,
-            shares: apiReel.shares_count || 0,
-            views: apiReel.views_count || 0,
-            isLiked: apiReel.is_liked || false,
-            duration: apiReel.duration_seconds || 0,
-            product: apiReel.product || null,
-            product_id: apiReel.product_id,
-            merchant_id: apiReel.merchant_id,
-            approval_status: apiReel.approval_status,
-            is_active: apiReel.is_active,
-            created_at: apiReel.created_at,
-            updated_at: apiReel.updated_at,
-          };
-        });
+        const mappedRecentlyViewedData = response.data.reels.map(
+          (apiReel, index) => {
+            return {
+              id:
+                apiReel.reel_id?.toString() ||
+                apiReel.id?.toString() ||
+                `recent-${index}`,
+              reel_id: apiReel.reel_id,
+              videoUrl:
+                apiReel.video_url ||
+                apiReel.videoUrl ||
+                apiReel.url ||
+                apiReel.video ||
+                apiReel.file_url,
+              thumbnail:
+                apiReel.thumbnail_url ||
+                apiReel.thumbnailUrl ||
+                apiReel.thumbnail ||
+                apiReel.poster_url ||
+                apiReel.image,
+              username:
+                apiReel.merchant?.username ||
+                apiReel.merchant?.user_name ||
+                `merchant_${apiReel.merchant_id}` ||
+                'User',
+              userAvatar:
+                apiReel.merchant?.avatar ||
+                apiReel.merchant?.avatar_url ||
+                apiReel.product?.thumbnail_url ||
+                'https://i.pravatar.cc/150?img=1',
+              merchant: apiReel.merchant || null,
+              caption: apiReel.description || '',
+              likes: apiReel.likes_count || 0,
+              comments: apiReel.comments_count || 0,
+              shares: apiReel.shares_count || 0,
+              views: apiReel.views_count || 0,
+              isLiked: apiReel.is_liked || false,
+              duration: apiReel.duration_seconds || 0,
+              product: apiReel.product || null,
+              product_id: apiReel.product_id,
+              merchant_id: apiReel.merchant_id,
+              approval_status: apiReel.approval_status,
+              is_active: apiReel.is_active,
+              created_at: apiReel.created_at,
+              updated_at: apiReel.updated_at,
+            };
+          },
+        );
         console.log('Mapped recently viewed data:', mappedRecentlyViewedData);
         setRecentlyViewedData(mappedRecentlyViewedData);
       } else if (Array.isArray(response)) {
@@ -311,8 +451,18 @@ const Explore = () => {
               apiReel.id?.toString() ||
               `recent-${index}`,
             reel_id: apiReel.reel_id,
-            videoUrl: apiReel.video_url || apiReel.videoUrl || apiReel.url || apiReel.video || apiReel.file_url,
-            thumbnail: apiReel.thumbnail_url || apiReel.thumbnailUrl || apiReel.thumbnail || apiReel.poster_url || apiReel.image,
+            videoUrl:
+              apiReel.video_url ||
+              apiReel.videoUrl ||
+              apiReel.url ||
+              apiReel.video ||
+              apiReel.file_url,
+            thumbnail:
+              apiReel.thumbnail_url ||
+              apiReel.thumbnailUrl ||
+              apiReel.thumbnail ||
+              apiReel.poster_url ||
+              apiReel.image,
             username:
               apiReel.merchant?.username ||
               apiReel.merchant?.user_name ||
@@ -354,8 +504,6 @@ const Explore = () => {
     fetchRecentlyViewedData();
   }, [fetchTrendingData, fetchRecentlyViewedData]);
 
-
-
   // Render circular seller thumbnail
   const renderSellerThumbnail = (item, showVerified = false) => (
     <TouchableOpacity
@@ -395,7 +543,7 @@ const Explore = () => {
           console.log('ProductCard clicked - source:', source);
           console.log('ProductCard clicked - item:', item);
           console.log('ProductCard clicked - reelId:', reelId);
-          
+
           // Navigate to UserReelsView for all reel types
           if (source === 'search') {
             navigation.navigate('UserReelsView', {
@@ -420,13 +568,10 @@ const Explore = () => {
           style={styles.productCardImage}
           resizeMode="cover"
         />
+        {source === 'premium' && <ComingSoonOverlay />}
         <View style={styles.playButtonOverlay}>
           <View style={styles.playButton}>
-            <Ionicons
-              name="play"
-              size={moderateScale(16)}
-              color="#FFFFFF"
-            />
+            <Ionicons name="play" size={moderateScale(16)} color="#FFFFFF" />
           </View>
         </View>
         {/* Show product info if available */}
@@ -446,10 +591,7 @@ const Explore = () => {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.container, {backgroundColor}]}>
-      <Header
-        title="Explore"
-        leftType="none"
-      />
+      <Header title="Explore" leftType="none" />
 
       <ScrollView
         style={styles.scrollView}
@@ -550,7 +692,18 @@ const Explore = () => {
             </Text>
           </TouchableOpacity>
         </View>
-
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, {color: textColor}]}>
+            Premium Seller
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalScrollContent}
+            nestedScrollEnabled={true}>
+            {premiumSellers.map(item => renderSellerThumbnail(item))}
+          </ScrollView>
+        </View>
         {/* Premium Picks Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -573,7 +726,9 @@ const Explore = () => {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalScrollContent}
             nestedScrollEnabled={true}>
-            {premiumPicks.map((item, index) => renderProductCard(item, index, 'premium'))}
+            {premiumPicks.map((item, index) =>
+              renderProductCard(item, index, 'premium'),
+            )}
           </ScrollView>
         </View>
 
@@ -587,9 +742,7 @@ const Explore = () => {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalScrollContent}
             nestedScrollEnabled={true}>
-            {verifiedSellers.map(item =>
-              renderSellerThumbnail(item, true),
-            )}
+            {verifiedSellers.map(item => renderSellerThumbnail(item, true))}
           </ScrollView>
         </View>
 
@@ -630,7 +783,9 @@ const Explore = () => {
               contentContainerStyle={styles.horizontalScrollContent}
               nestedScrollEnabled={true}>
               {trendingData.length > 0 ? (
-                trendingData.map((item, index) => renderProductCard(item, index, 'trending'))
+                trendingData.map((item, index) =>
+                  renderProductCard(item, index, 'trending'),
+                )
               ) : (
                 <Text style={[styles.emptyText, {color: textColor}]}>
                   No trending reels found
@@ -671,7 +826,9 @@ const Explore = () => {
               contentContainerStyle={styles.horizontalScrollContent}
               nestedScrollEnabled={true}>
               {recentlyViewedData.length > 0 ? (
-                recentlyViewedData.map((item, index) => renderProductCard(item, index, 'recentlyViewed'))
+                recentlyViewedData.map((item, index) =>
+                  renderProductCard(item, index, 'recentlyViewed'),
+                )
               ) : (
                 <Text style={[styles.emptyText, {color: textColor}]}>
                   No recently viewed products
@@ -689,8 +846,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
- 
-  
+
   scrollView: {
     flex: 1,
   },
@@ -792,7 +948,6 @@ const styles = StyleSheet.create({
     width: moderateScale(60),
     height: moderateScale(60),
     borderRadius: moderateScale(40),
-    
   },
   verifiedBadge: {
     position: 'absolute',
@@ -865,6 +1020,24 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(11),
     fontWeight: '700',
   },
+  lockOverlay: {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: 'rgba(0,0,0,0.45)', // transparent black
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+
+lockText: {
+  color: '#FFFFFF',
+  fontSize: moderateScale(16),
+  fontWeight: '700',
+  letterSpacing: 2,
+},
+
 });
 
 export default Explore;

@@ -24,6 +24,7 @@ import { getData } from '../../utils/APiCall';
 
 import { BASE_URL, ROUTES } from '../../utils/Routes';
 import MyProfileSkeleton from '../../components/Skeleton/MyProfileSkeleton.js';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const MyProfile = () => {
   const theme = useAppTheme();
@@ -105,7 +106,7 @@ const MyProfile = () => {
 
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor }]}>
       {/* Header - Always visible */}
       <Header
         title="Account Settings"
@@ -234,7 +235,7 @@ const MyProfile = () => {
       </View>
 
       
-    </View>
+    </SafeAreaView>
   );
 };
 

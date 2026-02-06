@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
-  SafeAreaView,
+  
   StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -19,7 +19,7 @@ import { Colors } from '../../utils/Colors';
 import { getData } from '../../utils/APiCall';
 import { ROUTES } from '../../utils/Routes';
 import Header from '../../components/Header/Header';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const FollowerList = ({ route }) => {
   const theme = useAppTheme();
   const { backgroundColor, textColor, borderColor } = getThemeColors(theme);
@@ -162,7 +162,7 @@ const FollowerList = ({ route }) => {
       />
       <SafeAreaView style={{ backgroundColor }}>
         <Header
-          title="Followers"
+          title="Following Merchants"
           leftType="back"
           onLeftPress={() => navigation.goBack()}
         />

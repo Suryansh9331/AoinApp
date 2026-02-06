@@ -12,7 +12,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {
   useNavigation,
   useRoute,
@@ -284,20 +284,21 @@ const PerticularReelProfile = () => {
 
   return (
     <View style={[styles.container, {backgroundColor}]}>
+      
       <View
         style={[
           styles.header,
           {borderBottomColor: borderColor},
-          Platform.OS === 'ios' && {paddingTop: insets.top + verticalScale(10)},
+          
         ]}>
-        <View style={styles.headerLeft}>
+        <SafeAreaView style={styles.headerLeft}>
           <TouchableOpacity
             style={styles.headerButton}
             onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color={textColor} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, {color: textColor}]}>Profile</Text>
-        </View>
+        </SafeAreaView>
       </View>
 
       <ScrollView
@@ -468,7 +469,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: scale(12),
-    paddingVertical: verticalScale(10),
+    paddingVertical: verticalScale(2),
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerLeft: {

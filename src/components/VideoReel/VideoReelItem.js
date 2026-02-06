@@ -306,6 +306,7 @@ const VideoReelItem = ({ item, isActive, isVisible, onLike, onShare, itemHeight 
     }
   };
 
+
   return (
     <View
       style={[

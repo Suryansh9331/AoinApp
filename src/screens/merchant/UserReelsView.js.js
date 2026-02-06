@@ -186,23 +186,23 @@ const UserReelsView = () => {
      title="My Reels"
 
      /* ⬅️ INDEPENDENT LEFT ICON */
-     leftContent={
-          <TouchableOpacity
-               onPress={() => navigation.goBack()}
-               style={{
-                    width: 44,
-                    height: 44,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-               }}
-          >
-               <Ionicons
-                    name="arrow-back"
-                    size={24}
-                    color="#FFFFFF"
-               />
-          </TouchableOpacity>
-     }
+     // leftContent={
+     //      <TouchableOpacity
+     //           onPress={() => navigation.goBack()}
+     //           style={{
+     //                width: 44,
+     //                height: 44,
+     //                justifyContent: 'center',
+     //                alignItems: 'center',
+     //           }}
+     //      >
+     //           <Ionicons
+     //                name="arrow-back"
+     //                size={24}
+     //                color="#FFFFFF"
+     //           />
+     //      </TouchableOpacity>
+     // }
 
      rightType="none"
      containerStyle={{

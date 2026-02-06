@@ -14,7 +14,7 @@ import {
   Modal,
   TextInput,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useNavigation,
   CommonActions,
@@ -469,12 +469,12 @@ const Profile = () => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor }]}>
       <View
         style={[
           styles.header,
           { borderBottomColor: borderColor },
-          Platform.OS === 'ios' && { paddingTop: insets.top + verticalScale(10) },
+          
         ]}>
         <View style={styles.headerLeft}>
           <Text style={[styles.headerTitle, { color: textColor }]}>Profile</Text>
@@ -674,7 +674,7 @@ const Profile = () => {
         setEditDescription={setEditDescription}
         updatingReel={updatingReel}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
