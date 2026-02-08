@@ -60,7 +60,7 @@ const UserReelsView = () => {
                          caption: reel.description || '',
                          username: userData?.username || 'merchant',
                          userAvatar: userData?.profile_image || 'https://via.placeholder.com/100',
-                         
+
                          likes: reel.likes_count || 0,
                          shares: reel.shares_count || 0,
                          views: reel.views_count || 0,
@@ -124,14 +124,12 @@ const UserReelsView = () => {
      useEffect(() => {
           // Use reelsData from Search.js if available, otherwise use Redux or passed reels
           const reelsToUse = passedReelsData || (reelsDataFromRedux.length > 0 ? reelsDataFromRedux : (passedReels || []));
-          
-          console.log('UserReelsView - passedReelsData:', passedReelsData);
-          console.log('UserReelsView - reelsToUse length:', reelsToUse.length);
-          console.log('UserReelsView - initialReelId:', initialReelId);
-          
+
+
+
           if (reelsToUse.length > 0) {
                const formattedReels = reelsToUse.map(reel => {
-                    console.log('Processing reel:', reel);
+
                     const formattedReel = {
                          id: reel.reel_id || reel.id,
                          reel_id: reel.reel_id || reel.id,
@@ -154,7 +152,6 @@ const UserReelsView = () => {
                          is_active: reel.is_active,
                          is_visible: reel.is_visible
                     };
-                    console.log('Formatted reel:', formattedReel);
                     return formattedReel;
                });
                setReels(formattedReels);
@@ -182,35 +179,35 @@ const UserReelsView = () => {
                     translucent={false}
                />
                <SafeAreaView style={{ backgroundColor: '#000000' }}>
-                  <Header
-     title="My Reels"
+                    <Header
+                         title="My Reels"
 
-     /* ⬅️ INDEPENDENT LEFT ICON */
-     // leftContent={
-     //      <TouchableOpacity
-     //           onPress={() => navigation.goBack()}
-     //           style={{
-     //                width: 44,
-     //                height: 44,
-     //                justifyContent: 'center',
-     //                alignItems: 'center',
-     //           }}
-     //      >
-     //           <Ionicons
-     //                name="arrow-back"
-     //                size={24}
-     //                color="#FFFFFF"
-     //           />
-     //      </TouchableOpacity>
-     // }
+                         /* ⬅️ INDEPENDENT LEFT ICON */
+                         // leftContent={
+                         //      <TouchableOpacity
+                         //           onPress={() => navigation.goBack()}
+                         //           style={{
+                         //                width: 44,
+                         //                height: 44,
+                         //                justifyContent: 'center',
+                         //                alignItems: 'center',
+                         //           }}
+                         //      >
+                         //           <Ionicons
+                         //                name="arrow-back"
+                         //                size={24}
+                         //                color="#FFFFFF"
+                         //           />
+                         //      </TouchableOpacity>
+                         // }
 
-     rightType="none"
-     containerStyle={{
-          backgroundColor: '#000000',
-          borderBottomWidth: 0,
-     }}
-     titleStyle={{ color: '#FFFFFF' }}
-/>
+                         rightType="none"
+                         containerStyle={{
+                              backgroundColor: '#000000',
+                              borderBottomWidth: 0,
+                         }}
+                         titleStyle={{ color: '#FFFFFF' }}
+                    />
 
                </SafeAreaView>
                {showLoading ? (

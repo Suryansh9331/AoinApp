@@ -86,8 +86,15 @@ const VideoReelItem = ({ item, isActive, isVisible, onLike, onShare, itemHeight 
   }, [isActive, isVisible, shouldLoadVideo, videoLoaded]);
 
   useEffect(() => {
-    if (isActive && isVisible && !shouldLoadVideo) {
+    if (isActive) {
       setShouldLoadVideo(true);
+    } else if (isVisible) {
+      // Preload next/prev if visible but not active
+      setShouldLoadVideo(true);
+    } else {
+      // Unload video if not visible to save bandwidth
+      setShouldLoadVideo(false);
+      setVideoLoaded(false);
     }
   }, [isActive, isVisible]);
 
@@ -352,6 +359,10 @@ const VideoReelItem = ({ item, isActive, isVisible, onLike, onShare, itemHeight 
             }}
             preventsDisplaySleepDuringVideoPlayback={false}
             preferredForwardBufferDuration={2}
+            selectedVideoTrack={{
+              type: 'resolution',
+              value: 720,
+            }}
           />
         )}
 

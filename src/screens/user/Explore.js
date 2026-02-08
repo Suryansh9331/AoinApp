@@ -1,5 +1,5 @@
-import React, {useState, useEffect, useCallback} from 'react';
-import {Animated} from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Animated } from 'react-native';
 
 import {
   View,
@@ -12,18 +12,18 @@ import {
   TextInput,
   StatusBar,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
-import {SafeAreaView} from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import useAppTheme from '../../theme/useAppTheme';
-import {getThemeColors} from '../../theme/themeColors';
-import {moderateScale, verticalScale, scale} from 'react-native-size-matters';
+import { getThemeColors } from '../../theme/themeColors';
+import { moderateScale, verticalScale, scale } from 'react-native-size-matters';
 import Header from '../../components/Header/Header';
 import VideoReel from '../../components/VideoReel/VideoReel';
-import {getData} from '../../utils/APiCall';
-import {ROUTES} from '../../utils/Routes';
-import {Colors} from '../../utils/Colors';
+import { getData } from '../../utils/APiCall';
+import { ROUTES } from '../../utils/Routes';
+import { Colors } from '../../utils/Colors';
 
 
 //external additional component for overlay of coming soon for premium picks 
@@ -49,7 +49,7 @@ const ComingSoonOverlay = () => {
 
   return (
     <View style={styles.lockOverlay}>
-      <Animated.Text style={[styles.lockText, {opacity}]}>
+      <Animated.Text style={[styles.lockText, { opacity }]}>
         COMING SOON
       </Animated.Text>
     </View>
@@ -61,7 +61,7 @@ const ComingSoonOverlay = () => {
 const Explore = () => {
   const navigation = useNavigation();
   const theme = useAppTheme();
-  const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
+  const { backgroundColor, textColor, borderColor } = getThemeColors(theme);
 
   const [trendingData, setTrendingData] = useState([]);
   const [recentlyViewedData, setRecentlyViewedData] = useState([]);
@@ -110,41 +110,12 @@ const Explore = () => {
         'https://images.pexels.com/photos/28953736/pexels-photo-28953736.jpeg',
       verified: true,
     },
-    
+
   ];
   // Dummy data for other sections
-  const premiumPicks = [
-    {
-      id: 1,
-      thumbnail: 'https://images.pexels.com/photos/27703654/pexels-photo-27703654.jpeg',
-      videoUrl: '',
-    },
-    {
-      id: 2,
-      thumbnail: 'https://images.pexels.com/photos/29285934/pexels-photo-29285934.jpeg',
-      videoUrl: '',
-    },
-    {
-      id: 3,
-      thumbnail: 'https://images.pexels.com/photos/27503507/pexels-photo-27503507.png',
-      videoUrl: '',
-    },
-    {
-      id: 4,
-      thumbnail: 'https://images.pexels.com/photos/27876805/pexels-photo-27876805.jpeg',
-      videoUrl: '',
-    },
-    {
-      id: 5,
-      thumbnail: 'https://images.pexels.com/photos/190819/pexels-photo-190819.jpeg',
-      videoUrl: '',
-    },
-    {
-      id: 6,
-      thumbnail: 'https://images.pexels.com/photos/12031204/pexels-photo-12031204.jpeg',
-      videoUrl: '',
-    },
-  ];
+  // Premium Picks replaced with API data
+  const [publicReels, setPublicReels] = useState([]);
+  const [publicReelsLoading, setPublicReelsLoading] = useState(true);
 
   const verifiedSellers = [
     {
@@ -202,11 +173,10 @@ const Explore = () => {
       );
 
       if (response && response.data) {
-        console.log('Search API response:', response);
-        console.log('Search data length:', response.data.length);
+
         // Map search results to match VideoReelItem expected structure
         const mappedSearchResults = response.data.map((apiReel, index) => {
-          console.log(`Search result ${index}:`, apiReel);
+
           const mappedResult = {
             id:
               apiReel.reel_id?.toString() ||
@@ -260,14 +230,8 @@ const Explore = () => {
           // Log if videoUrl is missing
           if (!mappedResult.videoUrl) {
             console.warn(`Search result ${index} has no videoUrl!`, apiReel);
-          } else {
-            console.log(
-              `Search result ${index} videoUrl:`,
-              mappedResult.videoUrl,
-            );
           }
 
-          console.log(`Mapped search result ${index}:`, mappedResult);
           return mappedResult;
         });
         setSearchResults(mappedSearchResults);
@@ -383,7 +347,7 @@ const Explore = () => {
     try {
       setRecentlyViewedLoading(true);
       const response = await getData(ROUTES.RECENTLY_VIEWED);
-      console.log('Recently viewed API response:', response);
+
 
       if (
         response &&
@@ -439,11 +403,10 @@ const Explore = () => {
             };
           },
         );
-        console.log('Mapped recently viewed data:', mappedRecentlyViewedData);
+
         setRecentlyViewedData(mappedRecentlyViewedData);
       } else if (Array.isArray(response)) {
-        console.log('Recently viewed array response:', response);
-        // Map array response to ensure consistent structure
+
         const mappedRecentlyViewedData = response.map((apiReel, index) => {
           return {
             id:
@@ -499,10 +462,68 @@ const Explore = () => {
     }
   }, []);
 
+  // Fetch Public Reels (Premium Picks)
+  const fetchPublicReels = useCallback(async () => {
+    try {
+      setPublicReelsLoading(true);
+      // Fetching first page of public reels for "Premium Picks"
+      const response = await getData(`${ROUTES.PUBLIC_REELS}?page=1&per_page=10`);
+
+      if (response?.data) {
+        const mappedReels = response.data.map((apiReel, index) => ({
+          id:
+            apiReel.reel_id?.toString() ||
+            apiReel.id?.toString() ||
+            `premium-${index}`,
+          reel_id: apiReel.reel_id,
+          videoUrl: apiReel.video_url,
+          thumbnail: apiReel.thumbnail_url,
+          username:
+            apiReel.merchant?.username ||
+            apiReel.merchant?.user_name ||
+            `merchant_${apiReel.merchant_id}` ||
+            'User',
+          userAvatar:
+            apiReel.merchant?.avatar ||
+            apiReel.merchant?.avatar_url ||
+            apiReel.product?.thumbnail_url ||
+            'https://i.pravatar.cc/150?img=1',
+          merchant: apiReel.merchant || null,
+          caption: apiReel.description || '',
+          likes: apiReel.likes_count || 0,
+          comments: apiReel.comments_count || 0,
+          shares: apiReel.shares_count || 0,
+          views: apiReel.views_count || 0,
+          isLiked: apiReel.is_liked || false,
+          duration: apiReel.duration_seconds || 0,
+          product: apiReel.product || null,
+          product_id: apiReel.product_id,
+          merchant_id: apiReel.merchant_id,
+          approval_status: apiReel.approval_status,
+          is_active: apiReel.is_active,
+          created_at: apiReel.created_at,
+          updated_at: apiReel.updated_at,
+          video_format: apiReel.video_format,
+          file_size_bytes: apiReel.file_size_bytes,
+          resolution: apiReel.resolution,
+        }));
+        setPublicReels(mappedReels);
+      } else {
+        setPublicReels([]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch public reels:', err);
+      setPublicReels([]);
+    } finally {
+      setPublicReelsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchTrendingData();
     fetchRecentlyViewedData();
-  }, [fetchTrendingData, fetchRecentlyViewedData]);
+    fetchPublicReels();
+  }, [fetchTrendingData, fetchRecentlyViewedData, fetchPublicReels]);
 
   // Render circular seller thumbnail
   const renderSellerThumbnail = (item, showVerified = false) => (
@@ -512,7 +533,7 @@ const Explore = () => {
       activeOpacity={0.7}>
       <View style={styles.sellerThumbnailWrapper}>
         <Image
-          source={{uri: item.image}}
+          source={{ uri: item.image }}
           style={styles.sellerThumbnail}
           resizeMode="cover"
         />
@@ -540,9 +561,7 @@ const Explore = () => {
         activeOpacity={0.8}
         onPress={() => {
           const reelId = item.id || item.reel_id;
-          console.log('ProductCard clicked - source:', source);
-          console.log('ProductCard clicked - item:', item);
-          console.log('ProductCard clicked - reelId:', reelId);
+
 
           // Navigate to UserReelsView for all reel types
           if (source === 'search') {
@@ -555,6 +574,12 @@ const Explore = () => {
               initialReelId: reelId,
               reelsData: recentlyViewedData,
             });
+
+          } else if (source === 'premium') {
+            navigation.navigate('UserReelsView', {
+              initialReelId: reelId,
+              reelsData: publicReels,
+            });
           } else {
             // trending
             navigation.navigate('UserReelsView', {
@@ -564,11 +589,11 @@ const Explore = () => {
           }
         }}>
         <Image
-          source={{uri: thumbnail || 'https://via.placeholder.com/200x300'}}
+          source={{ uri: thumbnail || 'https://via.placeholder.com/200x300' }}
           style={styles.productCardImage}
           resizeMode="cover"
         />
-        {source === 'premium' && <ComingSoonOverlay />}
+        {/* {source === 'premium' && <ComingSoonOverlay />} */}
         <View style={styles.playButtonOverlay}>
           <View style={styles.playButton}>
             <Ionicons name="play" size={moderateScale(16)} color="#FFFFFF" />
@@ -590,7 +615,7 @@ const Explore = () => {
   };
 
   return (
-    <SafeAreaView edges={['top']} style={[styles.container, {backgroundColor}]}>
+    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor }]}>
       <Header title="Explore" leftType="none" />
 
       <ScrollView
@@ -599,7 +624,7 @@ const Explore = () => {
         contentContainerStyle={styles.scrollContent}
         nestedScrollEnabled={true}>
         {/* Search Bar */}
-        <View style={[styles.searchContainer, {backgroundColor: borderColor}]}>
+        <View style={[styles.searchContainer, { backgroundColor: borderColor }]}>
           <Ionicons
             name="search"
             size={moderateScale(20)}
@@ -607,7 +632,7 @@ const Explore = () => {
             style={styles.searchIcon}
           />
           <TextInput
-            style={[styles.searchInput, {color: textColor}]}
+            style={[styles.searchInput, { color: textColor }]}
             placeholder="Search products"
             placeholderTextColor={textColor + '60'}
             value={searchQuery}
@@ -629,13 +654,13 @@ const Explore = () => {
         {/* Search Results */}
         {showSearchResults && (
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, {color: textColor}]}>
+            <Text style={[styles.sectionTitle, { color: textColor }]}>
               Search Results
             </Text>
             {searchLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={Colors.PRIMARY} />
-                <Text style={[styles.loadingText, {color: textColor}]}>
+                <Text style={[styles.loadingText, { color: textColor }]}>
                   Searching...
                 </Text>
               </View>
@@ -650,7 +675,7 @@ const Explore = () => {
                 )}
               </ScrollView>
             ) : (
-              <Text style={[styles.emptyText, {color: textColor}]}>
+              <Text style={[styles.emptyText, { color: textColor }]}>
                 No results found for "{searchQuery}"
               </Text>
             )}
@@ -663,13 +688,13 @@ const Explore = () => {
             style={[
               styles.tab,
               selectedTab === 'All' && styles.tabActive,
-              selectedTab === 'All' && {borderBottomColor: Colors.PRIMARY},
+              selectedTab === 'All' && { borderBottomColor: Colors.PRIMARY },
             ]}
             onPress={() => setSelectedTab('All')}>
             <Text
               style={[
                 styles.tabText,
-                {color: selectedTab === 'All' ? Colors.PRIMARY : textColor},
+                { color: selectedTab === 'All' ? Colors.PRIMARY : textColor },
               ]}>
               All
             </Text>
@@ -678,7 +703,7 @@ const Explore = () => {
             style={[
               styles.tab,
               selectedTab === 'Popular' && styles.tabActive,
-              selectedTab === 'Popular' && {borderBottomColor: Colors.PRIMARY},
+              selectedTab === 'Popular' && { borderBottomColor: Colors.PRIMARY },
             ]}
             onPress={() => setSelectedTab('Popular')}>
             <Text
@@ -693,7 +718,7 @@ const Explore = () => {
           </TouchableOpacity>
         </View>
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, {color: textColor}]}>
+          <Text style={[styles.sectionTitle, { color: textColor }]}>
             Premium Seller
           </Text>
           <ScrollView
@@ -707,7 +732,7 @@ const Explore = () => {
         {/* Premium Picks Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, {color: textColor}]}>
+            <Text style={[styles.sectionTitle, { color: textColor }]}>
               Premium Picks
             </Text>
             <TouchableOpacity style={styles.filterButton}>
@@ -716,25 +741,40 @@ const Explore = () => {
                 size={moderateScale(20)}
                 color={textColor}
               />
-              <Text style={[styles.filterText, {color: textColor}]}>
+              <Text style={[styles.filterText, { color: textColor }]}>
                 Filter
               </Text>
             </TouchableOpacity>
           </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalScrollContent}
-            nestedScrollEnabled={true}>
-            {premiumPicks.map((item, index) =>
-              renderProductCard(item, index, 'premium'),
-            )}
-          </ScrollView>
+          {publicReelsLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={Colors.PRIMARY} />
+              <Text style={[styles.loadingText, { color: textColor }]}>
+                Loading picks...
+              </Text>
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalScrollContent}
+              nestedScrollEnabled={true}>
+              {publicReels.length > 0 ? (
+                publicReels.map((item, index) =>
+                  renderProductCard(item, index, 'premium'),
+                )
+              ) : (
+                <Text style={[styles.emptyText, { color: textColor, width: '100%', paddingHorizontal: 20 }]}>
+                  No premium picks available
+                </Text>
+              )}
+            </ScrollView>
+          )}
         </View>
 
         {/* Verified Seller Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, {color: textColor}]}>
+          <Text style={[styles.sectionTitle, { color: textColor }]}>
             Verified Seller
           </Text>
           <ScrollView
@@ -758,11 +798,11 @@ const Explore = () => {
                 });
               }
             }}>
-            <Text style={[styles.sectionTitle, {color: textColor}]}>
+            <Text style={[styles.sectionTitle, { color: textColor }]}>
               Trending Now
             </Text>
             <View style={styles.seeAllContainer}>
-              <Text style={[styles.seeAllText, {color: Colors.PRIMARY}]}>
+              <Text style={[styles.seeAllText, { color: Colors.PRIMARY }]}>
                 See All
               </Text>
               <Ionicons
@@ -787,7 +827,7 @@ const Explore = () => {
                   renderProductCard(item, index, 'trending'),
                 )
               ) : (
-                <Text style={[styles.emptyText, {color: textColor}]}>
+                <Text style={[styles.emptyText, { color: textColor }]}>
                   No trending reels found
                 </Text>
               )}
@@ -798,11 +838,11 @@ const Explore = () => {
         {/* Recently Viewed Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, {color: textColor}]}>
+            <Text style={[styles.sectionTitle, { color: textColor }]}>
               Recently Viewed
             </Text>
             <View style={styles.seeAllContainer}>
-              <Text style={[styles.seeAllText, {color: Colors.PRIMARY}]}>
+              <Text style={[styles.seeAllText, { color: Colors.PRIMARY }]}>
                 See All
               </Text>
               <Ionicons
@@ -815,7 +855,7 @@ const Explore = () => {
           {recentlyViewedLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={Colors.PRIMARY} />
-              <Text style={[styles.loadingText, {color: textColor}]}>
+              <Text style={[styles.loadingText, { color: textColor }]}>
                 Loading recently viewed...
               </Text>
             </View>
@@ -830,7 +870,7 @@ const Explore = () => {
                   renderProductCard(item, index, 'recentlyViewed'),
                 )
               ) : (
-                <Text style={[styles.emptyText, {color: textColor}]}>
+                <Text style={[styles.emptyText, { color: textColor }]}>
                   No recently viewed products
                 </Text>
               )}
@@ -1021,22 +1061,22 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   lockOverlay: {
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: 'rgba(0,0,0,0.45)', // transparent black
-  justifyContent: 'center',
-  alignItems: 'center',
-},
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)', // transparent black
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
-lockText: {
-  color: '#FFFFFF',
-  fontSize: moderateScale(16),
-  fontWeight: '700',
-  letterSpacing: 2,
-},
+  lockText: {
+    color: '#FFFFFF',
+    fontSize: moderateScale(16),
+    fontWeight: '700',
+    letterSpacing: 2,
+  },
 
 });
 
