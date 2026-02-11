@@ -4,6 +4,7 @@ import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../utils/Colors';
 import useAppTheme from '../theme/useAppTheme';
 import { getThemeColors } from '../theme/themeColors';
@@ -58,6 +59,7 @@ const TAB_ITEMS = [
 ];
 
 const MerchantBottomTab = () => {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const route = useRoute();
   const flatListRef = useRef(null);
@@ -142,6 +144,7 @@ const MerchantBottomTab = () => {
           backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF',
           borderTopColor: borderColor,
           shadowColor: theme === 'dark' ? '#000000' : '#111827',
+          paddingBottom: Math.max(insets.bottom, verticalScale(8)),
         }
       ]}>
         {TAB_ITEMS.map((tab, index) => {

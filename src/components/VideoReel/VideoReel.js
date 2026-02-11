@@ -24,7 +24,7 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
   const lastInitialReelId = useRef(null);
   const previousDataIdsRef = useRef([]);
   const isDataStructureChanged = useRef(false);
-  
+
   // Performance optimization: Track visible items for video management
   const visibleItemsRef = useRef(new Set());
   const lastVisibleIndex = useRef(-1);
@@ -42,7 +42,7 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
   const currentIds = data.map(r => (r.id || r.reel_id)?.toString()).filter(Boolean);
   const currentIdsString = currentIds.join(',');
   const previousIdsStringRef = useRef('');
-  
+
   // Check if structure changed (new items added/removed)
   const structureChanged = currentIdsString !== previousIdsStringRef.current;
   if (structureChanged) {
@@ -51,7 +51,7 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
   } else {
     isDataStructureChanged.current = false;
   }
-  
+
   // Memoize reels data - always return latest data, but track structure changes
   const reelsData = useMemo(() => {
     return data || [];
@@ -65,10 +65,10 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
     }
   }, [initialReelId]);
 
- 
+
   useEffect(() => {
-    
-    
+
+
     if (initialReelId && reelsData && reelsData.length > 0 && containerHeight > 0 && !hasScrolledToInitialReel.current) {
       const reelIndex = reelsData.findIndex(reel => {
         // Check all possible ID fields and handle both string and number comparisons
@@ -77,7 +77,7 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
           reelId === initialReelId ||
           reelId?.toString() === initialReelId?.toString()
         );
-        
+
         return matches;
       });
 
@@ -85,16 +85,16 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
       if (reelIndex !== -1) {
         // Reset the scroll flag to ensure we can scroll again if needed
         hasScrolledToInitialReel.current = false;
-        
+
         // Small delay to ensure the list is ready
         const scrollToReel = () => {
           if (!flatListRef.current) {
-           
+
             return;
           }
-          
-         
-          
+
+
+
           try {
             // First try scrollToIndex
             flatListRef.current.scrollToIndex({
@@ -104,7 +104,7 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
             });
             setCurrentIndex(reelIndex);
             hasScrolledToInitialReel.current = true;
-           
+
           } catch (error) {
             console.log('scrollToIndex failed, trying scrollToOffset:', error);
             // If that fails, try scrollToOffset
@@ -116,10 +116,10 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
               });
               setCurrentIndex(reelIndex);
               hasScrolledToInitialReel.current = true;
-              
+
             } catch (e) {
-              
-           
+
+
               if (!hasScrolledToInitialReel.current) {
                 setTimeout(scrollToReel, 100);
               }
@@ -127,19 +127,19 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
           }
         };
 
-      
+
         scrollToReel();
       } else {
-      
+
       }
     }
   }, [initialReelId, reelsData, containerHeight]);
 
-  
+
   useEffect(() => {
-    
+
     if (isDataStructureChanged.current && reelsData && reelsData.length > 0) {
-      
+
       if (currentIndex >= reelsData.length) {
         setCurrentIndex(reelsData.length - 1);
       }
@@ -156,15 +156,15 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
       }
     });
     visibleItemsRef.current = newVisibleItems;
-    
+
     if (viewableItems.length > 0) {
       const fullyVisibleItem = viewableItems.find(
         item => item.isViewable && item.index !== null
       );
-      
+
       if (fullyVisibleItem && fullyVisibleItem.index !== currentIndex) {
         setCurrentIndex(fullyVisibleItem.index);
-        
+
         // Check if we're near the end and should load more
         if (onEndReached && hasMore && !isLoading) {
           const threshold = 2; // Reduced threshold for better performance
@@ -181,19 +181,19 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
     minimumViewTime: 0, // Immediate response for smooth scrolling
   }).current;
 
-  
+
   const handleLike = useCallback((id, isLiked) => {
-    
+
   }, []);
 
   const handleShare = useCallback((id) => {
-   
+
   }, []);
 
   const renderItem = useCallback(({ item, index }) => {
     const isVisible = visibleItemsRef.current.has(index);
     const isActive = index === currentIndex;
-    
+
     return (
       <VideoReelItem
         item={item}
@@ -229,7 +229,7 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
       const index = Math.round(offsetY / containerHeight);
       if (index >= 0 && index < (reelsData?.length || 0) && index !== currentIndex) {
         setCurrentIndex(index);
-        
+
         // Check if we're near the end and should load more
         if (onEndReached && hasMore && !isLoading) {
           const threshold = 3; // Load more when 3 items from end
@@ -270,14 +270,13 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
         viewabilityConfig={viewabilityConfig}
         getItemLayout={containerHeight > 0 ? getItemLayout : undefined}
         removeClippedSubviews={true}
-        maxToRenderPerBatch={1} // Render one at a time for smoother scrolling
-        windowSize={1} // Minimal window for best performance
+        maxToRenderPerBatch={1}
+        windowSize={1}
         initialNumToRender={1}
         scrollEventThrottle={16} // Standard throttle for smooth scrolling
         bounces={false}
         onMomentumScrollEnd={onMomentumScrollEnd}
         // Additional optimizations for smooth scrolling
-        key={reelsData?.length || 0} // Force re-render when data changes
         maintainVisibleContentPosition={{
           minIndexForVisible: 0,
           autoscrollToTopThreshold: 1000,
@@ -298,7 +297,7 @@ const VideoReel = ({ data = [], initialReelId = null, onEndReached, hasMore, isL
           });
         }}
       />
-      
+
       {/* Loading indicator for pagination */}
       {/* {isLoading && hasMore && (
         <View style={styles.paginationLoading}>

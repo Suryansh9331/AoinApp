@@ -71,11 +71,6 @@ const VideoReelItem = ({ item, isActive, isVisible, onLike, onShare, itemHeight 
 
     if (isActive && shouldLoadVideo && videoLoaded) {
       setIsPlaying(true);
-      setShowControls(true);
-      controlsTimeoutRef.current = setTimeout(() => {
-        setShowControls(false);
-        controlsTimeoutRef.current = null;
-      }, 1000);
     } else {
       setIsPlaying(false);
       if (controlsTimeoutRef.current) {
@@ -350,11 +345,13 @@ const VideoReelItem = ({ item, isActive, isVisible, onLike, onShare, itemHeight 
 
             }}
 
+            controls={false}
             poster={item.thumbnail}
+            posterResizeMode="cover"
             bufferConfig={{
               minBufferMs: 500,
-              maxBufferMs: 3000,
-              bufferForPlaybackMs: 200,
+              maxBufferMs: 1500,
+              bufferForPlaybackMs: 250,
               bufferForPlaybackAfterRebufferMs: 500,
             }}
             preventsDisplaySleepDuringVideoPlayback={false}
@@ -533,6 +530,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     position: 'relative',
+    overflow: 'hidden',
   },
   video: {
     width: '100%',

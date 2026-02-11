@@ -3,6 +3,7 @@ import { View, StyleSheet, TouchableOpacity, Platform, Text, FlatList, Dimension
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../utils/Colors';
 import useAppTheme from '../theme/useAppTheme';
 import { getThemeColors } from '../theme/themeColors';
@@ -42,10 +43,11 @@ const TAB_ITEMS = [
     component: Settings,
     icon: { Component: Ionicons, active: 'settings', inactive: 'settings-outline' },
   },
-  
+
 ];
 
 const UserBottomTab = () => {
+  const insets = useSafeAreaInsets();
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef(null);
   const navigation = useNavigation();
@@ -88,21 +90,21 @@ const UserBottomTab = () => {
         </View>
       );
     }
-    
-    const profileParams = item.key === 'Profile' && route.params?.userId 
+
+    const profileParams = item.key === 'Profile' && route.params?.userId
       ? { userId: route.params.userId }
       : undefined;
-    
+
     const homeParams = item.key === 'Home' && route.params?.reelId
       ? { reelId: route.params.reelId }
       : undefined;
-    
+
     const screenParams = item.key === 'Home' ? homeParams : profileParams;
-    
+
     return (
       <View style={[styles.slide, { backgroundColor }]}>
-        <ScreenComponent 
-          navigation={navigation} 
+        <ScreenComponent
+          navigation={navigation}
           routeKey={item.key}
           routeParams={screenParams}
         />
@@ -139,14 +141,15 @@ const UserBottomTab = () => {
           backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF',
           borderTopColor: borderColor,
           shadowColor: theme === 'dark' ? '#000000' : '#111827',
+          paddingBottom: Math.max(insets.bottom, verticalScale(8)),
         }
       ]}>
         {TAB_ITEMS.map((tab, index) => {
           const isActive = index === activeIndex;
           const { Component: IconComp, active, inactive } = tab.icon;
           const iconName = isActive ? active : inactive;
-          const iconColor = isActive 
-            ? Colors.PRIMARY 
+          const iconColor = isActive
+            ? Colors.PRIMARY
             : (theme === 'dark' ? '#6B7280' : '#9CA3AF');
 
           return (
@@ -165,9 +168,9 @@ const UserBottomTab = () => {
               <Text
                 style={[
                   styles.tabLabel,
-                  { 
-                    color: isActive 
-                      ? Colors.PRIMARY 
+                  {
+                    color: isActive
+                      ? Colors.PRIMARY
                       : (theme === 'dark' ? '#6B7280' : '#9CA3AF')
                   },
                 ]}>
@@ -194,7 +197,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-around',
     paddingBottom: verticalScale(Platform.OS === 'ios' ? 8 : 6),
-    paddingTop: verticalScale(6),  
+    paddingTop: verticalScale(6),
     borderTopWidth: StyleSheet.hairlineWidth,
     shadowColor: '#111827',
     shadowOffset: { width: 0, height: -4 },
