@@ -89,8 +89,8 @@ android {
         applicationId "com.aoinapp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 3
-        versionName "1.0.2"
+        versionCode 6
+        versionName "1.0.6"
     }
 signingConfigs {
     release {
@@ -111,9 +111,18 @@ buildTypes {
             // signingConfig signingConfigs.debug
             // minifyEnabled enableProguardInReleaseBuilds
             // proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
-            signingConfig signingConfigs.release
-            minifyEnabled false
-            shrinkResources false
+            //    signingConfig signingConfigs.release
+            //    minifyEnabled false
+            //    shrinkResources false
+              
+             signingConfig signingConfigs.release
+             minifyEnabled true
+             shrinkResources false
+
+    proguardFiles getDefaultProguardFile(
+        "proguard-android-optimize.txt"
+    ), "proguard-rules.pro"
+        
         }
     }
 }

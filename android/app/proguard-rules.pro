@@ -8,3 +8,13 @@
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
 # Add any project specific keep options here:
+# React Native
+-keep class com.facebook.react.** { *; }
+-keep class com.facebook.hermes.** { *; }
+
+# Gson / JSON safety
+-keepattributes Signature
+-keepattributes *Annotation*
+
+# Suppress warnings
+-dontwarn com.facebook.react.**
