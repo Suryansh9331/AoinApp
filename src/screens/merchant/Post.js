@@ -416,9 +416,11 @@ const Post = ({ routeParams }) => {
 
         setUploading(true);
         try {
-          const result = await updateReel(editingReelId, {
+          const updatePayload = {
             description: description.trim(),
-          });
+          };
+          console.log('Update Reel Payload:', updatePayload);
+          const result = await updateReel(editingReelId, updatePayload);
 
           Alert.alert('Success', 'Reel updated successfully!', [
             {
@@ -470,7 +472,22 @@ const Post = ({ routeParams }) => {
           if (category.trim()) formData.append('category', category.trim());
         }
 
-        // Log keys for debugging (values are hidden in FormData)
+        // Log payload for debugging
+        const payloadData = {
+          description: description.trim(),
+          mode: uploadMode,
+          ...(uploadMode === 'AOIN' ? {
+            product_id: selectedProduct?.product_id,
+            is_external: '0'
+          } : {
+            product_url: productUrl.trim(),
+            product_name: productName.trim(),
+            platform: platform.trim(),
+            category: category.trim(),
+            is_external: '1'
+          })
+        };
+        console.log('Upload Reel Payload:', payloadData);
         console.log('FormData keys:', Object.keys(formData));
 
         const response = await uploadFormData(

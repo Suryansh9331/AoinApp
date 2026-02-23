@@ -106,6 +106,7 @@ export const uploadFormData = async (endpoint, formData, onProgress = null) => {
   try {
     const response = await axios.post(`${BASE_URL}${endpoint}`, formData, {
       headers: {
+        'Content-Type': 'multipart/form-data',
         ...(authToken && { Authorization: `Bearer ${authToken}` }),
       },
       timeout: 60000, // 60 seconds timeout for uploads
