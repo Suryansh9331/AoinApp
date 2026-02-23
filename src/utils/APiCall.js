@@ -1,5 +1,5 @@
 import axios from 'axios';
-import {BASE_URL} from './Routes';
+import { BASE_URL } from './Routes';
 
 let authToken = null;
 
@@ -22,11 +22,11 @@ apiClient.interceptors.request.use(config => {
 
 export const handleApiError = error => {
   if (error.response) {
-    const {status, data} = error.response;
+    const { status, data } = error.response;
     const errorMessage = data?.message || data?.error || data?.errorMessage || `Request failed with status ${status}`;
-    
-    
-    
+
+
+
     throw {
       type: 'response',
       status,
@@ -36,7 +36,7 @@ export const handleApiError = error => {
   }
 
   if (error.request) {
-    
+
     throw {
       type: 'network',
       message: 'Network error, no response received. Please check your internet connection and server URL.',
@@ -64,7 +64,7 @@ export const clearAuthToken = () => {
 
 export const getData = async (endpoint, params = {}) => {
   try {
-    const {data} = await apiClient.get(endpoint, {params});
+    const { data } = await apiClient.get(endpoint, { params });
     return data;
   } catch (error) {
     handleApiError(error);
@@ -74,7 +74,7 @@ export const getData = async (endpoint, params = {}) => {
 
 export const postData = async (endpoint, body = {}) => {
   try {
-    const {data} = await apiClient.post(endpoint, body);
+    const { data } = await apiClient.post(endpoint, body);
     return data;
   } catch (error) {
     // Re-throw the error so saga can catch it properly
@@ -84,7 +84,7 @@ export const postData = async (endpoint, body = {}) => {
 
 export const putData = async (endpoint, body = {}) => {
   try {
-    const {data} = await apiClient.put(endpoint, body);
+    const { data } = await apiClient.put(endpoint, body);
     return data;
   } catch (error) {
     handleApiError(error);
@@ -94,7 +94,7 @@ export const putData = async (endpoint, body = {}) => {
 
 export const deleteData = async (endpoint, body = {}) => {
   try {
-    const {data} = await apiClient.delete(endpoint, {data: body});
+    const { data } = await apiClient.delete(endpoint, { data: body });
     return data;
   } catch (error) {
     handleApiError(error);
@@ -106,7 +106,6 @@ export const uploadFormData = async (endpoint, formData, onProgress = null) => {
   try {
     const response = await axios.post(`${BASE_URL}${endpoint}`, formData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
         ...(authToken && { Authorization: `Bearer ${authToken}` }),
       },
       timeout: 60000, // 60 seconds timeout for uploads
@@ -127,7 +126,7 @@ export const uploadFormData = async (endpoint, formData, onProgress = null) => {
 
 export const deleteReel = async (reelId) => {
   try {
-    const {data} = await apiClient.delete(`/api/reels/${reelId}`);
+    const { data } = await apiClient.delete(`/api/reels/${reelId}`);
     return data;
   } catch (error) {
     throw handleApiError(error);
@@ -136,7 +135,7 @@ export const deleteReel = async (reelId) => {
 
 export const updateReel = async (reelId, body = {}) => {
   try {
-    const {data} = await apiClient.put(`/api/reels/${reelId}`, body);
+    const { data } = await apiClient.put(`/api/reels/${reelId}`, body);
     return data;
   } catch (error) {
     throw handleApiError(error);

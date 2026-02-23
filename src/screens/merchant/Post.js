@@ -1,4 +1,4 @@
-import React, {useState, useCallback, useEffect, useMemo, memo} from 'react';
+import React, { useState, useCallback, useEffect, useMemo, memo } from 'react';
 import {
   View,
   Text,
@@ -19,19 +19,33 @@ import {
   useFocusEffect,
   useRoute,
 } from '@react-navigation/native';
-import { StatusBar} from 'react-native';
+import { StatusBar } from 'react-native';
 import Header from '../../components/Header/Header';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
+import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import useAppTheme from '../../theme/useAppTheme';
-import {getThemeColors} from '../../theme/themeColors';
-import {Colors} from '../../utils/Colors';
-import {ROUTES} from '../../utils/Routes';
-import {uploadFormData, getData, updateReel} from '../../utils/APiCall';
+import { getThemeColors } from '../../theme/themeColors';
+import { Colors } from '../../utils/Colors';
+import { ROUTES } from '../../utils/Routes';
+import { uploadFormData, getData, updateReel } from '../../utils/APiCall';
 
-// Import image picker
-import {launchImageLibrary} from 'react-native-image-picker';
+// Import custom components
+import Input from '../../components/reuseable/Input';
+import { launchImageLibrary } from 'react-native-image-picker';
 import Video from 'react-native-video';
+
+// Platforms constants
+const PLATFORMS = [
+  { label: 'Amazon', value: 'Amazon' },
+  { label: 'Flipkart', value: 'Flipkart' },
+  { label: 'Myntra', value: 'Myntra' },
+  { label: 'Ajio', value: 'Ajio' },
+  { label: 'Meesho', value: 'Meesho' },
+  { label: 'Nykaa', value: 'Nykaa' },
+  { label: 'Snapdeal', value: 'Snapdeal' },
+  { label: 'Tata CLiQ', value: 'Tata CLiQ' },
+  { label: 'Other', value: 'Other' },
+];
 
 // Validation constants
 const MAX_VIDEO_SIZE_MB = 100;
@@ -45,11 +59,11 @@ const ALLOWED_VIDEO_TYPES = [
 ];
 const ALLOWED_VIDEO_EXTENSIONS = ['.mp4', '.mov', '.avi', '.mkv'];
 
-const Post = ({routeParams}) => {
+const Post = ({ routeParams }) => {
   const navigation = useNavigation();
   const route = useRoute();
   const theme = useAppTheme();
-  const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
+  const { backgroundColor, textColor, borderColor } = getThemeColors(theme);
 
   // Check if we're editing a reel - memoized
   const editingReel = useMemo(
@@ -72,6 +86,13 @@ const Post = ({routeParams}) => {
   const [hasFetched, setHasFetched] = useState(false);
   const [validationError, setValidationError] = useState('');
 
+  // New states for External Mode
+  const [uploadMode, setUploadMode] = useState('AOIN'); // 'AOIN' or 'EXTERNAL'
+  const [productUrl, setProductUrl] = useState('');
+  const [productName, setProductName] = useState('');
+  const [platform, setPlatform] = useState('');
+  const [category, setCategory] = useState('');
+
   // Format price to Indian currency format - memoized (must be before fetchProducts)
   const formatPrice = useCallback(price => {
     return `₹${parseFloat(price).toLocaleString('en-IN', {
@@ -93,7 +114,7 @@ const Post = ({routeParams}) => {
           key={product.product_id + index}
           style={[
             styles.productItem,
-            {borderBottomColor: borderColor},
+            { borderBottomColor: borderColor },
             isSelected && {
               backgroundColor:
                 theme === 'dark'
@@ -104,23 +125,23 @@ const Post = ({routeParams}) => {
           onPress={() => handleProductSelect(product)}
           activeOpacity={0.7}>
           <Image
-            source={{uri: product.primary_image}}
-            style={styles.productImage}
+            source={{ uri: product.primary_image }}
+            style={styles.productThumbnail}
           />
           <View style={styles.productDetails}>
-            <Text style={[styles.productName, {color: textColor}]}>
+            <Text style={[styles.productNameText, { color: textColor }]}>
               {product.name}
             </Text>
 
             <Text
               style={[
-                styles.productCategory,
-                {color: textColor, opacity: 0.7},
+                styles.productCategoryText,
+                { color: textColor, opacity: 0.7 },
               ]}>
               {product.category}
             </Text>
 
-            <Text style={[styles.productPrice, {color: Colors.PRIMARY}]}>
+            <Text style={[styles.productPriceText, { color: Colors.PRIMARY }]}>
               ₹{product.selling_price}
             </Text>
           </View>
@@ -147,7 +168,7 @@ const Post = ({routeParams}) => {
             size={moderateScale(48)}
             color={Colors.GRAY}
           />
-          <Text style={[styles.emptyText, {color: Colors.GRAY}]}>
+          <Text style={[styles.emptyText, { color: Colors.GRAY }]}>
             No products available
           </Text>
         </View>
@@ -171,15 +192,21 @@ const Post = ({routeParams}) => {
     [borderColor, theme],
   );
 
-  const addDetailsButtonStyle = useMemo(
+  const modeToggleStyle = useMemo(() => ({
+    backgroundColor: theme === 'dark' ? '#1E1E1E' : '#F5F5F5',
+    borderColor: borderColor,
+  }), [theme, borderColor]);
+
+  const inputStyle = useMemo(
     () => [
-      styles.addDetailsButton,
+      styles.textInput,
       {
+        color: textColor,
         borderColor: borderColor,
         backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF',
       },
     ],
-    [borderColor, theme],
+    [textColor, borderColor, theme],
   );
 
   const descriptionInputStyle = useMemo(
@@ -196,16 +223,23 @@ const Post = ({routeParams}) => {
 
   // Memoize upload button disabled state
   const isUploadDisabled = useMemo(() => {
+    if (uploading) return true;
     if (isEditingMode) {
-      return !description.trim() || uploading;
+      return !description.trim();
     }
-    return (
-      !selectedVideo || !selectedProduct || !description.trim() || uploading
-    );
-  }, [isEditingMode, description, uploading, selectedVideo, selectedProduct]);
+
+    const hasVideo = !!selectedVideo;
+    const hasDescription = !!description.trim();
+
+    if (uploadMode === 'AOIN') {
+      return !hasVideo || !selectedProduct || !hasDescription;
+    } else {
+      return !hasVideo || !productUrl.trim() || !productName.trim() || !hasDescription;
+    }
+  }, [isEditingMode, description, uploading, selectedVideo, selectedProduct, uploadMode, productUrl, productName]);
 
   // Validation function - memoized
-  const validateUpload = useCallback(async (video, product, desc) => {
+  const validateUpload = useCallback(async (video, desc) => {
     try {
       // 1. Video file validation
       if (!video) {
@@ -246,9 +280,21 @@ const Post = ({routeParams}) => {
         );
       }
 
-      // 6. Product validation
-      if (!product?.id) {
-        throw new Error('Please select a product');
+      // 6. Mode specific validation
+      if (uploadMode === 'AOIN') {
+        if (!selectedProduct) {
+          throw new Error('Please select a product');
+        }
+      } else {
+        if (!productUrl.trim()) {
+          throw new Error('Please enter the product URL');
+        }
+        if (!productUrl.startsWith('http')) {
+          throw new Error('Product URL must be a valid link (starting with http/https)');
+        }
+        if (!productName.trim()) {
+          throw new Error('Please enter the product name');
+        }
       }
 
       // 7. Description validation
@@ -268,7 +314,7 @@ const Post = ({routeParams}) => {
       setValidationError(error.message);
       throw error;
     }
-  }, []);
+  }, [uploadMode, selectedProduct, productUrl, productName]);
 
   // Initialize with reel data if editing
   useEffect(() => {
@@ -298,7 +344,7 @@ const Post = ({routeParams}) => {
           stock_qty: item.stock_qty,
           category_id: item.category_id,
           primary_image: item.primary_image,
-          image: item.primary_image, // Use real image instead of dummy
+          image: item.primary_image,
         }));
 
         setProducts(mappedProducts);
@@ -328,108 +374,20 @@ const Post = ({routeParams}) => {
     }, [hasFetched, fetchProducts]),
   );
 
-  // Permission handling - react-native-image-picker handles it automatically
-  // But we can check beforehand for better UX
-  const checkAndRequestPermission = useCallback(async () => {
-    if (Platform.OS !== 'android') {
-      return true;
-    }
-
-    try {
-      const apiLevel = Platform.Version;
-      let permission;
-
-      if (apiLevel >= 33) {
-        // Android 13+ uses granular media permissions
-        permission = PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO;
-      } else {
-        // Android 12 and below
-        permission = PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE;
-      }
-
-      // Check if already granted
-      const hasPermission = await PermissionsAndroid.check(permission);
-      if (hasPermission) {
-        return true;
-      }
-
-      // Request permission
-      const result = await PermissionsAndroid.request(permission, {
-        title: 'Video Access Permission',
-        message: 'AoinApp needs access to your videos to upload content',
-        buttonNeutral: 'Ask Me Later',
-        buttonNegative: 'Cancel',
-        buttonPositive: 'Allow',
-      });
-
-      return result === PermissionsAndroid.RESULTS.GRANTED;
-    } catch (error) {
-      console.log('Permission check error:', error);
-      // Let the library handle it
-      return true;
-    }
-  }, []);
-
   const handleVideoPick = useCallback(async () => {
-    // Let react-native-image-picker handle permissions automatically
     const options = {
       mediaType: 'video',
       quality: 1,
       videoQuality: 'high',
-      durationLimit: 300, // 5 minutes max
       selectionLimit: 1,
       includeBase64: false,
       saveToPhotos: false,
-      presentationStyle: 'pageSheet', // For iOS
     };
 
     launchImageLibrary(options, response => {
-      if (response.didCancel) {
-        return;
-      }
-
+      if (response.didCancel) return;
       if (response.errorCode) {
-        let errorTitle = 'Error';
-        let errorMessage = 'Failed to select video';
-        let showSettingsButton = false;
-
-        switch (response.errorCode) {
-          case 'permission':
-            errorTitle = 'Permission Required';
-            errorMessage =
-              'Please allow access to your videos in app settings to upload content.';
-            showSettingsButton = true;
-            break;
-          case 'others':
-            errorMessage =
-              response.errorMessage ||
-              'An error occurred while selecting video';
-            break;
-          default:
-            errorMessage =
-              response.errorMessage ||
-              'Failed to select video. Please try again.';
-        }
-
-        const buttons = [{text: 'Cancel', style: 'cancel'}];
-
-        if (showSettingsButton && Platform.OS === 'android') {
-          buttons.push({
-            text: 'Open Settings',
-            onPress: () => {
-              Linking.openSettings().catch(err =>
-                console.log('Error opening settings:', err),
-              );
-            },
-          });
-        }
-
-        Alert.alert(errorTitle, errorMessage, buttons);
-        return;
-      }
-
-      if (response.errorMessage) {
-        Alert.alert('Error', response.errorMessage);
+        Alert.alert('Error', response.errorMessage || 'Failed to select video');
         return;
       }
 
@@ -438,10 +396,7 @@ const Post = ({routeParams}) => {
         const videoData = {
           uri: video.uri,
           type: video.type || 'video/mp4',
-          name:
-            video.fileName ||
-            video.uri.split('/').pop() ||
-            `video_${Date.now()}.mp4`,
+          name: video.fileName || `video_${Date.now()}.mp4`,
           fileSize: video.fileSize,
           duration: video.duration,
         };
@@ -450,20 +405,10 @@ const Post = ({routeParams}) => {
     });
   }, []);
 
-  const handleAddDetails = useCallback(() => {
-    if (!selectedVideo) {
-      Alert.alert('Error', 'Please select a video first');
-      return;
-    }
-    // TODO: Navigate to details screen or show modal
-    Alert.alert('Add Details', 'Details screen will open here');
-  }, [selectedVideo]);
-
   const handleUpload = useCallback(async () => {
     try {
       setValidationError('');
 
-      // For editing, only description is required
       if (isEditingMode) {
         if (!description.trim()) {
           throw new Error('Please add a description');
@@ -471,7 +416,6 @@ const Post = ({routeParams}) => {
 
         setUploading(true);
         try {
-          // Update reel with new description
           const result = await updateReel(editingReelId, {
             description: description.trim(),
           });
@@ -480,7 +424,6 @@ const Post = ({routeParams}) => {
             {
               text: 'OK',
               onPress: () => {
-                // Navigate back to MerchantBottomTab and show Profile tab
                 navigation.navigate('MerchantBottomTab', {
                   navigateToTab: 'Profile',
                 });
@@ -488,86 +431,86 @@ const Post = ({routeParams}) => {
             },
           ]);
         } catch (error) {
-          console.log('Update error:', error);
-          Alert.alert(
-            'Update Failed',
-            error?.message || 'Failed to update reel. Please try again.',
-          );
+          Alert.alert('Update Failed', error?.message || 'Failed to update reel.');
         } finally {
           setUploading(false);
         }
         return;
       }
 
-      // For new upload, run all validations
       try {
-        await validateUpload(selectedVideo, selectedProduct, description);
+        await validateUpload(selectedVideo, description);
       } catch (error) {
-        console.log('Validation error:', error);
         Alert.alert('Validation Error', error.message);
         return;
       }
-
-      // If we get here, all validations passed
 
       setUploading(true);
       setUploadProgress(0);
 
       try {
-        // React Native FormData
         const formData = new FormData();
         formData.append('video', {
           uri: selectedVideo.uri,
           type: selectedVideo.type || 'video/mp4',
           name: selectedVideo.name || `video_${Date.now()}.mp4`,
         });
-        formData.append('url', selectedVideo.uri);
-        formData.append('product_id', selectedProduct.product_id.toString());
         formData.append('description', description.trim());
 
-        // Upload with progress tracking
+        if (uploadMode === 'AOIN') {
+          formData.append('product_id', selectedProduct.product_id.toString());
+          formData.append('is_external', '0');
+          formData.append('upload_mode', 'AOIN');
+        } else {
+          formData.append('product_url', productUrl.trim());
+          formData.append('product_name', productName.trim());
+          formData.append('is_external', '1');
+          formData.append('upload_mode', 'EXTERNAL');
+          if (platform.trim()) formData.append('platform', platform.trim());
+          if (category.trim()) formData.append('category', category.trim());
+        }
+
+        // Log keys for debugging (values are hidden in FormData)
+        console.log('FormData keys:', Object.keys(formData));
+
         const response = await uploadFormData(
           ROUTES.UPLOAD_REEL,
           formData,
-          progress => {
-            setUploadProgress(progress);
-          },
+          progress => setUploadProgress(progress)
         );
 
-        Alert.alert('Success', 'Video uploaded successfully!', [
+        Alert.alert('Success', 'Reel uploaded successfully!', [
           {
             text: 'OK',
             onPress: () => {
-              // Reset form
               setSelectedVideo(null);
               setSelectedProduct(null);
               setDescription('');
+              setProductUrl('');
+              setProductName('');
+              setPlatform('');
+              setCategory('');
               setUploadProgress(0);
 
-              // Navigate back if possible
               if (navigation.canGoBack()) {
                 navigation.goBack();
               } else {
-                // If we can't go back, navigate to home or another appropriate screen
-                navigation.navigate('MerchantBottomTab', {
-                  screen: 'Home',
-                });
+                navigation.navigate('MerchantBottomTab', { screen: 'Home' });
               }
             },
           },
         ]);
       } catch (error) {
-        console.log('Upload error:', error);
-        Alert.alert(
-          'Upload Failed',
-          error?.message || 'Failed to upload video. Please try again.',
-        );
+        console.log('Detailed Upload Error:', error);
+        if (error.data) {
+          console.log('Error Data:', error.data);
+        }
+        Alert.alert('Upload Failed', error?.message || 'Failed to upload video.');
       } finally {
         setUploading(false);
       }
     } catch (error) {
-      console.log('Validation error:', error);
-      Alert.alert('Validation Error', error.message);
+      Alert.alert('Error', error.message);
     }
   }, [
     isEditingMode,
@@ -575,18 +518,23 @@ const Post = ({routeParams}) => {
     editingReelId,
     selectedVideo,
     selectedProduct,
+    uploadMode,
+    productUrl,
+    productName,
+    platform,
+    category,
     validateUpload,
     navigation,
   ]);
 
   return (
-    <SafeAreaView style={[styles.container, {backgroundColor}]}>
+    <SafeAreaView style={[styles.container, { backgroundColor }]}>
       <StatusBar
         barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundColor}
         translucent={false}
       />
-      <View style={{flex: 1, backgroundColor}}>
+      <View style={{ flex: 1, backgroundColor }}>
         <Header
           title={isEditingMode ? 'Edit Reel' : 'Create Reel'}
           leftType={false}
@@ -602,15 +550,11 @@ const Post = ({routeParams}) => {
               ]}
               activeOpacity={0.7}>
               {uploading ? (
-                <View style={styles.uploadProgressContainer}>
-                  <ActivityIndicator size="small" color={Colors.PRIMARY} />
-                  <View style={styles.uploadProgressOverlay}>
-                    <Text style={styles.uploadProgressText}>
-                      {uploadProgress > 0
-                        ? `${uploadProgress}%`
-                        : 'Uploading...'}
-                    </Text>
-                  </View>
+                <View style={styles.uploadProgressWrapper}>
+                  <ActivityIndicator size="small" color="#FFF" />
+                  <Text style={styles.progressText}>
+                    {uploadProgress}%
+                  </Text>
                 </View>
               ) : (
                 <Text style={styles.uploadButtonText}>
@@ -623,34 +567,31 @@ const Post = ({routeParams}) => {
             backgroundColor,
             borderBottomWidth: 0,
           }}
-          titleStyle={{color: textColor}}
+          titleStyle={{ color: textColor }}
         />
 
         <ScrollView
           showsVerticalScrollIndicator={false}
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}>
-          {/* Video Upload Section - Only show when creating new reel */}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled={true}>
+
+          {/* Video Section */}
           {!isEditingMode && (
             <View style={styles.videoSection}>
-              {/* Video Thumbnail */}
               <TouchableOpacity
                 style={styles.videoContainer}
                 onPress={handleVideoPick}
                 activeOpacity={0.9}>
                 {selectedVideo ? (
                   <View style={styles.videoThumbnailContainer}>
-                    {/* Use Video component to show first frame as thumbnail */}
                     <Video
-                      source={{uri: selectedVideo.uri}}
+                      source={{ uri: selectedVideo.uri }}
                       style={styles.videoThumbnail}
                       resizeMode="cover"
                       paused={true}
                       muted={true}
-                      repeat={false}
-                      onError={error => {
-                        console.log('Video thumbnail error:', error);
-                      }}
                     />
                     <View style={styles.playButton}>
                       <Ionicons name="play-circle" size={48} color="#FFFFFF" />
@@ -663,111 +604,137 @@ const Post = ({routeParams}) => {
                       size={48}
                       color={textColor}
                     />
-                    <Text style={[styles.placeholderText, {color: textColor}]}>
+                    <Text style={[styles.placeholderText, { color: textColor }]}>
                       Tap to select video
                     </Text>
                   </View>
                 )}
               </TouchableOpacity>
 
-              {/* Product Details */}
-              <View style={styles.productInfoContainer}>
-                {selectedProduct ? (
-                  <>
-                    {/* Product Image */}
-                    <View style={styles.productImageContainer}>
-                      <Image
-                        source={{uri: selectedProduct.primary_image}}
-                        style={styles.productImage}
-                        resizeMode="cover"
-                      />
-                    </View>
-                    <Text
-                      style={[styles.productDescription, {color: textColor}]}>
-                      {selectedProduct.name}
-                    </Text>
-
-                    <Text
-                      style={[styles.productAttributes, {color: textColor}]}>
-                      Category: {selectedProduct.category}
-                    </Text>
-
-                    <Text
-                      style={[styles.productAttributes, {color: textColor}]}>
-                      Price: ₹{selectedProduct.selling_price}
-                    </Text>
-                  </>
-                ) : (
-                  <>
-                    <Text
-                      style={[styles.productDescription, {color: textColor}]}>
-                      Crafted from premium silk, this kurta combines comfort
-                      with luxury.
-                    </Text>
-                    <Text
-                      style={[styles.productAttributes, {color: textColor}]}>
-                      Fabric: 100% Silk
-                    </Text>
-                    <Text
-                      style={[styles.productAttributes, {color: textColor}]}>
-                      Color: Royal Red
-                    </Text>
-                    <Text
-                      style={[styles.productAttributes, {color: textColor}]}>
-                      Fit: Regular, Comfortable
-                    </Text>
-                  </>
-                )}
+              <View style={styles.videoInfoContainer}>
+                <Text style={[styles.videoStatusText, { color: textColor }]}>
+                  {selectedVideo ? 'Video Selected' : 'No Video Selected'}
+                </Text>
+                <Text style={[styles.videoHintText, { color: textColor, opacity: 0.6 }]}>
+                  {selectedVideo ? selectedVideo.name : 'Max size: 100MB\nMax duration: 60s'}
+                </Text>
               </View>
             </View>
           )}
 
-          {/* Add Details Button - Only show when creating new reel */}
+
+          {/* Mode Selection Section */}
           {!isEditingMode && (
-            <TouchableOpacity
-              style={addDetailsButtonStyle}
-              onPress={handleAddDetails}
-              activeOpacity={0.7}>
-              <Text style={[styles.addDetailsText, {color: textColor}]}>
-                Add details....
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.modeSelectionSection}>
+              <Text style={[styles.inputLabel, { color: textColor }]}>Link Product Mode</Text>
+              <View style={[styles.modeToggle, modeToggleStyle]}>
+                <TouchableOpacity
+                  style={[styles.modeOption, uploadMode === 'AOIN' && styles.modeOptionActive]}
+                  onPress={() => setUploadMode('AOIN')}
+                >
+                  <Text style={[styles.modeText, uploadMode === 'AOIN' ? styles.modeTextActive : { color: textColor }]}>AOIN Mode</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modeOption, uploadMode === 'EXTERNAL' && styles.modeOptionActive]}
+                  onPress={() => setUploadMode('EXTERNAL')}
+                >
+                  <Text style={[styles.modeText, uploadMode === 'EXTERNAL' ? styles.modeTextActive : { color: textColor }]}>External Mode</Text>
+                </TouchableOpacity>
+              </View>
+
+              {uploadMode === 'AOIN' && selectedProduct && (
+                <View style={styles.selectedProductPreview}>
+                  <Text style={[styles.selectedLabel, { color: textColor, marginBottom: 0, marginRight: scale(4) }]}>Selected:</Text>
+                  <Text style={[styles.selectedName, { color: Colors.PRIMARY }]} numberOfLines={1}>
+                    {selectedProduct.name}
+                  </Text>
+                </View>
+              )}
+            </View>
           )}
 
-          {/* Description Input */}
+          {/* Description */}
           <View style={styles.descriptionContainer}>
+            <Text style={[styles.inputLabel, { color: textColor }]}>Description</Text>
             <TextInput
               style={descriptionInputStyle}
-              placeholder="Add description..."
-              placeholderTextColor={textColor + '80'}
+              placeholder="What is this reel about? (Max 5000 chars)"
+              placeholderTextColor={textColor + '60'}
               value={description}
               onChangeText={setDescription}
               multiline
-              numberOfLines={4}
+              maxLength={5000}
               textAlignVertical="top"
             />
           </View>
 
-          {/* Products List Section */}
-          <View style={styles.productsListSection}>
-            <Text style={[styles.productsListTitle, {color: textColor}]}>
-              Products List
-            </Text>
-
-            {loadingProducts ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color={Colors.PRIMARY} />
-                <Text style={[styles.loadingText, {color: textColor}]}>
-                  Loading products...
+          {/* Conditional Content based on Upload Mode */}
+          {!isEditingMode && (
+            uploadMode === 'AOIN' ? (
+              <View style={styles.productsListSection}>
+                <Text style={[styles.sectionTitle, { color: textColor }]}>
+                  Select Your Product
                 </Text>
+
+                {loadingProducts ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color={Colors.PRIMARY} />
+                    <Text style={[styles.loadingText, { color: textColor }]}>
+                      Fetching products...
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.productsList}>{productsList}</View>
+                )}
               </View>
             ) : (
-              <View style={styles.productsList}>{productsList}</View>
-            )}
-          </View>
+              <View style={styles.externalFormSection}>
+                <Text style={[styles.sectionTitle, { color: textColor }]}>
+                  External Product Details
+                </Text>
+
+                <Input
+                  label="Product URL *"
+                  placeholder="https://amazon.in/dp/..."
+                  value={productUrl}
+                  onChangeText={setProductUrl}
+                  autoCapitalize="none"
+                />
+
+                <Input
+                  label="Product Name *"
+                  placeholder="Enter product title"
+                  value={productName}
+                  onChangeText={setProductName}
+                />
+
+                <View style={styles.rowInputs}>
+                  <View style={{ flex: 1, marginRight: scale(8) }}>
+                    <Input
+                      label="Platform (Optional)"
+                      placeholder="Select..."
+                      type="dropdown"
+                      options={PLATFORMS}
+                      value={platform}
+                      onChangeText={setPlatform}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Input
+                      label="Category (Optional)"
+                      placeholder="e.g. Fashion"
+                      value={category}
+                      onChangeText={setCategory}
+                    />
+                  </View>
+                </View>
+              </View>
+            )
+          )}
         </ScrollView>
       </View>
     </SafeAreaView>
+
   );
 };
 
@@ -777,64 +744,48 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: scale(16),
-    paddingVertical: verticalScale(12),
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  backButton: {
-    padding: scale(8),
-  },
-  headerTitle: {
-    fontSize: moderateScale(18),
-    fontWeight: '700',
+  scrollView: {
     flex: 1,
-    textAlign: 'center',
+  },
+  scrollContent: {
+    paddingBottom: verticalScale(150),
   },
   uploadButton: {
-    paddingHorizontal: scale(12),
-    paddingVertical: verticalScale(6),
-    borderRadius: 20,
     backgroundColor: Colors.PRIMARY,
+    paddingHorizontal: scale(16),
+    paddingVertical: verticalScale(6),
+    borderRadius: moderateScale(20),
+    minWidth: scale(70),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   uploadButtonDisabled: {
-    opacity: 0.5,
+    backgroundColor: Colors.GRAY,
+    opacity: 0.6,
   },
   uploadButtonText: {
     color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: moderateScale(12),
+    fontWeight: '700',
+    fontSize: moderateScale(13),
   },
-  uploadProgressContainer: {
+  uploadProgressWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    width: 40,
-    height: 20,
   },
-  uploadProgressOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  uploadProgressText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: moderateScale(12),
+  progressText: {
+    color: '#FFF',
+    fontSize: moderateScale(11),
+    fontWeight: '700',
+    marginLeft: scale(4),
   },
   videoSection: {
     flexDirection: 'row',
-    paddingHorizontal: scale(16),
-    paddingTop: verticalScale(16),
+    padding: scale(16),
     gap: scale(12),
   },
   videoContainer: {
-    width: scale(140),
-    height: verticalScale(200),
+    width: scale(120),
+    height: verticalScale(180),
     borderRadius: moderateScale(12),
     overflow: 'hidden',
     position: 'relative',
@@ -842,38 +793,15 @@ const styles = StyleSheet.create({
   videoThumbnailContainer: {
     width: '100%',
     height: '100%',
-    position: 'relative',
   },
   videoThumbnail: {
     width: '100%',
     height: '100%',
-    borderRadius: moderateScale(12),
-  },
-  videoThumbnailPlaceholder: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: moderateScale(12),
-    backgroundColor: '#000',
-  },
-  videoSelectedText: {
-    color: '#FFFFFF',
-    fontSize: moderateScale(12),
-    marginTop: verticalScale(8),
-    fontWeight: '600',
-  },
-  videoFileName: {
-    color: '#FFFFFF',
-    fontSize: moderateScale(10),
-    marginTop: verticalScale(4),
-    opacity: 0.8,
-    paddingHorizontal: scale(8),
   },
   videoPlaceholder: {
     width: '100%',
     height: '100%',
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderStyle: 'dashed',
     borderRadius: moderateScale(12),
     justifyContent: 'center',
@@ -881,124 +809,170 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     marginTop: verticalScale(8),
-    fontSize: moderateScale(12),
+    fontSize: moderateScale(10),
     textAlign: 'center',
+    paddingHorizontal: scale(4),
   },
   playButton: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(0,0,0,0.2)',
   },
-  productInfoContainer: {
+  videoInfoContainer: {
     flex: 1,
-    paddingVertical: verticalScale(8),
+    paddingVertical: verticalScale(4),
   },
-  productImageContainer: {
-    width: moderateScale(80),
-    height: moderateScale(80),
-    borderRadius: moderateScale(8),
-    overflow: 'hidden',
-    marginBottom: verticalScale(12),
-    alignSelf: 'flex-start',
-  },
-  productImage: {
-    width: '100%',
-    height: '100%',
-  },
-  productDescription: {
-    fontSize: moderateScale(13),
-    lineHeight: moderateScale(18),
-    marginBottom: verticalScale(8),
-  },
-  productAttributes: {
-    fontSize: moderateScale(12),
-    lineHeight: moderateScale(16),
+  videoStatusText: {
+    fontSize: moderateScale(14),
+    fontWeight: '700',
     marginBottom: verticalScale(4),
   },
-  addDetailsButton: {
-    marginHorizontal: scale(16),
-    marginTop: verticalScale(12),
-    paddingVertical: verticalScale(12),
+  videoHintText: {
+    fontSize: moderateScale(11),
+    lineHeight: moderateScale(15),
+  },
+  modeSelectionSection: {
     paddingHorizontal: scale(16),
-    borderRadius: moderateScale(8),
-    borderWidth: 1,
+    marginBottom: verticalScale(20),
   },
-  addDetailsText: {
-    fontSize: moderateScale(14),
-    fontWeight: '500',
+  selectedProductPreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: verticalScale(8),
+    backgroundColor: 'rgba(242, 99, 31, 0.05)',
+    padding: scale(8),
+    borderRadius: moderateScale(6),
   },
-  descriptionContainer: {
-    marginHorizontal: scale(16),
-    marginTop: verticalScale(12),
+  modeAndInfoContainer: {
+    display: 'none',
   },
-  descriptionInput: {
-    minHeight: verticalScale(100),
-    padding: scale(12),
-    borderRadius: moderateScale(8),
-    borderWidth: 1,
-    fontSize: moderateScale(14),
-  },
-  productsListSection: {
-    marginTop: verticalScale(24),
-    paddingHorizontal: scale(16),
-  },
-  productsListTitle: {
-    fontSize: moderateScale(18),
+  sectionTitle: {
+    fontSize: moderateScale(16),
     fontWeight: '700',
     marginBottom: verticalScale(12),
   },
+  modeToggle: {
+    flexDirection: 'row',
+    borderRadius: moderateScale(8),
+    padding: scale(4),
+    borderWidth: 1,
+    marginBottom: verticalScale(12),
+  },
+  modeOption: {
+    flex: 1,
+    paddingVertical: verticalScale(6),
+    alignItems: 'center',
+    borderRadius: moderateScale(6),
+  },
+  modeOptionActive: {
+    backgroundColor: Colors.PRIMARY,
+  },
+  modeText: {
+    fontSize: moderateScale(12),
+    fontWeight: '600',
+  },
+  modeTextActive: {
+    color: '#FFF',
+  },
+  selectedProductInfo: {
+    marginTop: verticalScale(4),
+  },
+  selectedLabel: {
+    fontSize: moderateScale(11),
+    fontWeight: '500',
+    opacity: 0.6,
+    marginBottom: verticalScale(2),
+  },
+  selectedName: {
+    fontSize: moderateScale(13),
+    fontWeight: '700',
+  },
+  placeholderInfo: {
+    fontSize: moderateScale(12),
+    fontStyle: 'italic',
+  },
+  descriptionContainer: {
+    paddingHorizontal: scale(16),
+    marginBottom: verticalScale(20),
+  },
+  inputLabel: {
+    fontSize: moderateScale(13),
+    fontWeight: '600',
+    marginBottom: verticalScale(8),
+  },
+  descriptionInput: {
+    borderRadius: moderateScale(8),
+    borderWidth: 1,
+    padding: scale(12),
+    fontSize: moderateScale(14),
+    minHeight: verticalScale(80),
+  },
+  textInput: {
+    borderRadius: moderateScale(8),
+    borderWidth: 1,
+    padding: scale(10),
+    fontSize: moderateScale(14),
+  },
+  productsListSection: {
+    paddingHorizontal: scale(16),
+  },
   productsList: {
-    gap: 0,
+    marginTop: verticalScale(4),
   },
   productItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: verticalScale(12),
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingVertical: verticalScale(10),
+    borderBottomWidth: 1,
   },
-  productImage: {
-    width: moderateScale(80),
-    height: moderateScale(80),
-    borderRadius: moderateScale(8),
+  productThumbnail: {
+    width: moderateScale(60),
+    height: moderateScale(60),
+    borderRadius: moderateScale(6),
     marginRight: scale(12),
   },
   productDetails: {
     flex: 1,
   },
-  productName: {
+  productNameText: {
     fontSize: moderateScale(14),
     fontWeight: '600',
-    marginBottom: verticalScale(4),
   },
-  productCategory: {
-    fontSize: moderateScale(12),
-    marginBottom: verticalScale(4),
+  productCategoryText: {
+    fontSize: moderateScale(11),
+    marginTop: verticalScale(2),
   },
-  productPrice: {
-    fontSize: moderateScale(14),
+  productPriceText: {
+    fontSize: moderateScale(13),
     fontWeight: '700',
+    marginTop: verticalScale(4),
+  },
+  externalFormSection: {
+    paddingHorizontal: scale(16),
+  },
+  inputGroup: {
+    marginBottom: verticalScale(16),
+  },
+  rowInputs: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   loadingContainer: {
+    padding: verticalScale(20),
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: verticalScale(20),
   },
   loadingText: {
-    fontSize: moderateScale(12),
     marginTop: verticalScale(8),
+    fontSize: moderateScale(12),
   },
   emptyContainer: {
+    padding: verticalScale(40),
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: verticalScale(40),
   },
   emptyText: {
-    fontSize: moderateScale(14),
     marginTop: verticalScale(12),
+    fontSize: moderateScale(14),
   },
 });
+
