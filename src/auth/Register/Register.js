@@ -1,21 +1,21 @@
-import React, { useState } from 'react';
-import { View, Text, Alert, TouchableOpacity, StyleSheet } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
+import React, {useState} from 'react';
+import {View, Text, Alert, TouchableOpacity, StyleSheet} from 'react-native';
+import {useDispatch, useSelector} from 'react-redux';
 import Input from '../../components/reuseable/Input';
 import ActionButton from '../../components/reuseable/ActionButton';
-import { moderateScale, verticalScale, scale } from 'react-native-size-matters';
+import {moderateScale, verticalScale, scale} from 'react-native-size-matters';
 import FONTS from '../../utils/Font';
-import { Colors } from '../../utils/Colors';
-import { useNavigation } from '@react-navigation/native';
+import {Colors} from '../../utils/Colors';
+import {useNavigation} from '@react-navigation/native';
 import useAppTheme from '../../theme/useAppTheme';
-import { getThemeColors } from '../../theme/themeColors';
-import { ROUTES } from '../../utils/Routes';
-import { postData } from '../../utils/APiCall';
-
-const Register = ({ route }) => {
+import {getThemeColors} from '../../theme/themeColors';
+import {ROUTES} from '../../utils/Routes';
+import {postData} from '../../utils/APiCall';
+import { Linking } from 'react-native';
+const Register = ({route}) => {
   const dispatch = useDispatch();
   const theme = useAppTheme();
-  const { backgroundColor, textColor } = getThemeColors(theme);
+  const {backgroundColor, textColor} = getThemeColors(theme);
 
   const navigation = useNavigation();
   const signUpMethod = route?.params?.method || 'email'; // 'email' or 'phone'
@@ -53,32 +53,29 @@ const Register = ({ route }) => {
         Alert.alert('Error', 'Please enter your phone number');
         return;
       }
-      
+
       if (mobileNumber.length < 10) {
         Alert.alert('Error', 'Please enter a valid phone number');
         return;
       }
 
-      const formattedPhone = mobileNumber.startsWith('+') 
-        ? mobileNumber 
-        : `+91${mobileNumber}`; 
+      const formattedPhone = mobileNumber.startsWith('+')
+        ? mobileNumber
+        : `+91${mobileNumber}`;
 
       setLoading(true);
       try {
-        
-
         const response = await postData(ROUTES.SEND_OTP, {
           phone: formattedPhone,
         });
-        
-      
+
         setLoading(false);
-        
+
         if (response) {
           // Navigate to OTP verification screen with all user data
           const expiresIn = response?.expires_in || 600; // Default to 600 seconds if not provided
-          navigation.navigate('VerifyOTP', { 
-            phone: formattedPhone, 
+          navigation.navigate('VerifyOTP', {
+            phone: formattedPhone,
             expiresIn,
             firstName: firstName,
             lastName: lastName,
@@ -88,57 +85,74 @@ const Register = ({ route }) => {
         }
       } catch (error) {
         setLoading(false);
-       
-        
+
         // Better error messages based on error type
         let errorMessage = 'Failed to send OTP. Please try again.';
         let errorTitle = 'Error';
-        
+
         if (error?.status === 500) {
           // Check if it's a database/backend error
           const errorData = error?.data || {};
           const backendError = errorData?.error || errorData?.message || '';
-          
-          if (backendError.includes('unverified') && backendError.includes('Trial accounts')) {
+
+          if (
+            backendError.includes('unverified') &&
+            backendError.includes('Trial accounts')
+          ) {
             errorTitle = 'Phone Number Not Verified';
-            errorMessage = 'This phone number is not verified for trial accounts. Please use a verified number or contact support.';
-          } else if (backendError.includes('twilio.com/user/account/phone-numbers/verified')) {
+            errorMessage =
+              'This phone number is not verified for trial accounts. Please use a verified number or contact support.';
+          } else if (
+            backendError.includes(
+              'twilio.com/user/account/phone-numbers/verified',
+            )
+          ) {
             errorTitle = 'Phone Number Verification Required';
-            errorMessage = 'Please verify your phone number at twilio.com/user/account/phone-numbers/verified or purchase a Twilio number to send messages.';
-          } else if (backendError.includes('user_id') || backendError.includes('database') || backendError.includes('SQL')) {
+            errorMessage =
+              'Please verify your phone number at twilio.com/user/account/phone-numbers/verified or purchase a Twilio number to send messages.';
+          } else if (
+            backendError.includes('user_id') ||
+            backendError.includes('database') ||
+            backendError.includes('SQL')
+          ) {
             errorTitle = 'Service Temporarily Unavailable';
-            errorMessage = 'We are experiencing a technical issue. Please try again in a few moments.\n\nIf the problem continues, please contact support.';
+            errorMessage =
+              'We are experiencing a technical issue. Please try again in a few moments.\n\nIf the problem continues, please contact support.';
           } else {
             errorTitle = 'Server Error';
-            errorMessage = 'Server error occurred. Please try again.\n\nIf issue persists, please contact support.';
+            errorMessage =
+              'Server error occurred. Please try again.\n\nIf issue persists, please contact support.';
           }
         } else if (error?.status === 400) {
-          errorMessage = error?.message || 'Invalid phone number. Please check and try again.';
+          errorMessage =
+            error?.message ||
+            'Invalid phone number. Please check and try again.';
         } else if (error?.status === 404) {
           errorMessage = 'Service not found. Please contact support.';
         } else if (error?.type === 'network') {
-          errorMessage = 'Network error. Please check your internet connection.';
+          errorMessage =
+            'Network error. Please check your internet connection.';
         } else if (error?.message) {
           errorMessage = error.message;
         }
-        
+
         Alert.alert(errorTitle, errorMessage);
       }
     }
   };
-
+  const handleOpenPrivacy = () => {
+    Linking.openURL('https://suryansh9331.github.io/aoin_privacy_policy/');
+  };
   return (
-    <View style={[styles.container, { backgroundColor }]}>
-      <Text style={[styles.title, { color: textColor }]}>
-        Create Account
-      </Text>
-      
-      <Text style={[styles.description, { color: textColor }]}>
-        {signUpMethod === 'email' 
-          ? 'Enter your details to register' 
+    <View style={[styles.container, {backgroundColor}]}>
+      <Text style={[styles.title, {color: textColor}]}>Create Account</Text>
+
+      <Text style={[styles.description, {color: textColor}]}>
+        {signUpMethod === 'email'
+          ? 'Enter your details to register'
           : 'Enter your details to receive OTP'}
       </Text>
-      
+
       <Input
         placeholder="First Name"
         value={firstName}
@@ -186,14 +200,25 @@ const Register = ({ route }) => {
       </View>
 
       <View style={styles.loginContainer}>
-        <Text style={[styles.loginText, { color: textColor }]}>
+        <Text style={[styles.loginText, {color: textColor}]}>
           Already have an account?{' '}
         </Text>
-        <TouchableOpacity onPress={() => {
-          navigation.navigate('Login');
-        }}>
-          <Text style={styles.loginLink}>
-            Login
+        <TouchableOpacity
+          onPress={() => {
+            navigation.navigate('Login');
+          }}>
+          <Text style={styles.loginLink}>Login</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.footerContainer}>
+        <Text style={[styles.footerText, {color: textColor}]}>
+          All rights reserved @aoin2024
+        </Text>
+
+        <TouchableOpacity onPress={handleOpenPrivacy}>
+          <Text style={[styles.privacyText, {color: Colors.PRIMARY}]}>
+            Privacy Policy
           </Text>
         </TouchableOpacity>
       </View>
@@ -245,6 +270,28 @@ const styles = StyleSheet.create({
   },
   button: {
     height: verticalScale(42),
+  },
+
+  footerContainer: {
+    position: 'absolute',
+    bottom: verticalScale(15),
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+
+  footerText: {
+    fontSize: moderateScale(12),
+    fontFamily: FONTS.WINDSONG.REGULAR,
+    marginBottom: 5,
+    textAlign: 'center',
+  },
+
+  privacyText: {
+    fontSize: moderateScale(13),
+    fontFamily: FONTS.WINDSONG.REGULAR,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
 
