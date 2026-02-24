@@ -73,7 +73,7 @@ const Home = ({ routeParams, initialReels }) => {
       setError(null);
       // Reduced per_page from 20 to 10 for better performance
       const response = await getData(`${ROUTES.PUBLIC_REELS}?page=${page}&per_page=10`);
-
+      // console.log("response", response);
       if (response?.data) {
         const mappedReels = response.data.map((apiReel, index) => ({
           id:
@@ -111,6 +111,7 @@ const Home = ({ routeParams, initialReels }) => {
           video_format: apiReel.video_format,
           file_size_bytes: apiReel.file_size_bytes,
           resolution: apiReel.resolution,
+          product_url: apiReel.product_url,
         }));
 
         if (append) {
@@ -158,10 +159,10 @@ const Home = ({ routeParams, initialReels }) => {
         typeof response?.data === 'number'
           ? response.data
           : response?.data?.count ||
-            response?.data?.unread_count ||
-            response?.count ||
-            response?.unread_count ||
-            0;
+          response?.data?.unread_count ||
+          response?.count ||
+          response?.unread_count ||
+          0;
       setUnreadCount(count);
     } catch {
       setUnreadCount(0);
@@ -209,7 +210,7 @@ const Home = ({ routeParams, initialReels }) => {
         style={[
           styles.floatingNotification,
           {
-            transform: [{scale: scaleAnim}],
+            transform: [{ scale: scaleAnim }],
             opacity: opacityAnim,
           },
         ]}>
@@ -270,7 +271,7 @@ const Home = ({ routeParams, initialReels }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#000000'},
+  container: { flex: 1, backgroundColor: '#000000' },
 
   floatingNotification: {
     position: 'absolute',
@@ -281,7 +282,7 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(22),
     padding: moderateScale(2),
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 6,
     elevation: 6,
@@ -316,10 +317,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  loadingContainer: {flex: 1, justifyContent: 'center', alignItems: 'center'},
-  loadingText: {marginTop: 12, color: '#FFFFFF'},
-  errorContainer: {flex: 1, justifyContent: 'center', alignItems: 'center'},
-  errorText: {color: '#FF3040'},
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: 12, color: '#FFFFFF' },
+  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  errorText: { color: '#FF3040' },
 });
 
 export default Home;

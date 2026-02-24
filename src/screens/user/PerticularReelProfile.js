@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback, useMemo} from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,30 +12,30 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useNavigation,
   useRoute,
   useFocusEffect,
 } from '@react-navigation/native';
-import {useDispatch, useSelector} from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
+import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import useAppTheme from '../../theme/useAppTheme';
-import {getThemeColors} from '../../theme/themeColors';
-import {Colors} from '../../utils/Colors';
+import { getThemeColors } from '../../theme/themeColors';
+import { Colors } from '../../utils/Colors';
 import Skeleton from '../../components/Skeleton/Skeleton';
 import ProfileSkeleton from '../merchant/components/ProfileSkeleton';
-import {fetchPublicReels_Request} from '../../redux/slices/reelSlice';
-import {getData, postData, deleteData} from '../../utils/APiCall';
-import {ROUTES} from '../../utils/Routes';
+import { fetchPublicReels_Request } from '../../redux/slices/reelSlice';
+import { getData, postData, deleteData } from '../../utils/APiCall';
+import { ROUTES } from '../../utils/Routes';
 
-const {width: SCREEN_WIDTH} = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const POST_ITEM_SIZE = (SCREEN_WIDTH - 4) / 3;
 
 const PerticularReelProfile = () => {
   const theme = useAppTheme();
-  const {backgroundColor, textColor, borderColor} = getThemeColors(theme);
+  const { backgroundColor, textColor, borderColor } = getThemeColors(theme);
   const route = useRoute();
   const navigation = useNavigation();
   const dispatch = useDispatch();
@@ -43,10 +43,10 @@ const PerticularReelProfile = () => {
 
   const merchantId = route.params?.merchantId || route.params?.userId;
   const passedProfileImage = route.params?.profileImage; // Get passed profile image
-  const {publicReels, publicReelsLoading, publicReelsError} = useSelector(
+  const { publicReels, publicReelsLoading, publicReelsError } = useSelector(
     state => state.reels,
   );
-  
+
   // Filter reels for this merchant
   const merchantReels = useMemo(() => {
     if (!merchantId) return [];
@@ -188,7 +188,7 @@ const PerticularReelProfile = () => {
     if (passedProfileImage) {
       return passedProfileImage;
     }
-    
+
     // Second priority: merchant profile from API
     if (!merchantProfile) return null;
 
@@ -243,22 +243,22 @@ const PerticularReelProfile = () => {
   }, [merchantId, isFollowing, followersCount]);
 
   const renderReelItem = useCallback(
-    ({item}) => {
+    ({ item }) => {
       const thumbnail = item.thumbnail || item.videoUrl;
       const views = formatViews(item.views || item.views_count || 0);
 
       return (
         <TouchableOpacity
-          style={[styles.postItem, {borderColor: borderColor}]}
+          style={[styles.postItem, { borderColor: borderColor }]}
           activeOpacity={0.8}
           onPress={() => {
-            navigation.navigate('UserBottomTab', {
-              navigateToTab: 'Home',
-              reelId: item.id || item.reel_id,
+            navigation.navigate('UserReelsView', {
+              initialReelId: item.id || item.reel_id,
+              reelsData: merchantReels,
             });
           }}>
           <Image
-            source={{uri: thumbnail}}
+            source={{ uri: thumbnail }}
             style={styles.postImage}
             resizeMode="cover"
           />
@@ -279,17 +279,17 @@ const PerticularReelProfile = () => {
         </TouchableOpacity>
       );
     },
-    [borderColor, navigation, formatViews],
+    [borderColor, navigation, formatViews, merchantReels],
   );
 
   return (
-    <View style={[styles.container, {backgroundColor}]}>
-      
+    <View style={[styles.container, { backgroundColor }]}>
+
       <View
         style={[
           styles.header,
-          {borderBottomColor: borderColor},
-          
+          { borderBottomColor: borderColor },
+
         ]}>
         <SafeAreaView style={styles.headerLeft}>
           <TouchableOpacity
@@ -297,7 +297,7 @@ const PerticularReelProfile = () => {
             onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color={textColor} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, {color: textColor}]}>Profile</Text>
+          <Text style={[styles.headerTitle, { color: textColor }]}>Profile</Text>
         </SafeAreaView>
       </View>
 
@@ -309,13 +309,13 @@ const PerticularReelProfile = () => {
           <ProfileSkeleton />
         ) : profileError && !merchantProfile ? (
           <View style={styles.profileErrorContainer}>
-            <Text style={[styles.errorText, {color: Colors.PRIMARY}]}>
+            <Text style={[styles.errorText, { color: Colors.PRIMARY }]}>
               {profileError}
             </Text>
             <TouchableOpacity
-              style={[styles.retryButton, {borderColor: borderColor}]}
+              style={[styles.retryButton, { borderColor: borderColor }]}
               onPress={fetchMerchantProfile}>
-              <Text style={[styles.retryButtonText, {color: Colors.PRIMARY}]}>
+              <Text style={[styles.retryButtonText, { color: Colors.PRIMARY }]}>
                 Retry
               </Text>
             </TouchableOpacity>
@@ -328,7 +328,7 @@ const PerticularReelProfile = () => {
                 key={profileImage}
                 source={
                   profileImage
-                    ? {uri: profileImage}
+                    ? { uri: profileImage }
                     : require('../../../assest/images/AppLogo.png')
                 }
                 style={styles.avatar}
@@ -336,38 +336,38 @@ const PerticularReelProfile = () => {
             </View>
 
             {/* Merchant Name */}
-            <Text style={[styles.username, {color: textColor}]}>
+            <Text style={[styles.username, { color: textColor }]}>
               {merchantProfile?.business_name || 'Merchant Store'}
             </Text>
             {/* Username below name */}
-            <Text style={[styles.userHandle, {color: textColor}]}>
+            <Text style={[styles.userHandle, { color: textColor }]}>
               {merchantProfile?.business_name
                 ? `@${merchantProfile.business_name
-                    .toLowerCase()
-                    .replace(/\s+/g, '_')}`
+                  .toLowerCase()
+                  .replace(/\s+/g, '_')}`
                 : '@merchant'}
             </Text>
 
             {/* Stats */}
             <View style={styles.statsContainer}>
               <View style={styles.statItem}>
-                <Text style={[styles.statNumber, {color: textColor}]}>
+                <Text style={[styles.statNumber, { color: textColor }]}>
                   {merchantStats?.total_reels || merchantReels?.length || 0}
                 </Text>
-                <Text style={[styles.statLabel, {color: textColor}]}>
+                <Text style={[styles.statLabel, { color: textColor }]}>
                   Reels
                 </Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={[styles.statNumber, {color: textColor}]}>
+                <Text style={[styles.statNumber, { color: textColor }]}>
                   {followersCount}
                 </Text>
-                <Text style={[styles.statLabel, {color: textColor}]}>
+                <Text style={[styles.statLabel, { color: textColor }]}>
                   Followers
                 </Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={[styles.statNumber, {color: textColor}]}>
+                <Text style={[styles.statNumber, { color: textColor }]}>
                   {merchantStats?.total_likes ||
                     merchantReels?.reduce(
                       (sum, reel) => sum + (reel.likes || 0),
@@ -375,7 +375,7 @@ const PerticularReelProfile = () => {
                     ) ||
                     0}
                 </Text>
-                <Text style={[styles.statLabel, {color: textColor}]}>
+                <Text style={[styles.statLabel, { color: textColor }]}>
                   Likes
                 </Text>
               </View>
@@ -402,7 +402,7 @@ const PerticularReelProfile = () => {
                   <Text
                     style={[
                       styles.followButtonText,
-                      {color: isFollowing ? textColor : Colors.PRIMARY},
+                      { color: isFollowing ? textColor : Colors.PRIMARY },
                     ]}>
                     {isFollowing ? 'UnFollow' : 'Follow'}
                   </Text>
@@ -427,13 +427,13 @@ const PerticularReelProfile = () => {
               ) : publicReelsLoading ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="large" color={Colors.PRIMARY} />
-                  <Text style={[styles.loadingText, {color: textColor}]}>
+                  <Text style={[styles.loadingText, { color: textColor }]}>
                     Loading reels...
                   </Text>
                 </View>
               ) : publicReelsError ? (
                 <View style={styles.errorContainer}>
-                  <Text style={[styles.errorText, {color: Colors.PRIMARY}]}>
+                  <Text style={[styles.errorText, { color: Colors.PRIMARY }]}>
                     {publicReelsError}
                   </Text>
                 </View>
@@ -444,10 +444,10 @@ const PerticularReelProfile = () => {
                     size={48}
                     color={textColor}
                   />
-                  <Text style={[styles.emptyText, {color: textColor}]}>
+                  <Text style={[styles.emptyText, { color: textColor }]}>
                     No reels yet
                   </Text>
-                  <Text style={[styles.emptySubText, {color: textColor}]}>
+                  <Text style={[styles.emptySubText, { color: textColor }]}>
                     This merchant hasn't uploaded any reels
                   </Text>
                 </View>

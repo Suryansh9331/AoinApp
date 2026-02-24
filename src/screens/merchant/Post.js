@@ -103,6 +103,11 @@ const Post = ({ routeParams }) => {
   // Handler functions - defined early for use in other callbacks
   const handleProductSelect = useCallback(product => {
     setSelectedProduct(product);
+    if (product) {
+      setProductUrl(`https://aoinstore.com/product/${product.product_id}`);
+    } else {
+      setProductUrl('');
+    }
   }, []);
 
   // Memoize product list rendering
@@ -232,7 +237,7 @@ const Post = ({ routeParams }) => {
     const hasDescription = !!description.trim();
 
     if (uploadMode === 'AOIN') {
-      return !hasVideo || !selectedProduct || !hasDescription;
+      return !hasVideo || !selectedProduct || !productUrl.trim() || !hasDescription;
     } else {
       return !hasVideo || !productUrl.trim() || !productName.trim() || !hasDescription;
     }
@@ -284,6 +289,9 @@ const Post = ({ routeParams }) => {
       if (uploadMode === 'AOIN') {
         if (!selectedProduct) {
           throw new Error('Please select a product');
+        }
+        if (!productUrl.trim()) {
+          throw new Error('Product URL is missing');
         }
       } else {
         if (!productUrl.trim()) {
@@ -419,7 +427,6 @@ const Post = ({ routeParams }) => {
           const updatePayload = {
             description: description.trim(),
           };
-          console.log('Update Reel Payload:', updatePayload);
           const result = await updateReel(editingReelId, updatePayload);
 
           Alert.alert('Success', 'Reel updated successfully!', [
@@ -461,6 +468,7 @@ const Post = ({ routeParams }) => {
 
         if (uploadMode === 'AOIN') {
           formData.append('product_id', selectedProduct.product_id.toString());
+          formData.append('product_url', productUrl.trim());
           formData.append('is_external', '0');
           formData.append('upload_mode', 'AOIN');
         } else {
@@ -478,6 +486,7 @@ const Post = ({ routeParams }) => {
           mode: uploadMode,
           ...(uploadMode === 'AOIN' ? {
             product_id: selectedProduct?.product_id,
+            product_url: productUrl.trim(),
             is_external: '0'
           } : {
             product_url: productUrl.trim(),
@@ -487,8 +496,7 @@ const Post = ({ routeParams }) => {
             is_external: '1'
           })
         };
-        console.log('Upload Reel Payload:', payloadData);
-        console.log('FormData keys:', Object.keys(formData));
+
 
         const response = await uploadFormData(
           ROUTES.UPLOAD_REEL,
@@ -660,11 +668,22 @@ const Post = ({ routeParams }) => {
               </View>
 
               {uploadMode === 'AOIN' && selectedProduct && (
-                <View style={styles.selectedProductPreview}>
-                  <Text style={[styles.selectedLabel, { color: textColor, marginBottom: 0, marginRight: scale(4) }]}>Selected:</Text>
-                  <Text style={[styles.selectedName, { color: Colors.PRIMARY }]} numberOfLines={1}>
-                    {selectedProduct.name}
-                  </Text>
+                <View style={styles.selectedProductWrapper}>
+                  <View style={styles.selectedProductPreview}>
+                    <Text style={[styles.selectedLabel, { color: textColor, marginBottom: 0, marginRight: scale(4) }]}>Selected:</Text>
+                    <Text style={[styles.selectedName, { color: Colors.PRIMARY }]} numberOfLines={1}>
+                      {selectedProduct.name}
+                    </Text>
+                  </View>
+                  <View style={{ marginTop: verticalScale(10) }}>
+                    <Input
+                      label="Product URL"
+                      placeholder="https://aoinstore.com/product/..."
+                      value={productUrl}
+                      onChangeText={setProductUrl}
+                      autoCapitalize="none"
+                    />
+                  </View>
                 </View>
               )}
             </View>
@@ -856,10 +875,12 @@ const styles = StyleSheet.create({
   selectedProductPreview: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: verticalScale(8),
     backgroundColor: 'rgba(242, 99, 31, 0.05)',
     padding: scale(8),
     borderRadius: moderateScale(6),
+  },
+  selectedProductWrapper: {
+    marginTop: verticalScale(8),
   },
   modeAndInfoContainer: {
     display: 'none',

@@ -492,7 +492,7 @@ const VideoReelItem = ({ item, isActive, isVisible, onLike, onShare, itemHeight 
         <Text style={styles.caption} numberOfLines={2}>
           {item.caption}
         </Text>
-        {item?.product_id && (
+        {(item?.product_url || item?.product_id) && (
           <Animated.View
             style={{
               transform: [{ scale: buyPulse }],
@@ -501,11 +501,10 @@ const VideoReelItem = ({ item, isActive, isVisible, onLike, onShare, itemHeight 
             }}>
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() =>
-                Linking.openURL(
-                  `https://aoinstore.com/product/${item.product_id}`,
-                )
-              }
+              onPress={() => {
+                const url = item.product_url || `https://aoinstore.com/product/${item.product_id}`;
+                Linking.openURL(url);
+              }}
               style={styles.buyButton}>
               <Text style={styles.buyButtonText}>Buy Now</Text>
             </TouchableOpacity>

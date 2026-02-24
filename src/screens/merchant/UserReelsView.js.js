@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,24 +6,24 @@ import {
   StatusBar,
   SafeAreaView,
 } from 'react-native';
-import {TouchableOpacity} from 'react-native';
+import { TouchableOpacity } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import {getData} from '../../utils/APiCall';
-import {ROUTES} from '../../utils/Routes';
+import { getData } from '../../utils/APiCall';
+import { ROUTES } from '../../utils/Routes';
 import VideoReel from '../../components/VideoReel/VideoReel';
-import {useSelector, useDispatch} from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import Header from '../../components/Header/Header';
-import {moderateScale} from 'react-native-size-matters';
-import {Colors} from '../../utils/Colors';
+import { moderateScale } from 'react-native-size-matters';
+import { Colors } from '../../utils/Colors';
 import useAppTheme from '../../theme/useAppTheme';
-import {getThemeColors} from '../../theme/themeColors';
-import {useNavigation, useRoute} from '@react-navigation/native';
-import {useFocusEffect} from '@react-navigation/native';
-import {setReelsData} from '../../redux/slices/reelsSlice';
+import { getThemeColors } from '../../theme/themeColors';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
+import { setReelsData } from '../../redux/slices/reelsSlice';
 
 const UserReelsView = () => {
   const theme = useAppTheme();
-  const {backgroundColor} = getThemeColors(theme);
+  const { backgroundColor } = getThemeColors(theme);
   const navigation = useNavigation();
   const route = useRoute();
   const dispatch = useDispatch();
@@ -146,13 +146,10 @@ const UserReelsView = () => {
       passedReelsData ||
       (reelsDataFromRedux.length > 0 ? reelsDataFromRedux : passedReels || []);
 
-    console.log('UserReelsView - passedReelsData:', passedReelsData);
-    console.log('UserReelsView - reelsToUse length:', reelsToUse.length);
-    console.log('UserReelsView - initialReelId:', initialReelId);
+
 
     if (reelsToUse.length > 0) {
       const formattedReels = reelsToUse.map(reel => {
-        console.log('Processing reel:', reel);
         const formattedReel = {
           id: reel.reel_id || reel.id,
           reel_id: reel.reel_id || reel.id,
@@ -184,7 +181,6 @@ const UserReelsView = () => {
           is_active: reel.is_active,
           is_visible: reel.is_visible,
         };
-        console.log('Formatted reel:', formattedReel);
         return formattedReel;
       });
       setReels(formattedReels);
@@ -205,13 +201,13 @@ const UserReelsView = () => {
   const showLoading = loading && reels.length === 0 && !hasFetched;
 
   return (
-    <View style={[styles.container, {backgroundColor: '#000'}]}>
+    <View style={[styles.container, { backgroundColor: '#000' }]}>
       <StatusBar
         barStyle="light-content"
         backgroundColor="#000000"
         translucent={false}
       />
-      <SafeAreaView style={{backgroundColor: '#000000'}}>
+      <SafeAreaView style={{ backgroundColor: '#000000' }}>
         <Header
           title=""
           // leftContent={
@@ -237,7 +233,7 @@ const UserReelsView = () => {
             backgroundColor: '#000000',
             borderBottomWidth: 0,
           }}
-          titleStyle={{color: '#FFFFFF'}}
+          titleStyle={{ color: '#FFFFFF' }}
         />
       </SafeAreaView>
 

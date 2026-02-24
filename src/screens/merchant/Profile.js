@@ -58,7 +58,8 @@ const Profile = () => {
   const [error, setError] = useState(null);
   const merchantId = useMemo(() => {
     const userInfo = userData?.data || userData || {};
-    return userInfo.merchant_id || userInfo.id || userInfo.user_id || null; }, [userData]);
+    return userInfo.merchant_id || userInfo.id || userInfo.user_id || null;
+  }, [userData]);
   const [merchantProfile, setMerchantProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState(null);
@@ -70,7 +71,7 @@ const Profile = () => {
   const fetchMerchantReelsDirect = async (page = 1, perPage = 20) => {
     try {
       const response = await getData(`${ROUTES.MERCHANT_MY_REELS}?page=${page}&per_page=${perPage}`);
-    
+
       return response;
     } catch (error) {
       console.error('Error fetching merchant reels:', error);
@@ -155,10 +156,10 @@ const Profile = () => {
           setReels(prev => [...prev, ...response.data]);
         }
         setHasMoreReels(response.data.length === perPage);
-        
+
         // Store reels data in Redux for UserReelsView
         dispatch(setReelsData(response.data));
-        
+
       } else {
         setReels([]);
         setHasMoreReels(false);
@@ -360,10 +361,10 @@ const Profile = () => {
           activeOpacity={0.7}
           onPress={() => {
             const currentReelId = item.reel_id || item.id;
-            
+
             navigation.navigate('UserReelsView', {
               initialReelId: currentReelId,
-              reels: reels, 
+              reels: reels,
             });
           }}>
           <Image
@@ -474,7 +475,7 @@ const Profile = () => {
         style={[
           styles.header,
           { borderBottomColor: borderColor },
-          
+
         ]}>
         <View style={styles.headerLeft}>
           <Text style={[styles.headerTitle, { color: textColor }]}>Profile</Text>
@@ -486,10 +487,10 @@ const Profile = () => {
           <TouchableOpacity
             style={[styles.headerButton, styles.themeToggleButton]}
             onPress={handleThemeToggle}>
-            <Ionicons 
-              name={theme === 'dark' ? 'sunny' : 'moon'} 
-              size={20} 
-              color={textColor} 
+            <Ionicons
+              name={theme === 'dark' ? 'sunny' : 'moon'}
+              size={20}
+              color={textColor}
             />
           </TouchableOpacity>
           <TouchableOpacity
@@ -739,7 +740,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileSection: {
-    
+
     paddingTop: verticalScale(20),
     alignItems: 'center',
   },
@@ -929,7 +930,7 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(40),
     alignItems: 'center',
     justifyContent: 'center',
-   
+
   },
   errorText: {
     fontSize: moderateScale(14),
