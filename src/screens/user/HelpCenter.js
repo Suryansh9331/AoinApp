@@ -168,10 +168,10 @@ const HelpCenter = () => {
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={[styles.footerText, {color: textColor, opacity: 0.6}]}>
-            © 2026 Aoin. All rights reserved.
+            © 2024 Aoin. All rights reserved.
           </Text>
           <TouchableOpacity
-            onPress={() => openLink('https://aoinstore.com/privacy-policy')}>
+            onPress={() => openLink('https://suryansh9331.github.io/aoin_privacy_policy/')}>
             <Text style={[styles.privacyText, {color: Colors.PRIMARY}]}>
               Privacy Policy
             </Text>

@@ -220,7 +220,11 @@ const Login = () => {
       Alert.alert(errorTitle, errorMessage);
     }
   };
-
+const handleOpenPrivacy = () => {
+  Linking.openURL(
+    'https://suryansh9331.github.io/aoin_privacy_policy/',
+  );
+};
   return (
     <View style={[styles.container, {backgroundColor}]}>
       <View style={styles.logoContainer}>
@@ -315,6 +319,18 @@ const Login = () => {
           </Text>
         </TouchableOpacity>
       </View>
+
+      <View style={styles.footerContainer}>
+  <Text style={[styles.footerText, {color: textColor}]}>
+    All rights reserved @aoin2024
+  </Text>
+
+  <TouchableOpacity onPress={handleOpenPrivacy}>
+    <Text style={[styles.privacyText, {color: Colors.PRIMARY}]}>
+      Privacy Policy
+    </Text>
+  </TouchableOpacity>
+</View>
     </View>
   );
 };
@@ -378,6 +394,27 @@ const styles = StyleSheet.create({
   button: {
     height: verticalScale(42),
   },
+  footerContainer: {
+  position: 'absolute',
+  bottom: verticalScale(15),
+  left: 0,
+  right: 0,
+  alignItems: 'center',
+},
+
+footerText: {
+  fontSize: moderateScale(12),
+  fontFamily: FONTS.WINDSONG.REGULAR,
+  marginBottom: 5,
+  textAlign: 'center',
+},
+
+privacyText: {
+  fontSize: moderateScale(13),
+  fontFamily: FONTS.WINDSONG.REGULAR,
+  fontWeight: '600',
+  textAlign: 'center',
+},
 });
 
 export default Login;
