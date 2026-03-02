@@ -276,23 +276,37 @@ const EditProfile = () => {
       }
 
       const originalUsername = merchantProfile?.username || '';
-      const currentUsername = username.replace('@', '');
+      const currentUsername = username.replace('@', '').trim();
+      
+      const trimmedPan = panNumber.trim().toUpperCase();
+      const trimmedGstin = gstin.trim().toUpperCase();
+
+      // Basic PAN Validation (10 characters, specific format)
+      if (trimmedPan.length > 0) {
+        const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+        if (!panRegex.test(trimmedPan)) {
+          saveButtonGlow.stopAnimation();
+          saveButtonGlow.setValue(0);
+          Alert.alert('Invalid PAN', 'Please enter a valid PAN number (e.g., ABCDE1234F).');
+          return;
+        }
+      }
 
       const requestBody = {
-        business_name: name,
-        business_description: bio,
-        business_address: storeAddress,
+        business_name: name.trim(),
+        business_description: bio.trim(),
+        business_address: storeAddress.trim(),
         profile_img: uploadedImageUrl || profileImage,
-        country_code: countryCode,
-        state_province: stateProvince,
-        city: city,
-        postal_code: postalCode,
-        gstin: gstin,
-        pan_number: panNumber,
-        bank_account_number: bankAccountNumber,
-        bank_name: bankName,
-        bank_branch: bankBranch,
-        bank_ifsc_code: bankIfscCode,
+        country_code: countryCode.trim(),
+        state_province: stateProvince.trim(),
+        city: city.trim(),
+        postal_code: postalCode.toString().trim(),
+        gstin: trimmedGstin,
+        pan_number: trimmedPan,
+        bank_account_number: bankAccountNumber.toString().trim(),
+        bank_name: bankName.trim(),
+        bank_branch: bankBranch.trim(),
+        bank_ifsc_code: bankIfscCode.toString().trim().toUpperCase(),
       };
 
       if (currentUsername !== originalUsername) {
@@ -315,7 +329,19 @@ const EditProfile = () => {
       } else {
         saveButtonGlow.stopAnimation();
         saveButtonGlow.setValue(0);
-        Alert.alert('Error', response?.message || 'Failed to update profile. Please try again.');
+        
+        let errorMsg = response?.message || 'Failed to update profile. Please try again.';
+        if (response?.data?.details) {
+          const detailMsgs = Object.keys(response.data.details).map(key => {
+            const fieldError = response.data.details[key];
+            const msg = Array.isArray(fieldError) ? fieldError.join(', ') : fieldError;
+            return `${key}: ${msg}`;
+          });
+          if (detailMsgs.length > 0) {
+            errorMsg = `Validation error:\n${detailMsgs.join('\n')}`;
+          }
+        }
+        Alert.alert('Error', errorMsg);
       }
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -340,28 +366,54 @@ const EditProfile = () => {
           ]
         );
       } else {
-        Alert.alert('Error', error?.message || 'Failed to update profile. Please try again.');
+        let errorMsg = error?.message || 'Failed to update profile. Please try again.';
+        
+        // Check for detailed validation errors in the error object
+        if (error?.data?.details) {
+          const detailMsgs = Object.keys(error.data.details).map(key => {
+            const fieldError = error.data.details[key];
+            const msg = Array.isArray(fieldError) ? fieldError.join(', ') : fieldError;
+            return `${key.replace(/_/g, ' ')}: ${msg}`;
+          });
+          if (detailMsgs.length > 0) {
+            errorMsg = `Validation errors:\n${detailMsgs.join('\n')}`;
+          }
+        }
+        
+        Alert.alert('Error', errorMsg);
       }
     }
   };
 
   const handleSaveWithoutUsername = async () => {
     try {
+      const trimmedPan = panNumber.trim().toUpperCase();
+      const trimmedGstin = gstin.trim().toUpperCase();
+
+      // Basic PAN Validation
+      if (trimmedPan.length > 0) {
+        const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+        if (!panRegex.test(trimmedPan)) {
+          Alert.alert('Invalid PAN', 'Please enter a valid PAN number (e.g., ABCDE1234F).');
+          return;
+        }
+      }
+
       const requestBody = {
-        business_name: name,
-        business_description: bio,
-        business_address: storeAddress,
+        business_name: name.trim(),
+        business_description: bio.trim(),
+        business_address: storeAddress.trim(),
         profile_img: profileImage,
-        country_code: countryCode,
-        state_province: stateProvince,
-        city: city,
-        postal_code: postalCode,
-        gstin: gstin,
-        pan_number: panNumber,
-        bank_account_number: bankAccountNumber,
-        bank_name: bankName,
-        bank_branch: bankBranch,
-        bank_ifsc_code: bankIfscCode,
+        country_code: countryCode.trim(),
+        state_province: stateProvince.trim(),
+        city: city.trim(),
+        postal_code: postalCode.toString().trim(),
+        gstin: trimmedGstin,
+        pan_number: trimmedPan,
+        bank_account_number: bankAccountNumber.toString().trim(),
+        bank_name: bankName.trim(),
+        bank_branch: bankBranch.trim(),
+        bank_ifsc_code: bankIfscCode.toString().trim().toUpperCase(),
       };
 
       const response = await putData(ROUTES.MERCHANT_PROFILE, requestBody);
@@ -374,11 +426,34 @@ const EditProfile = () => {
           },
         ]);
       } else {
-        Alert.alert('Error', response?.message || 'Failed to update profile. Please try again.');
+        let errorMsg = response?.message || 'Failed to update profile. Please try again.';
+        if (response?.data?.details) {
+          const detailMsgs = Object.keys(response.data.details).map(key => {
+            const fieldError = response.data.details[key];
+            const msg = Array.isArray(fieldError) ? fieldError.join(', ') : fieldError;
+            return `${key.replace(/_/g, ' ')}: ${msg}`;
+          });
+          if (detailMsgs.length > 0) {
+            errorMsg = `Validation error:\n${detailMsgs.join('\n')}`;
+          }
+        }
+        Alert.alert('Error', errorMsg);
       }
     } catch (error) {
       console.error('Error updating profile without username:', error);
-      Alert.alert('Error', error?.message || 'Failed to update profile. Please try again.');
+      let errorMsg = error?.message || 'Failed to update profile. Please try again.';
+      
+      if (error?.data?.details) {
+        const detailMsgs = Object.keys(error.data.details).map(key => {
+          const fieldError = error.data.details[key];
+          const msg = Array.isArray(fieldError) ? fieldError.join(', ') : fieldError;
+          return `${key.replace(/_/g, ' ')}: ${msg}`;
+        });
+        if (detailMsgs.length > 0) {
+          errorMsg = `Validation errors:\n${detailMsgs.join('\n')}`;
+        }
+      }
+      Alert.alert('Error', errorMsg);
     }
   };
 
@@ -655,6 +730,7 @@ const EditProfile = () => {
                         value={panNumber}
                         onChangeText={setPanNumber}
                         autoCapitalize="characters"
+                        maxLength={10}
                       />
                     </View>
                   </View>
