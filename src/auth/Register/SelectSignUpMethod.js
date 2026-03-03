@@ -118,20 +118,20 @@ const SelectSignUpMethod = () => {
         {/* Divider */}
         <View style={styles.dividerContainer}>
           <View style={[styles.divider, { backgroundColor: borderColor }]} />
-          <Text style={[styles.dividerText, { color: textColor }]}>
+          {/* <Text style={[styles.dividerText, { color: textColor }]}>
             Or continue with
-          </Text>
+          </Text> */}
           <View style={[styles.divider, { backgroundColor: borderColor }]} />
         </View>
 
         {/* Google Sign Up Button */}
-        <View style={styles.googleButtonContainer}>
+        {/* <View style={styles.googleButtonContainer}>
           <GoogleButton
             onPress={handleGoogleSignUp}
             style={styles.googleButton}
             disabled={loading}
           />
-        </View>
+        </View> */}
       </View>
     </View>
   );
