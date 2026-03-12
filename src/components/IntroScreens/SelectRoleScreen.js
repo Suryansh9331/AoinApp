@@ -160,34 +160,54 @@
 // });
 
 // export default SelectRoleScreen;
-
-
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
+  Image,
+  Dimensions,
   StatusBar,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import Video from 'react-native-video';
-import { moderateScale, verticalScale, scale } from 'react-native-size-matters';
-import { Colors } from '../../utils/Colors';
+import {useNavigation} from '@react-navigation/native';
+import {moderateScale, verticalScale, scale} from 'react-native-size-matters';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import Feather from 'react-native-vector-icons/Feather';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import FONTS from '../../utils/Font';
 import useAppTheme from '../../theme/useAppTheme';
-import { getThemeColors } from '../../theme/themeColors';
+import {getThemeColors} from '../../theme/themeColors';
 
+const {width} = Dimensions.get('window');
+const ORANGE = '#F97316';
+
+// ── Role Card ──────────────────────────────────────────────────────────────────
+const RoleCard = ({iconComponent, title, subtitle, onPress}) => (
+  <TouchableOpacity style={styles.roleCard} onPress={onPress} activeOpacity={0.75}>
+    <View style={styles.cardIconWrap}>{iconComponent}</View>
+    <View style={styles.cardTextWrap}>
+      <Text style={styles.cardTitle}>{title}</Text>
+      <Text style={styles.cardSubtitle}>{subtitle}</Text>
+    </View>
+    <View style={styles.cardChevronWrap}>
+      <Ionicons name="chevron-forward" size={moderateScale(16)} color={ORANGE} />
+    </View>
+  </TouchableOpacity>
+);
+
+// ── Main Screen ────────────────────────────────────────────────────────────────
 const SelectRoleScreen = () => {
   const navigation = useNavigation();
   const theme = useAppTheme();
-  const { backgroundColor } = getThemeColors(theme);
+  const {backgroundColor} = getThemeColors(theme);
   const [selectedRole, setSelectedRole] = useState(null);
 
-  const handleRoleSelect = (role) => {
+  // Original logic — untouched
+  const handleRoleSelect = role => {
     setSelectedRole(role);
-    navigation.navigate('Login', { role: role });
+    navigation.navigate('Login', {role});
   };
 
   const handleSignUp = () => {
@@ -195,93 +215,164 @@ const SelectRoleScreen = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor }]}>
-      <StatusBar barStyle="dark-content" />
+    <SafeAreaView style={styles.root} edges={['bottom']}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* ===== TOP CENTER VIDEO (LIKE LOGO POSITION) ===== */}
-      <View style={styles.videoWrapper}>
-        <Video
-          source={{
-            uri: 'https://res.cloudinary.com/dggzjpqdi/video/upload/v1772565247/CL086cRB9tjYtbVJE2_yhbbzo.mp4',
-          }}
-          style={styles.video}
-          resizeMode="contain"
-          repeat
-          muted
+      {/* ── Background image (orange gradient with AOIN logo) ── */}
+      <View style={styles.headerImageWrap}>
+        <Image
+          source={require('../../../assest/images/rolebg.png')}
+          style={styles.headerImage}
+          resizeMode="cover"
+        />
+        {/* Wave vector overlaid at bottom edge of bg image */}
+        <Image
+          source={require('../../../assest/images/vector.png')}
+          style={styles.waveOverlay}
+          resizeMode="stretch"
         />
       </View>
 
-      {/* ===== BOTTOM PANEL ===== */}
-      <View style={styles.bottomPanel}>
-        <TouchableOpacity
-          style={styles.roleButton}
-          onPress={() => handleRoleSelect('merchant')}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.roleTitle}>
-            Sign in as a Merchant
-          </Text>
-        </TouchableOpacity>
+      {/* ── White content area ── */}
+      <View style={styles.content}>
+        <Text style={styles.welcomeTitle}>Welcome Back 👋</Text>
+        <Text style={styles.welcomeSub}>Choose how you'd like to sign in</Text>
 
-        <TouchableOpacity
-          style={styles.roleButton}
-          onPress={() => handleRoleSelect('user')}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.roleTitle}>
-            Sign in as a User
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.cardsWrap}>
+
+          {/* Merchant → Seller (role = 'merchant') */}
+          <RoleCard
+            iconComponent={
+              <Feather name="shopping-bag" size={moderateScale(22)} color={ORANGE} />
+            }
+            title="Sign in as Seller"
+            subtitle="List & manage your products"
+            onPress={() => handleRoleSelect('merchant')}
+          />
+
+          {/* Creator — free, no navigation */}
+          <RoleCard
+            iconComponent={
+              <MaterialCommunityIcons name="star-outline" size={moderateScale(24)} color={ORANGE} />
+            }
+            title="Sign in as Creator"
+            subtitle="Build & share your content"
+            onPress={() => {/* free for future use */}}
+          />
+
+          {/* User → Buyer (role = 'user') */}
+          <RoleCard
+            iconComponent={
+              <Feather name="shopping-cart" size={moderateScale(22)} color={ORANGE} />
+            }
+            title="Sign in as Buyer"
+            subtitle="Discover & shop with ease"
+            onPress={() => handleRoleSelect('user')}
+          />
+
+        </View>
       </View>
     </SafeAreaView>
   );
 };
 
+// ── Styles ─────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
   },
 
-  /* ===== VIDEO POSITIONING ===== */
+  // Header
+  headerImageWrap: {
+    width: '100%',
+    height: verticalScale(280),
+  },
+  headerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  waveOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    width: width,
+    height: verticalScale(30),
+  },
 
-  videoWrapper: {
+  // Content
+  content: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingHorizontal: scale(22),
+    paddingTop: verticalScale(20),
   },
-
-  video: {
-    width: moderateScale(360),
-    height: moderateScale(360),
-  },
-
-  /* ===== BOTTOM PANEL (LIKE YOUR DESIGN) ===== */
-
-  bottomPanel: {
-   
-    paddingTop: verticalScale(30),
-    paddingBottom: verticalScale(50),
-    paddingHorizontal: scale(20),
-    borderTopLeftRadius: moderateScale(40),
-    borderTopRightRadius: moderateScale(40),
-    gap: verticalScale(20),
-  },
-
-  roleButton: {
-    backgroundColor: Colors.PRIMARY,
-    borderRadius: moderateScale(20),
-    paddingVertical: verticalScale(16),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  roleTitle: {
-    fontSize: moderateScale(16),
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-    fontFamily: FONTS.WINDSONG.REGULAR,
+  welcomeTitle: {
+    fontSize: moderateScale(24),
+    fontWeight: '700',
+    color: '#1A1A2E',
     textAlign: 'center',
-    fontWeight: '400',
+    marginBottom: verticalScale(6),
+    fontFamily: FONTS.WINDSONG?.BOLD || undefined,
+  },
+  welcomeSub: {
+    fontSize: moderateScale(14),
+    color: '#8A8A9A',
+    textAlign: 'center',
+    marginBottom: verticalScale(28),
+    fontFamily: FONTS.WINDSONG?.REGULAR || undefined,
+  },
+
+  // Cards
+  cardsWrap: {
+    gap: verticalScale(14),
+  },
+  roleCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: moderateScale(16),
+    paddingVertical: verticalScale(14),
+    paddingHorizontal: scale(16),
+    borderWidth: 1.5,
+    borderColor: '#FFE8D6',
+    shadowColor: ORANGE,
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  cardIconWrap: {
+    width: moderateScale(44),
+    height: moderateScale(44),
+    borderRadius: moderateScale(12),
+    backgroundColor: '#FFF4EE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: scale(14),
+  },
+  cardTextWrap: {
+    flex: 1,
+  },
+  cardTitle: {
+    fontSize: moderateScale(15),
+    fontWeight: '700',
+    color: '#1A1A2E',
+    marginBottom: verticalScale(2),
+    fontFamily: FONTS.WINDSONG?.BOLD || undefined,
+  },
+  cardSubtitle: {
+    fontSize: moderateScale(12),
+    color: '#8A8A9A',
+    fontFamily: FONTS.WINDSONG?.REGULAR || undefined,
+  },
+  cardChevronWrap: {
+    width: moderateScale(32),
+    height: moderateScale(32),
+    borderRadius: moderateScale(10),
+    backgroundColor: '#FFF4EE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: scale(10),
   },
 });
 
