@@ -92,6 +92,11 @@
 
 // export default OnboardingScreen1;
 
+
+
+
+
+
 import React from 'react';
 import {
   View,
@@ -120,13 +125,13 @@ const OnboardingScreen1 = ({ navigation }) => {
       <View style={styles.imageSection}>
         <View style={styles.heroImageWrapper}>
           <Image
-            source={require('../../../assest/images/image.png')}
+            source={require('../../../assest/images/image2.png')}
             style={styles.heroImage}
             resizeMode="contain"
           />
         </View>
 
-        {/* Pagination dots */}
+        {/* Pagination dots — 2nd active */}
         <View style={styles.dotsRow}>
           <View style={[styles.dot, styles.dotActive]} />
           <View style={styles.dot} />
@@ -136,28 +141,26 @@ const OnboardingScreen1 = ({ navigation }) => {
 
       {/* ── BOTTOM CARD ── */}
       <View style={styles.card}>
-        <Text style={styles.headingBlack}>Same-Day Delivery</Text>
-        <Text style={styles.headingOrange}>In Your City</Text>
 
-        <Text style={styles.description}>
-          Order today and receive your product today.{'\n'}
-          Fast delivery powered by trusted courier partners.
+        {/* "India's First" pill badge */}
+        <View style={styles.pillBadge}>
+          <Text style={styles.pillText}>🇮🇳  India's First</Text>
+        </View>
+
+        {/* Heading with inline orange */}
+        <Text style={styles.heading}>
+          India's First{' '}
+          <Text style={styles.headingOrange}>Age-Based</Text>
+          {'\n'}Reel Shopping App
         </Text>
 
-        {/* Feature chips */}
-        <View style={styles.chipsRow}>
-          <View style={styles.chip}>
-            <Text style={styles.chipText}>Same-day delivery 📦</Text>
-          </View>
-          <View style={styles.chip}>
-            <Text style={styles.chipText}>🔄 Same-day easy return</Text>
-          </View>
-        </View>
-        <View style={styles.chipsRowSingle}>
-          <View style={styles.chip}>
-            <Text style={styles.chipText}>Local seller shipping 📦</Text>
-          </View>
-        </View>
+        {/* Two description lines */}
+        <Text style={styles.description}>
+          Discover products through reels created by real creators.
+        </Text>
+        <Text style={styles.description}>
+          Shop smarter with products curated for your age and lifestyle
+        </Text>
 
         {/* CTA */}
         <TouchableOpacity
@@ -194,9 +197,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   heroImage: {
-    width: width,          // full screen width
+    width: width,
     height: undefined,
-    aspectRatio: 1.3,     // slightly taller for a bigger feel
+    aspectRatio: 1.3,
   },
 
   /* DOTS */
@@ -218,63 +221,58 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
 
+  
   /* BOTTOM CARD */
   card: {
     backgroundColor: CARD_BG,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingHorizontal: 20,
-    paddingTop: 24,
+    paddingTop: 20,
     paddingBottom: 28,
   },
-  headingBlack: {
+
+  /* India's First pill */
+  pillBadge: {
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: ORANGE,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    marginBottom: 14,
+  },
+  pillText: {
+    fontFamily: 'Inter-SemiBold',
+    fontWeight: '600',
+    fontSize: 13,
+    color: ORANGE,
+  },
+
+  /* Heading */
+  heading: {
     fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 26,
     color: '#1A1A1A',
-    lineHeight: 34,
+    lineHeight: 36,
+    marginBottom: 14,
   },
   headingOrange: {
     fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 26,
     color: ORANGE,
-    lineHeight: 34,
-    marginBottom: 12,
   },
+
+  /* Description */
   description: {
     fontFamily: 'Inter-Regular',
     fontWeight: '400',
     fontSize: 14,
     color: '#444444',
     lineHeight: 22,
-    marginBottom: 18,
-  },
-
-  /* CHIPS */
-  chipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
     marginBottom: 10,
-  },
-  chipsRowSingle: {
-    flexDirection: 'row',
-    marginBottom: 22,
-  },
-  chip: {
-    backgroundColor: WHITE,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#E8E8E8',
-  },
-  chipText: {
-    fontFamily: 'Inter-Regular',
-    fontWeight: '400',
-    fontSize: 12,
-    color: '#333333',
   },
 
   /* CTA BUTTON */
@@ -287,12 +285,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
+    marginTop: 14,
   },
   ctaText: {
     color: WHITE,
     fontFamily: 'Inter-Bold',
-    fontWeight: '800',
-    fontSize: 16,
+    fontWeight: '700',
+    fontSize: 17,
     letterSpacing: 0.3,
   },
   ctaIconWrapper: {

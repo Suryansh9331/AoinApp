@@ -185,6 +185,13 @@
 // export default OnboardingScreen1;
 
 
+
+
+
+
+
+
+
 import React from 'react';
 import {
   View,
@@ -198,13 +205,13 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
-const { width } = Dimensions.get('window');
+const {width} = Dimensions.get('window');
 
 const ORANGE = '#F2631F';
 const CARD_BG = '#FFDFD0';
 const WHITE = '#FFFFFF';
 
-const OnboardingScreen2 = ({ navigation }) => {
+const OnboardingScreen2 = ({navigation}) => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
@@ -213,13 +220,13 @@ const OnboardingScreen2 = ({ navigation }) => {
       <View style={styles.imageSection}>
         <View style={styles.heroImageWrapper}>
           <Image
-            source={require('../../../assest/images/image2.png')}
+            source={require('../../../assest/images/image3.png')}
             style={styles.heroImage}
             resizeMode="contain"
           />
         </View>
 
-        {/* Pagination dots — 2nd active */}
+        {/* Pagination dots — 3rd active */}
         <View style={styles.dotsRow}>
           <View style={styles.dot} />
           <View style={[styles.dot, styles.dotActive]} />
@@ -229,33 +236,41 @@ const OnboardingScreen2 = ({ navigation }) => {
 
       {/* ── BOTTOM CARD ── */}
       <View style={styles.card}>
+        {/* Heading: "Shop Through " + orange "Creator\nReels" */}
+        <Text style={styles.heading}>
+          Shop Through{' '}
+          <Text style={styles.headingOrange}>Creator{'\n'}Reels</Text>
+        </Text>
 
-        {/* "India's First" pill badge */}
-        <View style={styles.pillBadge}>
-          <Text style={styles.pillText}>🇮🇳  India's First</Text>
+        {/* Description */}
+        <Text style={styles.description}>
+          Watch short product videos from creators.{'\n'}
+          See real reviews before you buy.
+        </Text>
+
+        {/* Chips row 1 */}
+        <View style={styles.chipsRow}>
+          <View style={styles.chip}>
+            <Text style={styles.chipText}>🎬 Reel product demos</Text>
+          </View>
+          <View style={styles.chip}>
+            <Text style={styles.chipText}>⭐ Real creator reviews</Text>
+          </View>
         </View>
 
-        {/* Heading with inline orange */}
-        <Text style={styles.heading}>
-          India's First{' '}
-          <Text style={styles.headingOrange}>Age-Based</Text>
-          {'\n'}Reel Shopping App
-        </Text>
-
-        {/* Two description lines */}
-        <Text style={styles.description}>
-          Discover products through reels created by real creators.
-        </Text>
-        <Text style={styles.description}>
-          Shop smarter with products curated for your age and lifestyle
-        </Text>
+        {/* Chips row 2 */}
+        <View style={styles.chipsRowSingle}>
+          <View style={styles.chip}>
+            <Text style={styles.chipText}>Instant buy from video 🛍️</Text>
+          </View>
+        </View>
 
         {/* CTA */}
         <TouchableOpacity
           style={styles.ctaButton}
           activeOpacity={0.85}
-          onPress={() => navigation?.navigate('Onboarding3')}
-        >
+         onPress={() => navigation?.navigate('Onboarding3')}
+          >
           <Text style={styles.ctaText}>Next</Text>
           <View style={styles.ctaIconWrapper}>
             <Ionicons name="arrow-forward" size={20} color={ORANGE} />
@@ -287,13 +302,14 @@ const styles = StyleSheet.create({
   heroImage: {
     width: width,
     height: undefined,
-    aspectRatio: 1.3,
+    aspectRatio: 1.1,
   },
 
   /* DOTS */
   dotsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
+    alignItems: 'center',
     gap: 6,
     marginBottom: 12,
   },
@@ -315,25 +331,8 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 22,
     paddingBottom: 28,
-  },
-
-  /* India's First pill */
-  pillBadge: {
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: ORANGE,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    marginBottom: 14,
-  },
-  pillText: {
-    fontFamily: 'Inter-SemiBold',
-    fontWeight: '600',
-    fontSize: 13,
-    color: ORANGE,
   },
 
   /* Heading */
@@ -343,12 +342,9 @@ const styles = StyleSheet.create({
     fontSize: 26,
     color: '#1A1A1A',
     lineHeight: 36,
-    marginBottom: 14,
+    marginBottom: 12,
   },
   headingOrange: {
-    fontFamily: 'Inter-Bold',
-    fontWeight: '700',
-    fontSize: 26,
     color: ORANGE,
   },
 
@@ -359,7 +355,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#444444',
     lineHeight: 22,
+    marginBottom: 16,
+  },
+
+  /* CHIPS */
+  chipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
     marginBottom: 10,
+  },
+  chipsRowSingle: {
+    flexDirection: 'row',
+    marginBottom: 20,
+  },
+  chip: {
+    backgroundColor: WHITE,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+  },
+  chipText: {
+    fontFamily: 'Inter-Regular',
+    fontWeight: '400',
+    fontSize: 13,
+    color: '#333333',
   },
 
   /* CTA BUTTON */
@@ -372,7 +394,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    marginTop: 14,
   },
   ctaText: {
     color: WHITE,

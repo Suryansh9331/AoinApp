@@ -88,6 +88,10 @@
 
 // export default OnboardingScreen3;
 
+
+
+
+
 import React from 'react';
 import {
   View,
@@ -101,13 +105,13 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
-const {width} = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 const ORANGE = '#F2631F';
 const CARD_BG = '#FFDFD0';
 const WHITE = '#FFFFFF';
 
-const OnboardingScreen3 = ({navigation}) => {
+const OnboardingScreen3 = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
@@ -116,13 +120,13 @@ const OnboardingScreen3 = ({navigation}) => {
       <View style={styles.imageSection}>
         <View style={styles.heroImageWrapper}>
           <Image
-            source={require('../../../assest/images/image3.png')}
+            source={require('../../../assest/images/image.png')}
             style={styles.heroImage}
             resizeMode="contain"
           />
         </View>
 
-        {/* Pagination dots — 3rd active */}
+        {/* Pagination dots */}
         <View style={styles.dotsRow}>
           <View style={styles.dot} />
           <View style={styles.dot} />
@@ -132,32 +136,26 @@ const OnboardingScreen3 = ({navigation}) => {
 
       {/* ── BOTTOM CARD ── */}
       <View style={styles.card}>
-        {/* Heading: "Shop Through " + orange "Creator\nReels" */}
-        <Text style={styles.heading}>
-          Shop Through{' '}
-          <Text style={styles.headingOrange}>Creator{'\n'}Reels</Text>
-        </Text>
+        <Text style={styles.headingBlack}>Same-Day Delivery</Text>
+        <Text style={styles.headingOrange}>In Your City</Text>
 
-        {/* Description */}
         <Text style={styles.description}>
-          Watch short product videos from creators.{'\n'}
-          See real reviews before you buy.
+          Order today and receive your product today.{'\n'}
+          Fast delivery powered by trusted courier partners.
         </Text>
 
-        {/* Chips row 1 */}
+        {/* Feature chips */}
         <View style={styles.chipsRow}>
           <View style={styles.chip}>
-            <Text style={styles.chipText}>🎬 Reel product demos</Text>
+            <Text style={styles.chipText}>Same-day delivery 📦</Text>
           </View>
           <View style={styles.chip}>
-            <Text style={styles.chipText}>⭐ Real creator reviews</Text>
+            <Text style={styles.chipText}>🔄 Same-day easy return</Text>
           </View>
         </View>
-
-        {/* Chips row 2 */}
         <View style={styles.chipsRowSingle}>
           <View style={styles.chip}>
-            <Text style={styles.chipText}>Instant buy from video 🛍️</Text>
+            <Text style={styles.chipText}>Local seller shipping 📦</Text>
           </View>
         </View>
 
@@ -165,8 +163,8 @@ const OnboardingScreen3 = ({navigation}) => {
         <TouchableOpacity
           style={styles.ctaButton}
           activeOpacity={0.85}
-         onPress={() => navigation.navigate('SelectRole')}
-          >
+          onPress={() => navigation?.navigate('SelectRole')}
+        >
           <Text style={styles.ctaText}>Next</Text>
           <View style={styles.ctaIconWrapper}>
             <Ionicons name="arrow-forward" size={20} color={ORANGE} />
@@ -196,16 +194,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   heroImage: {
-    width: width,
+    width: width,          // full screen width
     height: undefined,
-    aspectRatio: 1.1,
+    aspectRatio: 1.3,     // slightly taller for a bigger feel
   },
 
   /* DOTS */
   dotsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'center',
     gap: 6,
     marginBottom: 12,
   },
@@ -227,31 +224,31 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingHorizontal: 20,
-    paddingTop: 22,
+    paddingTop: 24,
     paddingBottom: 28,
   },
-
-  /* Heading */
-  heading: {
+  headingBlack: {
     fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 26,
     color: '#1A1A1A',
-    lineHeight: 36,
-    marginBottom: 12,
+    lineHeight: 34,
   },
   headingOrange: {
+    fontFamily: 'Inter-Bold',
+    fontWeight: '700',
+    fontSize: 26,
     color: ORANGE,
+    lineHeight: 34,
+    marginBottom: 12,
   },
-
-  /* Description */
   description: {
     fontFamily: 'Inter-Regular',
     fontWeight: '400',
     fontSize: 14,
     color: '#444444',
     lineHeight: 22,
-    marginBottom: 16,
+    marginBottom: 18,
   },
 
   /* CHIPS */
@@ -263,20 +260,20 @@ const styles = StyleSheet.create({
   },
   chipsRowSingle: {
     flexDirection: 'row',
-    marginBottom: 20,
+    marginBottom: 22,
   },
   chip: {
     backgroundColor: WHITE,
     borderRadius: 20,
     paddingHorizontal: 14,
-    paddingVertical: 9,
+    paddingVertical: 8,
     borderWidth: 1,
     borderColor: '#E8E8E8',
   },
   chipText: {
     fontFamily: 'Inter-Regular',
     fontWeight: '400',
-    fontSize: 13,
+    fontSize: 12,
     color: '#333333',
   },
 
@@ -294,8 +291,8 @@ const styles = StyleSheet.create({
   ctaText: {
     color: WHITE,
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
-    fontSize: 17,
+    fontWeight: '800',
+    fontSize: 16,
     letterSpacing: 0.3,
   },
   ctaIconWrapper: {
